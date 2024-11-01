@@ -4,9 +4,10 @@ import Header from './components/layout/Header/Header';
 import OrdersPage from './pages/OrdersPage/OrdersPage';
 import ProductsPage from './pages/ProductsPage/ProductsPage';
 import LoginPage from './pages/LoginPage/LoginPage';
-import InventoryPage from './pages/Inventory';
+import InventoryPage from './pages/InventoryPage/InventoryPage';
 import SettingsPage from './pages/Settings';
 import ClientsPage from './pages/ClientsPage/ClientsPage';
+import ShopManagement from './pages/Settings/ShopManagement';
 import { Users, ShoppingCart, Package, Warehouse, Settings } from 'lucide-react';
 
 const App = () => {
@@ -20,6 +21,7 @@ const App = () => {
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/settings/shops" element={<ShopManagement />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/" element={<OrdersPage />} />
@@ -28,26 +30,21 @@ const App = () => {
 
         {/* Мобильный таб-бар */}
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 sm:hidden">
-          <div className="flex justify-around">
+          <div className="flex justify-around py-2">
             <NavLink to="/orders" className="tab-link">
               <ShoppingCart size={24} />
-              <span>Заказы</span>
             </NavLink>
             <NavLink to="/products" className="tab-link">
               <Package size={24} />
-              <span>Товары</span>
             </NavLink>
             <NavLink to="/inventory" className="tab-link">
               <Warehouse size={24} />
-              <span>Склад</span>
             </NavLink>
             <NavLink to="/clients" className="tab-link">
               <Users size={24} />
-              <span>Клиенты</span>
             </NavLink>
-            <NavLink to="/settings" className="tab-link">
+            <NavLink to="/settings/shops" className="tab-link">
               <Settings size={24} />
-              <span>Настройки</span>
             </NavLink>
           </div>
         </nav>

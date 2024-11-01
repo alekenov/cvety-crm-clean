@@ -28,7 +28,7 @@ const Header = () => {
             <Users size={20} />
             <span>Клиенты</span>
           </NavLink>
-          <NavLink to="/settings" className="nav-link">
+          <NavLink to="/settings/shops" className="nav-link">
             <Settings size={20} />
             <span>Настройки</span>
           </NavLink>

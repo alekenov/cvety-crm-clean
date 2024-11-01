@@ -1,32 +1,21 @@
 /* Стили для таб-бара */
 .tab-link {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 12px 8px;
+  justify-content: center;
   color: #6b7280;
   text-decoration: none;
-  font-size: 12px;
   transition: all 0.2s;
+  padding: 8px;
 }
 
 .tab-link.active {
   color: #3b82f6;
 }
 
-.tab-link svg {
-  margin-bottom: 4px;
-}
-
-.tab-link span {
-  margin-top: 4px;
-  font-weight: 500;
-}
-
 /* Медиа-запрос для десктопной версии */
 @media (min-width: 640px) {
   .tab-link {
     padding: 12px;
-    font-size: 14px;
   }
 } 
