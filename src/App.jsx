@@ -8,6 +8,7 @@ import InventoryPage from './pages/InventoryPage/InventoryPage';
 import SettingsPage from './pages/Settings';
 import ClientsPage from './pages/ClientsPage/ClientsPage';
 import ShopManagement from './pages/Settings/ShopManagement';
+import ProductManagement from './pages/Products/ProductManagement';
 import { Users, ShoppingCart, Package, Warehouse, Settings } from 'lucide-react';
 
 const App = () => {
@@ -19,7 +20,7 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/products" element={<ProductManagement />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/settings/shops" element={<ShopManagement />} />
             <Route path="/settings" element={<SettingsPage />} />
