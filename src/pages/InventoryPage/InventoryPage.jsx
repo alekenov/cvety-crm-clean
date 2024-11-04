@@ -1,151 +1,189 @@
 import React, { useState } from 'react';
 import { 
-  Package, Search, Edit2, Plus, Check, ArrowUpDown, 
-  Share2, ClipboardCheck, X 
+  ChevronDown, ChevronRight, Search, Filter, Plus, Edit2, 
+  Archive, Package, Calendar 
 } from 'lucide-react';
 
-// Компонент строки товара для десктопной версии
-const DesktopProductRow = ({ product, onEdit }) => (
-  <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-gray-50">
-    <div className="col-span-6 font-medium">
-      <div className="flex items-center">
-        {product.name}
-        <span className={`ml-2 px-2 py-0.5 ${
-          product.quantity > 0 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        } text-xs rounded-full`}>
-          {product.quantity > 0 ? 'В наличии' : 'Нет в наличии'}
-        </span>
-      </div>
-    </div>
-    <div className="col-span-3">{product.quantity} шт</div>
-    <div className="col-span-3 flex justify-between items-center">
-      <span className="font-medium text-green-600">{product.price} тг</span>
-      <button 
-        onClick={() => onEdit(product.id)}
-        className="p-1 text-gray-400 hover:text-blue-500"
-      >
-        <Edit2 size={16} />
-      </button>
-    </div>
-  </div>
-);
-
-// Компонент карточки товара для мобильной версии
-const MobileProductCard = ({ product, onEdit }) => (
-  <div className="bg-white rounded-lg shadow p-4 mb-3">
-    <div className="flex justify-between items-start">
-      <div>
-        <div className="flex items-center">
-          <h3 className="font-semibold">{product.name}</h3>
-          <span className={`ml-2 px-2 py-0.5 ${
-            product.quantity > 0 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-red-100 text-red-800'
-          } text-xs rounded-full`}>
-            {product.quantity > 0 ? 'В наличии' : 'Нет в наличии'}
-          </span>
-        </div>
-        <p className="text-sm text-gray-600 mt-1">{product.quantity} шт</p>
-      </div>
-      <div className="text-right">
-        <p className="text-sm font-medium text-green-600">{product.price} тг</p>
-        <button 
-          onClick={() => onEdit(product.id)}
-          className="mt-2 p-2 text-gray-400 hover:text-blue-500"
-        >
-          <Edit2 size={16} />
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
 function InventoryPage() {
-  const [sortBy, setSortBy] = useState('name');
-  const [showInactive, setShowInactive] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [isInventoryMode, setIsInventoryMode] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState(['today', 'yesterday']);
+  const [editingItem, setEditingItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
 
-  // Пример данных товаров
-  const products = [
-    {
-      id: 1,
-      name: "Freedom",
-      quantity: 300,
-      price: 576,
-      cost: 400,
-      markup: 44
-    },
-    {
-      id: 2,
-      name: "Mondial",
-      quantity: 0,
-      price: 590,
-      cost: 410,
-      markup: 44
-    }
-  ];
+  const inventory = {
+    today: [
+      {
+        id: 1,
+        name: 'Freedom 60см',
+        quantity: 300,
+        unit: 'шт',
+        category: 'Розы',
+        price: 576,
+        date: '02.11.2024',
+        active: true
+      },
+      {
+        id: 2,
+        name: 'Pink Floyd 60см',
+        quantity: 150,
+        unit: 'шт',
+        category: 'Розы',
+        price: 610,
+        date: '02.11.2024',
+        active: true
+      },
+      {
+        id: 3,
+        name: 'Тюльпан Strong Gold',
+        quantity: 200,
+        unit: 'шт',
+        category: 'Тюльпаны',
+        price: 300,
+        date: '02.11.2024',
+        active: true
+      }
+    ],
+    yesterday: [
+      {
+        id: 4,
+        name: 'Red Naomi 60см',
+        quantity: 120,
+        unit: 'шт',
+        category: 'Розы',
+        price: 550,
+        date: '01.11.2024',
+        active: true
+      },
+      {
+        id: 5,
+        name: 'Тюльпан Pink Expression',
+        quantity: 180,
+        unit: 'шт',
+        category: 'Тюльпаны',
+        price: 280,
+        date: '01.11.2024',
+        active: true
+      }
+    ],
+    old: [
+      {
+        id: 6,
+        name: 'Red Naomi 50см',
+        quantity: 0,
+        unit: 'шт',
+        category: 'Розы',
+        price: 450,
+        date: '29.10.2024',
+        active: false
+      }
+    ]
+  };
+
+  const groupTitles = {
+    today: 'Сегодня, 2 ноября',
+    yesterday: 'Вчера, 1 ноября',
+    old: 'Старые поставки'
+  };
+
+  const toggleGroup = (group) => {
+    setExpandedGroups(prev => 
+      prev.includes(group) 
+        ? prev.filter(g => g !== group)
+        : [...prev, group]
+    );
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem({
+      ...item,
+      isEditing: true
+    });
+  };
+
+  const handleSave = () => {
+    // Здесь будет логика сохранения изменений
+    setEditingItem(null);
+  };
 
   // Мобильная версия
   const MobileView = () => (
-    <div className="max-w-md mx-auto bg-gray-100 min-h-screen sm:hidden">
-      <div className="bg-white p-4 flex items-center justify-between shadow-sm">
-        <h1 className="text-lg font-semibold flex items-center">
-          <Package className="text-blue-500 mr-2" size={20} />
-          Склад
-        </h1>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <Search size={20} />
-          </button>
-          <button
-            onClick={() => setIsInventoryMode(!isInventoryMode)}
-            className={`p-2 rounded-full ${
-              isInventoryMode ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-            }`}
-          >
-            {isInventoryMode ? <Check size={20} /> : <ClipboardCheck size={20} />}
-          </button>
-          <button
-            className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center"
-          >
+    <div className="sm:hidden bg-gray-100 min-h-screen">
+      {/* Заголовок */}
+      <div className="bg-white p-4 sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-lg font-semibold flex items-center">
+            <Package className="text-blue-500 mr-2" size={20} />
+            Склад
+          </h1>
+          <button className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
             <Plus size={20} />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Поиск товаров..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg"
+            />
+          </div>
+          <button className="p-2 bg-gray-100 rounded-lg">
+            <Filter size={20} />
           </button>
         </div>
       </div>
 
+      {/* Список товаров */}
       <div className="p-4">
-        {showSearch && (
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Поиск товара..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-3 pl-10 pr-4 border border-gray-300 rounded-lg"
-              />
+        {Object.entries(inventory).map(([group, items]) => (
+          <div key={group} className="mb-4">
+            <div 
+              className="flex items-center bg-white p-3 rounded-lg shadow-sm mb-2 cursor-pointer"
+              onClick={() => toggleGroup(group)}
+            >
+              {expandedGroups.includes(group) ? (
+                <ChevronDown size={20} className="mr-2" />
+              ) : (
+                <ChevronRight size={20} className="mr-2" />
+              )}
+              <span className="font-medium">{groupTitles[group]}</span>
+              <span className="ml-2 text-gray-500">({items.length})</span>
             </div>
-          </div>
-        )}
 
-        <div className="space-y-3">
-          {products.map(product => (
-            <MobileProductCard 
-              key={product.id} 
-              product={product}
-              onEdit={setEditingId}
-            />
-          ))}
-        </div>
+            {expandedGroups.includes(group) && items.map(item => (
+              <div 
+                key={item.id} 
+                className="bg-white rounded-lg shadow-sm p-4 mb-2"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium">{item.name}</h3>
+                    <p className="text-sm text-gray-500">{item.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{item.quantity} {item.unit}</p>
+                    <p className="text-sm text-green-600">{item.price} ₸</p>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-3 space-x-2">
+                  <button 
+                    onClick={() => handleEdit(item)}
+                    className="p-2 text-blue-600 bg-blue-50 rounded-lg"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                  <button 
+                    className="p-2 text-gray-600 bg-gray-50 rounded-lg"
+                  >
+                    <Archive size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -155,115 +193,143 @@ function InventoryPage() {
     <div className="hidden sm:block min-h-screen bg-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Верхняя панель */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Package className="text-blue-500 mr-2" size={24} />
-                <h1 className="text-xl font-bold">Склад</h1>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Поиск товара..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-64 pl-10 pr-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <button 
-                  onClick={() => setIsInventoryMode(!isInventoryMode)}
-                  className={`px-4 py-2 rounded-lg flex items-center ${
-                    isInventoryMode ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-                  }`}
-                >
-                  {isInventoryMode ? (
-                    <>
-                      <Check size={20} className="mr-2" />
-                      Завершить ревизию
-                    </>
-                  ) : (
-                    <>
-                      <ClipboardCheck size={20} className="mr-2" />
-                      Ревизия
-                    </>
-                  )}
-                </button>
-                <button className="px-4 py-2 bg-green-500 text-white rounded-lg flex items-center">
-                  <Plus size={20} className="mr-2" />
-                  Добавить товар
-                </button>
-              </div>
-            </div>
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-2xl font-bold flex items-center">
+            <Package className="mr-2" size={28} />
+            Склад
           </div>
-          
-          {/* Фильтры */}
-          <div className="px-4 pb-4 flex items-center space-x-2">
-            <button 
-              className={`px-3 py-1.5 rounded-full text-sm flex items-center ${
-                sortBy === 'name' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-              onClick={() => setSortBy('name')}
-            >
-              <ArrowUpDown size={14} className="mr-1" />
-              По названию
-            </button>
-            <button 
-              className={`px-3 py-1.5 rounded-full text-sm ${
-                sortBy === 'quantity' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-              onClick={() => setSortBy('quantity')}
-            >
-              По количеству
-            </button>
-            <button 
-              className={`px-3 py-1.5 rounded-full text-sm ${
-                sortBy === 'price' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-              onClick={() => setSortBy('price')}
-            >
-              По цене
-            </button>
-            <div className="h-4 w-px bg-gray-300 mx-2"></div>
-            <label className="flex items-center px-3 py-1.5 bg-gray-100 rounded-full hover:bg-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
               <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="rounded border-gray-300 text-blue-500 mr-2"
+                type="text"
+                placeholder="Поиск товаров"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2 border rounded-lg w-64"
               />
-              <span className="text-sm text-gray-700">
-                Показывать отсутствующие
-              </span>
-            </label>
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+            </div>
+            <button className="p-2 bg-gray-100 rounded-lg">
+              <Calendar size={20} />
+            </button>
+            <button className="p-2 bg-gray-100 rounded-lg">
+              <Filter size={20} />
+            </button>
+            <button className="px-4 py-2 bg-green-500 text-white rounded-lg flex items-center">
+              <Plus size={20} className="mr-2" />
+              Добавить приход
+            </button>
           </div>
         </div>
 
         {/* Таблица товаров */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b text-sm font-medium text-gray-500">
-            <div className="col-span-6 flex items-center">Наименование</div>
-            <div className="col-span-3">Количество</div>
-            <div className="col-span-3 flex justify-between items-center pr-8">Цена продажи</div>
+        <div className="bg-white rounded-lg shadow">
+          {/* Заголовок таблицы */}
+          <div className="grid grid-cols-12 gap-4 p-4 border-b bg-gray-50 font-medium">
+            <div className="col-span-5">Название</div>
+            <div className="col-span-2 text-right">В наличии</div>
+            <div className="col-span-3 text-right">Цена за штуку</div>
+            <div className="col-span-2 text-right">Действия</div>
           </div>
 
-          <div className="divide-y">
-            {products.map(product => (
-              <DesktopProductRow 
-                key={product.id} 
-                product={product}
-                onEdit={setEditingId}
-              />
-            ))}
-          </div>
+          {/* Группы товаров по датам */}
+          {Object.entries(inventory).map(([group, items]) => (
+            <div key={group}>
+              <div 
+                className="p-4 bg-gray-100 border-b flex items-center cursor-pointer"
+                onClick={() => toggleGroup(group)}
+              >
+                {expandedGroups.includes(group) ? (
+                  <ChevronDown size={20} className="mr-2" />
+                ) : (
+                  <ChevronRight size={20} className="mr-2" />
+                )}
+                <span className="font-medium">{groupTitles[group]}</span>
+                <span className="ml-2 text-gray-500">({items.length})</span>
+              </div>
+              {expandedGroups.includes(group) && items.map(item => (
+                <div 
+                  key={item.id} 
+                  className={`grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50 ${
+                    item.quantity === 0 ? 'bg-gray-50' : ''
+                  }`}
+                >
+                  {editingItem?.id === item.id ? (
+                    // Режим редактирования
+                    <>
+                      <div className="col-span-5">
+                        <input
+                          type="text"
+                          value={editingItem.name}
+                          onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                          className="w-full p-2 border rounded"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          value={editingItem.quantity}
+                          onChange={(e) => setEditingItem({...editingItem, quantity: Number(e.target.value)})}
+                          className="w-full p-2 border rounded text-right"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="number"
+                          value={editingItem.price}
+                          onChange={(e) => setEditingItem({...editingItem, price: Number(e.target.value)})}
+                          className="w-full p-2 border rounded text-right"
+                        />
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <button 
+                          onClick={handleSave}
+                          className="px-3 py-1 bg-green-500 text-white rounded-lg mr-2"
+                        >
+                          Сохранить
+                        </button>
+                        <button 
+                          onClick={() => setEditingItem(null)}
+                          className="px-3 py-1 bg-gray-200 rounded-lg"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    // Режим просмотра
+                    <>
+                      <div className="col-span-5">
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-sm text-gray-500">{item.category}</div>
+                      </div>
+                      <div className="col-span-2 text-right font-medium">
+                        {item.quantity} {item.unit}
+                      </div>
+                      <div className="col-span-3 text-right font-medium">
+                        {item.price} ₸
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <button 
+                          onClick={() => handleEdit(item)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-2"
+                          title="Редактировать"
+                        >
+                          <Edit2 size={20} />
+                        </button>
+                        <button 
+                          className="p-1 text-gray-400 hover:bg-gray-50 rounded"
+                          title="Архивировать"
+                        >
+                          <Archive size={20} />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -277,4 +343,4 @@ function InventoryPage() {
   );
 }
 
-export default InventoryPage; 
+export default InventoryPage;

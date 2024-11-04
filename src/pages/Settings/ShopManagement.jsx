@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Plus, Edit2, MessageCircle, Instagram, MapPin, Phone, 
-  Map, Clock, User, ChevronDown, ChevronUp, Briefcase, Settings, X 
+  Map, Clock, Settings, X, Briefcase 
 } from 'lucide-react';
 
 function ShopManagement() {
@@ -10,7 +10,6 @@ function ShopManagement() {
   const [newShopMode, setNewShopMode] = useState(false);
   const [editingShop, setEditingShop] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
 
@@ -115,34 +114,9 @@ function ShopManagement() {
     setNewShopMode(true);
   };
 
-  const handleNewShopSave = () => {
-    if (editingShop.name && editingShop.address && editingShop.phone) {
-      setShops([...shops, editingShop]);
-      setSelectedShop(editingShop.id);
-      setNewShopMode(false);
-      setEditingShop(null);
-    }
-  };
-
-  const handleNewShopCancel = () => {
-    setNewShopMode(false);
-    setEditingShop(null);
-  };
-
   const handleEditStart = () => {
     setEditingShop(shops.find(s => s.id === selectedShop));
     setEditMode(true);
-  };
-
-  const handleEditSave = () => {
-    setShops(shops.map(shop => shop.id === editingShop.id ? editingShop : shop));
-    setEditMode(false);
-    setEditingShop(null);
-  };
-
-  const handleEditCancel = () => {
-    setEditMode(false);
-    setEditingShop(null);
   };
 
   const handleAddEmployee = (newEmployee) => {
@@ -422,7 +396,7 @@ function ShopManagement() {
     </div>
   );
 
-  // Мобил��ная версия
+  // Мобилная версия
   const MobileView = () => (
     <div className="max-w-md mx-auto bg-gray-100 min-h-screen sm:hidden">
       <div className="bg-white p-4 flex items-center justify-between shadow-sm">
@@ -508,7 +482,7 @@ function ShopManagement() {
               <h2 className="text-lg font-semibold">Информация о магазине</h2>
               {!isEditing ? (
                 <button 
-                  onClick={() => setIsEditing(true)}
+                  onClick={handleEditStart}
                   className="p-2 bg-blue-50 text-blue-500 rounded-lg"
                 >
                   <Edit2 size={20} />
