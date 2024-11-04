@@ -6,8 +6,9 @@ import {
 } from 'lucide-react';
 import PageLayout, { PageHeader, PageSection } from '../../components/layout/PageLayout/PageLayout';
 import { Button, Badge } from '../../components/common';
+import { useNavigate } from 'react-router-dom';
 
-const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction }) => {
+const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction, onClick }) => {
   const statusColors = {
     'Не оплачен': 'danger',
     'Оплачен': 'primary',
@@ -28,7 +29,10 @@ const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction }) => {
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+    <div 
+      className="bg-white p-4 rounded-lg shadow-sm mb-4 cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex justify-between items-center mb-3">
         <span className="font-bold text-lg">{order.number}</span>
         <span className="font-semibold text-green-600">{order.totalPrice}</span>
@@ -125,14 +129,20 @@ const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction }) => {
           <Button
             variant="secondary"
             icon={<Phone size={16} />}
-            onClick={() => window.location.href = `tel:${order.client}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.location.href = `tel:${order.client}`;
+            }}
           >
             Позвонить
           </Button>
           <Button
             variant="secondary"
             icon={<MessageCircle size={16} />}
-            onClick={() => window.open(`https://wa.me/${order.client.replace(/[^0-9]/g, '')}`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(`https://wa.me/${order.client.replace(/[^0-9]/g, '')}`);
+            }}
           >
             WhatsApp
           </Button>
@@ -165,6 +175,7 @@ function OrdersPage() {
   const [expandedGroups, setExpandedGroups] = useState(['today', 'tomorrow']);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const navigate = useNavigate();
 
   // Добавляем определение statusColors
   const statusColors = {
@@ -238,6 +249,11 @@ function OrdersPage() {
 
   const handleRespondToClientReaction = (orderNumber, reaction) => {
     console.log(`Реакция на отзыв клиента для заказа ${orderNumber}: ${reaction}`);
+  };
+
+  const handleOrderClick = (orderNumber) => {
+    const cleanNumber = orderNumber.replace('№', '');
+    navigate(`/orders/${cleanNumber}`);
   };
 
   // Верхняя панель
@@ -319,6 +335,7 @@ function OrdersPage() {
                     order={order}
                     onUploadPhoto={handleUploadPhoto}
                     onRespondToClientReaction={handleRespondToClientReaction}
+                    onClick={() => handleOrderClick(order.number)}
                   />
                 ))}
               </div>
@@ -359,7 +376,8 @@ function OrdersPage() {
             {groupOrders.map(order => (
               <div 
                 key={order.number}
-                className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50"
+                className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50 cursor-pointer"
+                onClick={() => handleOrderClick(order.number)}
               >
                 {/* Номер и статус */}
                 <div className="col-span-2">
@@ -416,13 +434,19 @@ function OrdersPage() {
                     variant="secondary"
                     size="sm"
                     icon={<Phone size={16} />}
-                    onClick={() => window.location.href = `tel:${order.client}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.location.href = `tel:${order.client}`;
+                    }}
                   />
                   <Button
                     variant="secondary"
                     size="sm"
                     icon={<MessageCircle size={16} />}
-                    onClick={() => window.open(`https://wa.me/${order.client.replace(/[^0-9]/g, '')}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`https://wa.me/${order.client.replace(/[^0-9]/g, '')}`);
+                    }}
                   />
                   {(order.status === 'Оплачен' || order.status === 'В работе') && (
                     <Button

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-do
 import SidebarMenu from './components/layout/SidebarMenu/SidebarMenu';
 import TopBar from './components/layout/TopBar/TopBar';
 import OrdersPage from './pages/OrdersPage/OrdersPage';
+import OrderProcessing from './pages/Orders/OrderProcessing/OrderProcessing';
 import ProductManagement from './pages/Products/ProductManagement';
 import InventoryPage from './pages/InventoryPage/InventoryPage';
 import ClientsPage from './pages/ClientsPage/ClientsPage';
@@ -21,6 +22,7 @@ const App = () => {
             <Routes>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/orders/:id" element={<OrderProcessing />} />
               <Route path="/products" element={<ProductManagement />} />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/settings/shops" element={<ShopManagement />} />
