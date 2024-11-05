@@ -37,7 +37,6 @@ const App = () => {
             </Routes>
           </main>
 
-          {/* Мобильный таб-бар */}
           <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 sm:hidden">
             <div className="flex justify-around py-2">
               <NavLink to="/dashboard" className="tab-link">
