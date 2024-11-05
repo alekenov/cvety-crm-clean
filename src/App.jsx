@@ -10,6 +10,9 @@ import ShopManagement from './pages/Settings/ShopManagement';
 import DashboardPage from './pages/Dashboard/DashboardPage';
 import { Home, ShoppingBag, Package, Warehouse, Settings } from 'lucide-react';
 import ProductsPage from './pages/ProductsPage/ProductsPage';
+import DeliveryPage from './pages/DeliveryPage/DeliveryPage';
+import AnalyticsPage from './pages/AnalyticsPage/AnalyticsPage';
+import ReportsPage from './pages/ReportsPage/ReportsPage';
 
 const App = () => {
   return (
@@ -27,6 +30,9 @@ const App = () => {
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/settings/shops" element={<ShopManagement />} />
               <Route path="/clients" element={<ClientsPage />} />
+              <Route path="/delivery" element={<DeliveryPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
               <Route path="/" element={<DashboardPage />} />
             </Routes>
           </main>
