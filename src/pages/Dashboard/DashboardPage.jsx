@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import PageLayout, { PageHeader, PageSection } from '../../components/layout/PageLayout/PageLayout';
-import { Button, Badge } from '../../components/common';
+import Button from '../../components/ui/Button/Button';
+import Card from '../../components/ui/Card/Card';
 import { Calendar, ChevronDown, ChevronRight, Clock, AlertCircle, Package, Truck } from 'lucide-react';
+import Badge from '../../components/ui/Badge/Badge';
 
 function DashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('today');

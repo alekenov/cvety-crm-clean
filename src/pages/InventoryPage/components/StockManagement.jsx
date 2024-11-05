@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Search, Edit2, Trash2, Plus, ClipboardCheck, Check, X, Percent, DollarSign, Calendar, Box } from 'lucide-react';
+import { Package, Search, Edit2, Trash2, Plus, ClipboardCheck, Check, X, Percent, Wallet, Calendar, Box } from 'lucide-react';
 
 export default function StockManagement({ inventory, onUpdateInventory }) {
   const [showSearch, setShowSearch] = useState(false);
@@ -426,7 +426,7 @@ export default function StockManagement({ inventory, onUpdateInventory }) {
               <p className="text-sm text-gray-500">Стоимость склада</p>
               <p className="text-2xl font-bold text-green-500">{stats.totalValue.toLocaleString()} ₸</p>
             </div>
-            <DollarSign className="text-green-500" size={24} />
+            <Wallet className="text-green-500" size={24} />
           </div>
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm">

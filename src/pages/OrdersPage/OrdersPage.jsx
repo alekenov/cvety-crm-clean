@@ -5,8 +5,10 @@ import {
   Search, Filter, Plus, ChevronDown, ChevronRight
 } from 'lucide-react';
 import PageLayout, { PageHeader, PageSection } from '../../components/layout/PageLayout/PageLayout';
-import { Button, Badge } from '../../components/common';
+import Button from '../../components/ui/Button/Button';
+import Card from '../../components/ui/Card/Card';
 import { useNavigate } from 'react-router-dom';
+import Badge from '../../components/ui/Badge/Badge';
 
 const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction, onClick }) => {
   const statusColors = {
@@ -221,7 +223,7 @@ function OrdersPage() {
         address: 'пр. Достык 5, офис 301', 
         shop: 'Лавка Флориста',
         items: [
-          { image: '/api/placeholder/80/80', description: 'Букет из 15 розовых роз', price: '16 000₸' },
+          { image: '/api/placeholder/80/80', description: 'Букет из 15 роовых роз', price: '16 000₸' },
           { image: '/api/placeholder/80/80', description: 'Ваза стеклянная', price: '6 500₸' }
         ],
         clientComment: 'Доставьте, пожалуйста, до 10:30, у получателя день рождения.'
