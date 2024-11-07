@@ -1,124 +1,138 @@
 import React, { useState } from 'react';
 import { Search, MessageCircle, Phone, Plus, ShoppingBag, Star, ArrowLeft } from 'lucide-react';
-import { useSelector } from 'react-redux';
 
-// Мобильная карточка клиента
-const MobileClientCard = ({ client }) => {
-  return (
-    <div className="bg-white rounded-lg shadow p-4 mb-3">
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="flex items-center">
-            <h3 className="font-semibold">{client.name}</h3>
-            {client.isVip && (
-              <Star size={16} className="ml-1 text-yellow-400 fill-yellow-400" />
-            )}
-          </div>
-          <p className="text-sm text-gray-600 mt-1">{client.phone}</p>
+// Выносим компоненты карточек на уровень выше
+const MobileClientCard = ({ client }) => (
+  <div className="bg-white rounded-lg shadow p-4 mb-3">
+    <div className="flex justify-between items-start">
+      <div>
+        <div className="flex items-center">
+          <h3 className="font-semibold">{client.name}</h3>
+          {client.isVip && (
+            <Star size={16} className="ml-1 text-yellow-400 fill-yellow-400" />
+          )}
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-600">{client.totalOrders} заказов</p>
-          <p className="text-sm font-medium">{client.totalSpent.toLocaleString()} ₸</p>
-        </div>
+        <p className="text-sm text-gray-600 mt-1">{client.phone}</p>
       </div>
-
-      {client.tags && client.tags.length > 0 && (
-        <div className="mt-3">
-          {client.tags.map((tag, index) => (
-            <span
-              key={index}
-              className="inline-block bg-gray-100 text-xs text-gray-600 px-2 py-1 rounded-full mr-2 mb-1"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="flex justify-between mt-3">
-        <button
-          onClick={() => window.location.href = `tel:${client.phone}`}
-          className="flex items-center justify-center py-2 px-4 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium flex-1 mr-2"
-        >
-          <Phone size={16} className="mr-1" />
-          Позвонить
-        </button>
-        <button
-          onClick={() => window.open(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`)}
-          className="flex items-center justify-center py-2 px-4 bg-green-50 text-green-600 rounded-lg text-sm font-medium flex-1"
-        >
-          <MessageCircle size={16} className="mr-1" />
-          WhatsApp
-        </button>
+      <div className="text-right">
+        <p className="text-sm text-gray-600">{client.totalOrders} заказов</p>
+        <p className="text-sm font-medium">{client.totalSpent.toLocaleString()} ₸</p>
       </div>
     </div>
-  );
-};
 
-// Десктопная строка клиента
-const DesktopClientRow = ({ client }) => {
-  return (
-    <div className="bg-white hover:bg-gray-50 p-4 border-b border-gray-100 flex items-center">
-      <div className="w-1/4">
-        <div className="flex items-center">
-          <div className="font-medium">{client.name}</div>
-          {client.isVip && <Star size={16} className="ml-1 text-yellow-400 fill-yellow-400" />}
-        </div>
-        <div className="text-sm text-gray-500">{client.phone}</div>
-      </div>
-
-      <div className="w-1/4 text-sm">
-        <div>Всего заказов: {client.totalOrders}</div>
-        <div className="text-green-600">Сумма: {client.totalSpent.toLocaleString()} ₸</div>
-      </div>
-
-      <div className="w-1/4 flex flex-wrap gap-1">
-        {client.tags?.map((tag, index) => (
-          <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+    {client.tags && client.tags.length > 0 && (
+      <div className="mt-3">
+        {client.tags.map((tag, index) => (
+          <span
+            key={index}
+            className="inline-block bg-gray-100 text-xs text-gray-600 px-2 py-1 rounded-full mr-2 mb-1"
+          >
             {tag}
           </span>
         ))}
       </div>
+    )}
 
-      <div className="w-1/4 flex justify-end space-x-2">
-        <button 
-          onClick={() => window.location.href = `tel:${client.phone}`}
-          className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-          title="Позвонить"
-        >
-          <Phone size={20} />
-        </button>
-        <button
-          onClick={() => window.open(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`)}
-          className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
-          title="WhatsApp"
-        >
-          <MessageCircle size={20} />
-        </button>
-        <button
-          onClick={() => alert('Создание заказа')}
-          className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100"
-          title="Создать заказ"
-        >
-          <ShoppingBag size={20} />
-        </button>
-      </div>
+    <div className="flex justify-between mt-3">
+      <button
+        onClick={() => window.location.href = `tel:${client.phone}`}
+        className="flex items-center justify-center py-2 px-4 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium flex-1 mr-2"
+      >
+        <Phone size={16} className="mr-1" />
+        Позвонить
+      </button>
+      <button
+        onClick={() => window.open(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`)}
+        className="flex items-center justify-center py-2 px-4 bg-green-50 text-green-600 rounded-lg text-sm font-medium flex-1"
+      >
+        <MessageCircle size={16} className="mr-1" />
+        WhatsApp
+      </button>
     </div>
-  );
-};
+  </div>
+);
+
+const DesktopClientRow = ({ client }) => (
+  <div className="bg-white hover:bg-gray-50 p-4 border-b border-gray-100 flex items-center">
+    <div className="w-1/4">
+      <div className="flex items-center">
+        <div className="font-medium">{client.name}</div>
+        {client.isVip && <Star size={16} className="ml-1 text-yellow-400 fill-yellow-400" />}
+      </div>
+      <div className="text-sm text-gray-500">{client.phone}</div>
+    </div>
+
+    <div className="w-1/4 text-sm">
+      <div>Всего заказов: {client.totalOrders}</div>
+      <div className="text-green-600">Сумма: {client.totalSpent.toLocaleString()} ₸</div>
+    </div>
+
+    <div className="w-1/4 flex flex-wrap gap-1">
+      {client.tags?.map((tag, index) => (
+        <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+          {tag}
+        </span>
+      ))}
+    </div>
+
+    <div className="w-1/4 flex justify-end space-x-2">
+      <button 
+        onClick={() => window.location.href = `tel:${client.phone}`}
+        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+        title="Позвонить"
+      >
+        <Phone size={20} />
+      </button>
+      <button
+        onClick={() => window.open(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`)}
+        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
+        title="WhatsApp"
+      >
+        <MessageCircle size={20} />
+      </button>
+      <button
+        onClick={() => alert('Создание заказа')}
+        className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100"
+        title="Создать заказ"
+      >
+        <ShoppingBag size={20} />
+      </button>
+    </div>
+  </div>
+);
 
 function ClientsPage() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const clients = useSelector(state => state.clients.items);
+  
+  // Локальное состояние вместо Redux
+  const [clients] = useState([
+    {
+      id: 1,
+      name: 'Анна Иванова',
+      phone: '+7 (777) 123-45-67',
+      totalOrders: 5,
+      totalSpent: 125000,
+      isVip: true,
+      tags: ['Постоянный клиент', 'VIP']
+    },
+    {
+      id: 2,
+      name: 'Сергей Петров',
+      phone: '+7 (777) 234-56-78',
+      totalOrders: 3,
+      totalSpent: 75000,
+      isVip: false,
+      tags: ['Новый клиент']
+    }
+  ]);
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.phone.includes(searchQuery)
   );
 
-  // Мобильная версия
   const MobileView = () => (
     <div className="max-w-md mx-auto bg-gray-100 min-h-screen sm:hidden">
       <div className="bg-white p-4 flex items-center justify-between shadow-sm">
@@ -175,7 +189,6 @@ function ClientsPage() {
     </div>
   );
 
-  // Десктопная версия
   const DesktopView = () => (
     <div className="hidden sm:block min-h-screen bg-gray-100 p-6">
       <div className="max-w-6xl mx-auto">

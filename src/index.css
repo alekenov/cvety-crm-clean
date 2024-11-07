@@ -10,6 +10,19 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  @apply overflow-x-hidden; /* Предотвращаем горизонтальный скролл */
+}
+
+/* Стили для мобильной навигации */
+@media (max-width: 640px) {
+  .mobile-nav-padding {
+    padding-bottom: 4rem;
+  }
+  
+  /* Фикс для iOS Safari */
+  .fixed {
+    position: fixed !important;
+  }
 }
 
 code {

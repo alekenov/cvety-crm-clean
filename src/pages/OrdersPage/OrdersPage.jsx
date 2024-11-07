@@ -282,8 +282,8 @@ function OrdersPage() {
 
   // Мобильная версия
   const MobileView = () => (
-    <div className="sm:hidden bg-gray-100 min-h-screen">
-      <div className="bg-white p-4 sticky top-0 z-10 shadow-sm">
+    <div className="sm:hidden">
+      <div className="bg-white p-4 border-b">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold">Заказы</h1>
           <div className="flex items-center space-x-2">
@@ -313,7 +313,7 @@ function OrdersPage() {
         )}
       </div>
 
-      <div className="p-4">
+      <div className="p-4 pb-24">
         {Object.entries(orders).map(([group, groupOrders]) => (
           <div key={group} className="mb-6">
             <div 
