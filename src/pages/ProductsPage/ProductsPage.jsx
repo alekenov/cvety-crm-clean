@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, ChevronDown, ArrowUpDown, Filter } from 'lucide-react';
+import { Search, Plus, ChevronDown, ArrowUpDown, Filter, MoreVertical } from 'lucide-react';
 import AddProductForm from './components/AddProductForm';
 import styles from './ProductsPage.module.css';
 
@@ -13,14 +13,56 @@ const products = [
 
 function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showActionMenu, setShowActionMenu] = useState(null); // id товара, для которого открыто меню
 
-  // Десктопная версия
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setShowAddForm(true);
+    setShowActionMenu(null);
+  };
+
+  const handleDeleteProduct = (productId) => {
+    // Здесь будет логика удаления
+    console.log('Удаление товара:', productId);
+    setShowActionMenu(null);
+  };
+
+  const handleToggleStatus = (product) => {
+    // Здесь будет логика изменения статуса
+    console.log('Изменение статуса:', product.id);
+    setShowActionMenu(null);
+  };
+
+  // Компонент меню действий
+  const ActionMenu = ({ product }) => (
+    <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10">
+      <button
+        onClick={() => handleEditProduct(product)}
+        className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
+      >
+        Редактировать
+      </button>
+      <button
+        onClick={() => handleToggleStatus(product)}
+        className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
+      >
+        {product.status === 'active' ? 'Скрыть' : 'Показать'}
+      </button>
+      <button
+        onClick={() => handleDeleteProduct(product.id)}
+        className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm text-red-500"
+      >
+        Удалить
+      </button>
+    </div>
+  );
+
+  // Обновляем DesktopView
   const DesktopView = () => (
     <div className="hidden sm:block">
       <div className="bg-white p-6 rounded-lg shadow">
@@ -100,10 +142,14 @@ function ProductsPage() {
                     {product.status === 'active' ? 'Активный' : 'Неактивный'}
                   </span>
                 </td>
-                <td className="py-4 text-right">
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <ChevronDown size={20} />
+                <td className="py-4 text-right relative">
+                  <button 
+                    onClick={() => setShowActionMenu(showActionMenu === product.id ? null : product.id)}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
+                  >
+                    <MoreVertical size={20} className="text-gray-400" />
                   </button>
+                  {showActionMenu === product.id && <ActionMenu product={product} />}
                 </td>
               </tr>
             ))}
@@ -113,7 +159,7 @@ function ProductsPage() {
     </div>
   );
 
-  // Мобильная версия
+  // Обновляем MobileView
   const MobileView = () => (
     <div className="sm:hidden">
       {/* Заголовок и поиск */}
@@ -176,11 +222,19 @@ function ProductsPage() {
       {/* Список букетов */}
       <div className="p-4">
         {products.map(product => (
-          <div key={product.id} className="bg-white rounded-lg shadow mb-4 p-4">
-            <div className="flex items-center space-x-4">
+          <div key={product.id} className="bg-white rounded-lg shadow mb-4">
+            <div className="p-4 flex items-center space-x-4">
               <img src={product.image} alt="" className="w-16 h-16 rounded-lg object-cover" />
               <div className="flex-1">
-                <h3 className="font-medium">{product.name}</h3>
+                <div className="flex justify-between items-start">
+                  <h3 className="font-medium">{product.name}</h3>
+                  <button 
+                    onClick={() => setShowActionMenu(showActionMenu === product.id ? null : product.id)}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
+                  >
+                    <MoreVertical size={20} className="text-gray-400" />
+                  </button>
+                </div>
                 <div className="text-sm text-gray-500">{product.category}</div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="font-medium">{product.price.toLocaleString()} ₸</span>
@@ -194,6 +248,28 @@ function ProductsPage() {
                 </div>
               </div>
             </div>
+            {showActionMenu === product.id && (
+              <div className="border-t px-4 py-2">
+                <button
+                  onClick={() => handleEditProduct(product)}
+                  className="w-full py-2 text-left hover:bg-gray-50 text-sm"
+                >
+                  Редактировать
+                </button>
+                <button
+                  onClick={() => handleToggleStatus(product)}
+                  className="w-full py-2 text-left hover:bg-gray-50 text-sm"
+                >
+                  {product.status === 'active' ? 'Скрыть' : 'Показать'}
+                </button>
+                <button
+                  onClick={() => handleDeleteProduct(product.id)}
+                  className="w-full py-2 text-left hover:bg-gray-50 text-sm text-red-500"
+                >
+                  Удалить
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -206,11 +282,17 @@ function ProductsPage() {
       <MobileView />
       {showAddForm && (
         <div className="fixed inset-0 z-50">
-          <AddProductForm onClose={() => setShowAddForm(false)} />
+          <AddProductForm 
+            onClose={() => {
+              setShowAddForm(false);
+              setEditingProduct(null);
+            }}
+            editingProduct={editingProduct}
+          />
         </div>
       )}
     </div>
   );
 }
 
-export default ProductsPage; 
+export default ProductsPage;
