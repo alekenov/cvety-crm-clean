@@ -10,6 +10,7 @@ import ProductsPage from './pages/ProductsPage/ProductsPage';
 import DeliveryPage from './pages/DeliveryPage/DeliveryPage';
 import AnalyticsPage from './pages/AnalyticsPage/AnalyticsPage';
 import ClientsPage from './pages/ClientsPage/ClientsPage';
+import FinancePage from './pages/FinancePage/FinancePage';
 
 const App = () => {
   return (
@@ -26,6 +27,7 @@ const App = () => {
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/delivery" element={<DeliveryPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/finance" element={<FinancePage />} />
           </Routes>
         </MainLayout>
         <MobileNavigation />

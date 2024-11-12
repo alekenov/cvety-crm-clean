@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   ShoppingBag, Package, Users, Settings, 
-  BarChart2, FileText, Truck, LayoutGrid 
+  BarChart2, FileText, Truck, LayoutGrid, Wallet 
 } from 'lucide-react';
 
 function SidebarMenu() {
@@ -12,6 +12,7 @@ function SidebarMenu() {
     { id: 'stock', path: '/inventory', icon: Package, label: 'Склад' },
     { id: 'clients', path: '/clients', icon: Users, label: 'Клиенты' },
     { id: 'delivery', path: '/delivery', icon: Truck, label: 'Доставка' },
+    { id: 'finance', path: '/finance', icon: Wallet, label: 'Финансы' },
   ];
 
   const secondaryMenu = [

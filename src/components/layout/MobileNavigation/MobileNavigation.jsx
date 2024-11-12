@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ShoppingBag, Package, Warehouse, Settings, Truck } from 'lucide-react';
+import { ShoppingBag, Package, Warehouse, Settings, Truck, Wallet } from 'lucide-react';
 
 const MobileNavigation = () => {
   return (
@@ -29,6 +29,17 @@ const MobileNavigation = () => {
         </NavLink>
 
         <NavLink 
+          to="/finance" 
+          className={({ isActive }) => `
+            flex flex-col items-center justify-center w-16 h-16
+            ${isActive ? 'text-blue-600' : 'text-gray-600'}
+          `}
+        >
+          <Wallet size={24} />
+          <span className="text-xs mt-1">Финансы</span>
+        </NavLink>
+
+        <NavLink 
           to="/inventory" 
           className={({ isActive }) => `
             flex flex-col items-center justify-center w-16 h-16
@@ -37,17 +48,6 @@ const MobileNavigation = () => {
         >
           <Warehouse size={24} />
           <span className="text-xs mt-1">Склад</span>
-        </NavLink>
-
-        <NavLink 
-          to="/delivery" 
-          className={({ isActive }) => `
-            flex flex-col items-center justify-center w-16 h-16
-            ${isActive ? 'text-blue-600' : 'text-gray-600'}
-          `}
-        >
-          <Truck size={24} />
-          <span className="text-xs mt-1">Доставка</span>
         </NavLink>
 
         <NavLink 
