@@ -8,9 +8,11 @@ import InventoryPage from './pages/InventoryPage/InventoryPage';
 import ShopManagement from './pages/Settings/ShopManagement';
 import ProductsPage from './pages/ProductsPage/ProductsPage';
 import DeliveryPage from './pages/DeliveryPage/DeliveryPage';
+import DeliveryGrouping from './pages/DeliveryPage/DeliveryGrouping/DeliveryGrouping';
 import AnalyticsPage from './pages/AnalyticsPage/AnalyticsPage';
 import ClientsPage from './pages/ClientsPage/ClientsPage';
 import FinancePage from './pages/FinancePage/FinancePage';
+import { Toaster } from 'react-hot-toast';
 
 const App = () => {
   return (
@@ -26,11 +28,13 @@ const App = () => {
             <Route path="/settings/shops" element={<ShopManagement />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/delivery" element={<DeliveryPage />} />
+            <Route path="/delivery/group" element={<DeliveryGrouping />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/finance" element={<FinancePage />} />
           </Routes>
         </MainLayout>
         <MobileNavigation />
+        <Toaster />
       </div>
     </Router>
   );
