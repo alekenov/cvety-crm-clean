@@ -1,28 +1,36 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  ShoppingBag, Package, Users, Settings, 
-  BarChart2, FileText, Truck, LayoutGrid, Wallet 
+  ShoppingBag,
+  Store,
+  Package,
+  Wallet,
+  Settings,
+  Users,
+  ShoppingCart,
+  BarChart2,
+  Truck
 } from 'lucide-react';
 
 function SidebarMenu() {
   const mainMenu = [
     { id: 'orders', path: '/', icon: ShoppingBag, label: 'Заказы' },
-    { id: 'catalog', path: '/products', icon: LayoutGrid, label: 'Мои букеты' },
+    { id: 'products', path: '/products', icon: Store, label: 'Товары' },
     { id: 'stock', path: '/inventory', icon: Package, label: 'Склад' },
-    { id: 'clients', path: '/clients', icon: Users, label: 'Клиенты' },
-    { id: 'delivery', path: '/delivery', icon: Truck, label: 'Доставка' },
     { id: 'finance', path: '/finance', icon: Wallet, label: 'Финансы' },
   ];
 
-  const secondaryMenu = [
+  const serviceMenu = [
+    { id: 'clients', path: '/clients', icon: Users, label: 'Клиенты' },
+    { id: 'purchase', path: '/purchase', icon: ShoppingCart, label: 'Закуп' },
+    { id: 'delivery', path: '/delivery', icon: Truck, label: 'Доставка' },
     { id: 'analytics', path: '/analytics', icon: BarChart2, label: 'Аналитика' },
     { id: 'settings', path: '/settings/shops', icon: Settings, label: 'Настройки' },
   ];
 
   function getLinkClass(isActive) {
     return isActive 
-      ? "w-full flex items-center px-6 py-3 bg-gray-100 text-blue-600 font-medium"
+      ? "w-full flex items-center px-6 py-3 bg-gray-100 text-green-500 font-medium"
       : "w-full flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50";
   }
 
@@ -38,33 +46,25 @@ function SidebarMenu() {
             <NavLink
               key={item.id}
               to={item.path}
-              className={function(props) {
-                return getLinkClass(props.isActive);
-              }}
+              className={({ isActive }) => getLinkClass(isActive)}
             >
               <item.icon size={20} className="mr-3" />
               {item.label}
-              {item.id === 'orders' && (
-                <span className="ml-auto bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs">
-                  12
-                </span>
-              )}
             </NavLink>
           ))}
         </div>
 
         <div className="mb-4 px-6">
+          <div className="text-sm font-medium text-gray-500 mb-2">Сервисы</div>
           <div className="border-t"></div>
         </div>
 
         <div>
-          {secondaryMenu.map((item) => (
+          {serviceMenu.map((item) => (
             <NavLink
               key={item.id}
               to={item.path}
-              className={function(props) {
-                return getLinkClass(props.isActive);
-              }}
+              className={({ isActive }) => getLinkClass(isActive)}
             >
               <item.icon size={20} className="mr-3" />
               {item.label}
