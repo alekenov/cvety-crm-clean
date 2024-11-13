@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout/MainLayout';
 import MobileNavigation from './components/layout/MobileNavigation/MobileNavigation';
 import OrdersPage from './pages/OrdersPage/OrdersPage';
+import CreateOrderPage from './pages/OrdersPage/CreateOrderPage';
 import OrderProcessing from './pages/OrdersPage/components/OrderProcessing';
 import InventoryPage from './pages/InventoryPage/InventoryPage';
 import ShopManagement from './pages/Settings/ShopManagement';
@@ -22,6 +23,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<OrdersPage />} />
             <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/orders/create" element={<CreateOrderPage />} />
             <Route path="/orders/:id" element={<OrderProcessing />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/inventory" element={<InventoryPage />} />

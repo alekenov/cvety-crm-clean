@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   MessageCircle, Camera, Truck, AlertTriangle, MapPin, Phone, 
   User, Store, Clock, Upload, ThumbsUp, ThumbsDown, RefreshCw,
-  Search, Filter, Plus, ChevronDown, ChevronRight
+  Search, Filter, Plus, ChevronDown, ChevronRight, ArrowLeft,
+  Gift, CreditCard, ShoppingBag
 } from 'lucide-react';
 import PageLayout, { PageHeader, PageSection } from '../../components/layout/PageLayout/PageLayout';
 import Button from '../../components/ui/Button/Button';
@@ -96,7 +97,7 @@ const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction, onClick })
           <div className="bg-yellow-50 p-2 rounded-lg">
             <h4 className="font-medium mb-1 flex items-center">
               <MessageCircle size={16} className="mr-1 text-yellow-500" />
-              Комментарий клиента:
+              Комментари клиента:
             </h4>
             <p className="text-sm">{order.clientComment}</p>
           </div>
@@ -179,6 +180,10 @@ function OrdersPage() {
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
 
+  const handleCreateOrder = () => {
+    navigate('/orders/create');
+  };
+
   // Добавляем определение statusColors
   const statusColors = {
     'Новый': 'danger',
@@ -211,7 +216,32 @@ function OrdersPage() {
         clientReaction: 'negative',
         clientReactionComment: 'Букет не соответствует ожиданиям. Слишком мало цветов.'
       },
-      // ... другие заказы на сегодня
+      { 
+        number: '№103802', 
+        totalPrice: '35 000₸', 
+        time: '11:00-12:00', 
+        status: 'В работе', 
+        client: '+7 (777) 234-56-78', 
+        address: 'ул. Жандосова 58, кв. 145', 
+        shop: 'Цветочный Рай',
+        florist: 'Мария',
+        items: [
+          { image: '/api/placeholder/80/80', description: 'Букет "Весенний сад"', price: '35 000₸' }
+        ],
+        clientComment: 'Нужна срочная доставка'
+      },
+      { 
+        number: '№103803', 
+        totalPrice: '42 000₸', 
+        time: '14:00-15:00', 
+        status: 'Оплачен', 
+        client: '+7 (777) 345-67-89', 
+        address: 'пр. Аль-Фараби 77, офис 255', 
+        shop: 'Лавка Флориста',
+        items: [
+          { image: '/api/placeholder/80/80', description: '51 красная роза', price: '42 000₸' }
+        ]
+      }
     ],
     tomorrow: [
       { 
@@ -223,10 +253,39 @@ function OrdersPage() {
         address: 'пр. Достык 5, офис 301', 
         shop: 'Лавка Флориста',
         items: [
-          { image: '/api/placeholder/80/80', description: 'Букет из 15 роовых роз', price: '16 000₸' },
+          { image: '/api/placeholder/80/80', description: 'Букет из 15 розовых роз', price: '16 000₸' },
           { image: '/api/placeholder/80/80', description: 'Ваза стеклянная', price: '6 500₸' }
         ],
         clientComment: 'Доставьте, пожалуйста, до 10:30, у получателя день рождения.'
+      },
+      { 
+        number: '№103804', 
+        totalPrice: '18 500₸', 
+        time: '12:00-13:00', 
+        status: 'Оплачен', 
+        client: '+7 (777) 456-78-90', 
+        address: 'ул. Тимирязева 42, кв. 75', 
+        shop: 'Цветочный Рай',
+        items: [
+          { image: '/api/placeholder/80/80', description: 'Букет "Нежность"', price: '15 000₸' },
+          { image: '/api/placeholder/80/80', description: 'Открытка праздничная', price: '3 500₸' }
+        ]
+      }
+    ],
+    later: [
+      { 
+        number: '№103805', 
+        totalPrice: '55 000₸', 
+        time: '12:00-13:00', 
+        status: 'Оплачен', 
+        client: '+7 (777) 567-89-01', 
+        address: 'ул. Сатпаева 90/20, кв. 158', 
+        shop: 'Лавка Флориста',
+        items: [
+          { image: '/api/placeholder/80/80', description: 'Букет "Королевский"', price: '50 000₸' },
+          { image: '/api/placeholder/80/80', description: 'Конфеты премиум', price: '5 000₸' }
+        ],
+        clientComment: 'Доставка на 5 ноября'
       }
     ]
   };
@@ -262,6 +321,14 @@ function OrdersPage() {
   const header = (
     <PageHeader title="Заказы">
       <div className="flex items-center space-x-3">
+        <Button 
+          variant="primary" 
+          icon={<Plus size={20} />}
+          onClick={handleCreateOrder}
+          className="bg-green-500 hover:bg-green-600 text-white"
+        >
+          Новый заказ
+        </Button>
         <div className="relative">
           <input
             type="text"
@@ -273,9 +340,6 @@ function OrdersPage() {
           <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
         </div>
         <Button variant="secondary" icon={<Filter size={20} />} />
-        <Button variant="primary" icon={<Plus size={20} />}>
-          Новый заказ
-        </Button>
       </div>
     </PageHeader>
   );
@@ -287,14 +351,19 @@ function OrdersPage() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold">Заказы</h1>
           <div className="flex items-center space-x-2">
+            <Button 
+              variant="primary"
+              onClick={handleCreateOrder}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center"
+            >
+              <Plus size={20} className="mr-2" />
+              Новый заказ
+            </Button>
             <button
               onClick={() => setShowSearch(!showSearch)}
               className="p-2 rounded-full hover:bg-gray-100"
             >
               <Search size={20} />
-            </button>
-            <button className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
-              <Plus size={20} />
             </button>
           </div>
         </div>

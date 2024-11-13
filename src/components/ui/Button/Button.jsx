@@ -1,45 +1,53 @@
 import React from 'react';
 
 const variants = {
-  primary: 'bg-primary-600 hover:bg-primary-700 text-white',
-  secondary: 'bg-secondary-500 hover:bg-secondary-600 text-white',
-  outline: 'border border-primary-600 text-primary-600 hover:bg-primary-50'
+  default: 'bg-primary text-white hover:bg-primary/90',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  ghost: 'hover:bg-accent hover:text-accent-foreground',
+  link: 'text-primary underline-offset-4 hover:underline',
+  primary: 'bg-green-500 hover:bg-green-600 text-white'
 };
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg'
+  default: 'h-10 px-4 py-2',
+  sm: 'h-9 rounded-md px-3',
+  lg: 'h-11 rounded-md px-8',
+  icon: 'h-10 w-10'
 };
 
 const Button = ({
   children,
-  variant = 'primary',
-  size = 'md',
+  variant = 'default',
+  size = 'default',
   className = '',
-  disabled = false,
-  type = 'button',
-  onClick,
+  icon,
   ...props
 }) => {
   return (
     <button
-      type={type}
       className={`
+        inline-flex 
+        items-center 
+        justify-center 
+        rounded-md 
+        text-sm 
+        font-medium 
+        ring-offset-background 
+        transition-colors 
+        focus-visible:outline-none 
+        focus-visible:ring-2 
+        focus-visible:ring-ring 
+        focus-visible:ring-offset-2 
+        disabled:pointer-events-none 
+        disabled:opacity-50
         ${variants[variant]}
         ${sizes[size]}
-        rounded-md
-        font-medium
-        transition-colors
-        duration-200
-        disabled:opacity-50
-        disabled:cursor-not-allowed
         ${className}
       `}
-      disabled={disabled}
-      onClick={onClick}
       {...props}
     >
+      {icon && <span className="mr-2">{icon}</span>}
       {children}
     </button>
   );
