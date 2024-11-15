@@ -14,6 +14,8 @@ function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isViewMode, setIsViewMode] = useState(false);
 
   // Загрузка продуктов
   useEffect(() => {
@@ -23,13 +25,56 @@ function ProductsPage() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          product_compositions (
+            id,
+            quantity,
+            price_per_stem,
+            inventory:inventory_item_id (
+              id,
+              products (
+                id,
+                name,
+                price
+              )
+            )
+          )
+        `)
+        .in('category', ['Букеты', 'Композиции'])
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProducts(data);
+      if (productsError) throw productsError;
+
+      const productsWithDetails = productsData.map(product => {
+        const composition = product.product_compositions?.map(item => ({
+          id: item.id,
+          name: item.inventory?.products?.name || 'Неизвестный цветок',
+          quantity: parseInt(item.quantity) || 0,
+          price_per_stem: parseFloat(item.price_per_stem) || 0
+        })) || [];
+
+        const basePrice = parseFloat(product.base_price) || 0;
+        const markupAmount = parseFloat(product.markup_amount) || 0;
+        const packagingCost = parseFloat(product.packaging_cost) || 2000;
+        const finalPrice = parseFloat(product.price) || 0;
+
+        return {
+          ...product,
+          total_stems: composition.reduce((sum, item) => sum + item.quantity, 0),
+          composition_details: composition,
+          price_details: {
+            basePrice,
+            markupAmount,
+            packagingCost,
+            finalPrice
+          }
+        };
+      });
+
+      setProducts(productsWithDetails);
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
@@ -77,6 +122,14 @@ function ProductsPage() {
     setShowActionMenu(null);
   };
 
+  // Обработчик для просмотра букета
+  const handleViewProduct = (product) => {
+    setSelectedProduct(product);
+    setIsViewMode(true);
+    setShowAddForm(true);
+    setShowActionMenu(null);
+  };
+
   // Фильтрация продуктов
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -88,6 +141,12 @@ function ProductsPage() {
   // Компонент меню действий
   const ActionMenu = ({ product }) => (
     <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10">
+      <button
+        onClick={() => handleViewProduct(product)}
+        className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
+      >
+        Просмотреть
+      </button>
       <button
         onClick={() => handleEditProduct(product)}
         className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
@@ -162,7 +221,7 @@ function ProductsPage() {
           <thead>
             <tr className="border-b">
               <th className="pb-3 text-left">Фото</th>
-              <th className="pb-3 text-left">Название</th>
+              <th className="pb-3 text-left">Названи</th>
               <th className="pb-3 text-left">Категория</th>
               <th className="pb-3 text-right">Остаток</th>
               <th className="pb-3 text-right">Цена</th>
@@ -172,33 +231,7 @@ function ProductsPage() {
           </thead>
           <tbody>
             {products.map(product => (
-              <tr key={product.id} className="border-b last:border-b-0">
-                <td className="py-4">
-                  <img src={product.image} alt="" className="w-12 h-12 rounded-lg object-cover" />
-                </td>
-                <td className="py-4">{product.name}</td>
-                <td className="py-4">{product.category}</td>
-                <td className="py-4 text-right">{product.inventory}</td>
-                <td className="py-4 text-right">{product.price.toLocaleString()} ₸</td>
-                <td className="py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    product.status === 'active' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {product.status === 'active' ? 'Активный' : 'Неактивный'}
-                  </span>
-                </td>
-                <td className="py-4 text-right relative">
-                  <button 
-                    onClick={() => setShowActionMenu(showActionMenu === product.id ? null : product.id)}
-                    className="p-2 hover:bg-gray-100 rounded-lg"
-                  >
-                    <MoreVertical size={20} className="text-gray-400" />
-                  </button>
-                  {showActionMenu === product.id && <ActionMenu product={product} />}
-                </td>
-              </tr>
+              <ProductCard key={product.id} product={product} />
             ))}
           </tbody>
         </table>
@@ -323,6 +356,92 @@ function ProductsPage() {
     </div>
   );
 
+  // Обновляем рендер карточки продукта в DesktopView
+  const ProductCard = ({ product }) => {
+    console.log('Rendering product:', product); // Для отладки
+
+    const priceDetails = product.price_details || {
+      basePrice: parseFloat(product.price) || 0,
+      markupAmount: 0,
+      packagingCost: 0,
+      finalPrice: parseFloat(product.price) || 0
+    };
+
+    return (
+      <tr 
+        key={product.id} 
+        className="border-b last:border-b-0 hover:bg-gray-50 cursor-pointer"
+        onClick={() => handleViewProduct(product)}
+      >
+        <td className="py-4">
+          <img src={product.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+        </td>
+        <td className="py-4">
+          <div>{product.name}</div>
+          <div className="text-sm text-gray-500">
+            {product.total_stems || 0} цветов
+          </div>
+        </td>
+        <td className="py-4">{product.category}</td>
+        <td className="py-4 text-right">
+          {product.composition_details?.map(item => (
+            <div key={item.id} className="text-sm">
+              {item.name}: {item.quantity} шт
+            </div>
+          ))}
+        </td>
+        <td className="py-4 text-right">
+          <div className="font-medium">{priceDetails.finalPrice.toLocaleString()} ₸</div>
+          {product.category === 'Цветы' ? (
+            <div className="text-sm text-gray-500">
+              Цена за штуку
+            </div>
+          ) : (
+            <>
+              <div className="text-sm text-gray-500">
+                Цветы: {priceDetails.basePrice.toLocaleString()} ₸
+              </div>
+              <div className="text-sm text-gray-500">
+                Работа: {priceDetails.markupAmount.toLocaleString()} ₸
+              </div>
+              <div className="text-sm text-gray-500">
+                Упаковка: {priceDetails.packagingCost.toLocaleString()} ₸
+              </div>
+            </>
+          )}
+        </td>
+        <td className="py-4">
+          <span className={`px-2 py-1 rounded-full text-xs ${
+            product.status === 'active' 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {product.status === 'active' ? 'Активный' : 'Неактивный'}
+          </span>
+        </td>
+        <td className="py-4 text-right relative">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowActionMenu(showActionMenu === product.id ? null : product.id);
+            }}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <MoreVertical size={20} className="text-gray-400" />
+          </button>
+          {showActionMenu === product.id && <ActionMenu product={product} />}
+        </td>
+      </tr>
+    );
+  };
+
+  // Обновляем опции фильтра категорий
+  const categoryOptions = [
+    { value: 'all', label: 'Все категории' },
+    { value: 'Букеты', label: 'Букеты' },
+    { value: 'Композиции', label: 'Композиции' }
+  ];
+
   return (
     <div className="min-h-screen bg-gray-100">
       <DesktopView products={filteredProducts} />
@@ -331,11 +450,16 @@ function ProductsPage() {
         <AddProductForm 
           onClose={() => {
             setShowAddForm(false);
+            setSelectedProduct(null);
             setEditingProduct(null);
-            loadProducts(); // Перезагружаем продукты после закрытия формы
+            setIsViewMode(false);
+            loadProducts();
           }}
           editingProduct={editingProduct}
+          viewMode={isViewMode && !editingProduct}
+          selectedProduct={selectedProduct}
           supabase={supabase}
+          categoryOptions={categoryOptions}
         />
       )}
     </div>
