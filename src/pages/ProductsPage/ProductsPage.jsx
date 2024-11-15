@@ -1,42 +1,89 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, ChevronDown, ArrowUpDown, Filter, MoreVertical } from 'lucide-react';
 import AddProductForm from './components/AddProductForm';
+import { supabase } from '../../lib/supabase';
 import styles from './ProductsPage.module.css';
 
-const products = [
-  { id: 1, name: '25 роз Red Naomi', price: 15000, category: 'Букеты', inventory: 10, status: 'active', image: '/placeholder.svg' },
-  { id: 2, name: '51 роза Red Naomi', price: 25000, category: 'Букеты', inventory: 5, status: 'active', image: '/placeholder.svg' },
-  { id: 3, name: 'Букет из тюльпанов', price: 8000, category: 'Букеты', inventory: 15, status: 'active', image: '/placeholder.svg' },
-  { id: 4, name: 'Корзина с лилиями', price: 12000, category: 'Композиции', inventory: 8, status: 'inactive', image: '/placeholder.svg' },
-  { id: 5, name: 'Букет из орхидей', price: 18000, category: 'Букеты', inventory: 3, status: 'active', image: '/placeholder.svg' },
-];
-
 function ProductsPage() {
+  const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [showActionMenu, setShowActionMenu] = useState(null); // id товара, для которого открыто меню
+  const [showActionMenu, setShowActionMenu] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleEditProduct = (product) => {
+  // Загрузка продуктов
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProducts(data);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Обработчики действий
+  const handleEditProduct = async (product) => {
     setEditingProduct(product);
     setShowAddForm(true);
     setShowActionMenu(null);
   };
 
-  const handleDeleteProduct = (productId) => {
-    // Здесь будет логика удаления
-    console.log('Удаление товара:', productId);
+  const handleDeleteProduct = async (productId) => {
+    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId);
+
+        if (error) throw error;
+        await loadProducts();
+      } catch (error) {
+        console.error('Error deleting product:', error);
+      }
+    }
     setShowActionMenu(null);
   };
 
-  const handleToggleStatus = (product) => {
-    // Здесь будет логика изменения статуса
-    console.log('Изменение статуса:', product.id);
+  const handleToggleStatus = async (product) => {
+    try {
+      const newStatus = product.status === 'active' ? 'inactive' : 'active';
+      const { error } = await supabase
+        .from('products')
+        .update({ status: newStatus })
+        .eq('id', product.id);
+
+      if (error) throw error;
+      await loadProducts();
+    } catch (error) {
+      console.error('Error updating product status:', error);
+    }
     setShowActionMenu(null);
   };
+
+  // Фильтрация продуктов
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
+    const matchesStatus = filterStatus === 'all' || product.status === filterStatus;
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   // Компонент меню действий
   const ActionMenu = ({ product }) => (
@@ -63,7 +110,7 @@ function ProductsPage() {
   );
 
   // Обновляем DesktopView
-  const DesktopView = () => (
+  const DesktopView = ({ products }) => (
     <div className="hidden sm:block">
       <div className="bg-white p-6 rounded-lg shadow">
         {/* Фильтры и поиск */}
@@ -160,7 +207,7 @@ function ProductsPage() {
   );
 
   // Обновляем MobileView
-  const MobileView = () => (
+  const MobileView = ({ products }) => (
     <div className="sm:hidden">
       {/* Заголовок и поиск */}
       <div className="bg-white p-4 border-b sticky top-0 z-10">
@@ -278,18 +325,18 @@ function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <DesktopView />
-      <MobileView />
+      <DesktopView products={filteredProducts} />
+      <MobileView products={filteredProducts} />
       {showAddForm && (
-        <div className="fixed inset-0 z-50">
-          <AddProductForm 
-            onClose={() => {
-              setShowAddForm(false);
-              setEditingProduct(null);
-            }}
-            editingProduct={editingProduct}
-          />
-        </div>
+        <AddProductForm 
+          onClose={() => {
+            setShowAddForm(false);
+            setEditingProduct(null);
+            loadProducts(); // Перезагружаем продукты после закрытия формы
+          }}
+          editingProduct={editingProduct}
+          supabase={supabase}
+        />
       )}
     </div>
   );

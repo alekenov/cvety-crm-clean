@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Minus, X, ArrowLeft, Upload, Truck, Percent, Calendar, Flower, Search } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
 
 const ProductCard = ({ onClose, editingProduct = null }) => {
   const [activeTab, setActiveTab] = useState('main');
@@ -252,17 +253,38 @@ const ProductCard = ({ onClose, editingProduct = null }) => {
     </div>
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Здесь будет логика отправки данных
-    console.log({
-      ...formData,
-      media,
-      composition,
-      selectedTags,
-      totalAmount
-    });
-    onClose();
+    try {
+      const productData = {
+        name: formData.name,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        description: formData.description,
+        status: 'active',
+        image_url: media[0]?.url || null,
+        sku: formData.sku // Убедитесь, что добавили поле SKU в форму
+      };
+
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id);
+        
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .insert([productData]);
+        
+        if (error) throw error;
+      }
+
+      onClose();
+    } catch (error) {
+      console.error('Error saving product:', error);
+    }
   };
 
   // Инициализируем состояния данными редактируемого товара

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MessageCircle, Camera, Truck, AlertTriangle, MapPin, Phone, 
   User, Store, Clock, Upload, ThumbsUp, ThumbsDown, RefreshCw,
@@ -10,6 +10,8 @@ import Button from '../../components/ui/Button/Button';
 import Card from '../../components/ui/Card/Card';
 import { useNavigate } from 'react-router-dom';
 import Badge from '../../components/ui/Badge/Badge';
+import { OrdersSkeleton } from '../../components/ui/Skeleton/Skeleton';
+import { supabase } from '../../lib/supabase';
 
 const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction, onClick }) => {
   const statusColors = {
@@ -34,7 +36,7 @@ const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction, onClick })
   return (
     <div 
       className="bg-white p-4 rounded-lg shadow-sm mb-4 cursor-pointer"
-      onClick={onClick}
+      onClick={() => onClick(order.number)}
     >
       <div className="flex justify-between items-center mb-3">
         <span className="font-bold text-lg">{order.number}</span>
@@ -84,7 +86,14 @@ const OrderCard = ({ order, onUploadPhoto, onRespondToClientReaction, onClick })
             {order.items.map((item, index) => (
               <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                 <div className="flex items-center">
-                  <img src={item.image} alt={item.description} className="w-12 h-12 object-cover rounded-md mr-2" />
+                  <img 
+                    src={item.image} 
+                    alt={item.description} 
+                    className="w-12 h-12 object-cover rounded-md mr-2"
+                    onError={(e) => {
+                      e.target.src = '/placeholder.jpg'; // Fallback изображение
+                    }}
+                  />
                   <span className="text-sm">{item.description}</span>
                 </div>
                 <span className="font-medium">{item.price}</span>
@@ -178,13 +187,142 @@ function OrdersPage() {
   const [expandedGroups, setExpandedGroups] = useState(['today', 'tomorrow']);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [orders, setOrders] = useState({
+    today: [],
+    tomorrow: [],
+    later: []
+  });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const handleCreateOrder = () => {
-    navigate('/orders/create');
+  // Загрузка заказов
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            product:products (*)
+          ),
+          store:stores (*)
+        `)
+        .order('delivery_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Группируем заказы по датам
+      const grouped = groupOrdersByDate(data);
+      setOrders(grouped);
+      
+    } catch (error) {
+      console.error('Error loading orders:', error);
+      // Здесь можно добавить уведомление об ошибке
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Добавляем определение statusColors
+  // Группировка заказов по датам
+  const groupOrdersByDate = (orders) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return orders.reduce((acc, order) => {
+      const orderDate = new Date(order.delivery_date);
+      orderDate.setHours(0, 0, 0, 0);
+
+      if (orderDate.getTime() === today.getTime()) {
+        acc.today.push(formatOrder(order));
+      } else if (orderDate.getTime() === tomorrow.getTime()) {
+        acc.tomorrow.push(formatOrder(order));
+      } else if (orderDate > today) {
+        acc.later.push(formatOrder(order));
+      }
+      return acc;
+    }, { today: [], tomorrow: [], later: [] });
+  };
+
+  // Форматирование заказа для отображения
+  const formatOrder = (order) => {
+    const items = order.order_items.map(item => {
+      const product = item.product;
+      return {
+        image: product?.image_url || '/placeholder.jpg',
+        description: product?.name || 'Товар не найден',
+        price: `${item.price.toLocaleString()} ₸`
+      };
+    });
+
+    // Считаем общую сумму заказа из элементов
+    const totalPrice = order.order_items.reduce((sum, item) => sum + item.price, 0);
+
+    return {
+      id: order.id,
+      number: `№${order.number}`,
+      totalPrice: `${totalPrice.toLocaleString()} ₸`,
+      time: order.delivery_time || 'Не указано',
+      status: order.status,
+      client: order.client_phone,
+      address: order.delivery_address,
+      shop: order.store?.name,
+      florist: order.florist_name,
+      items,
+      clientComment: order.client_comment,
+      clientReaction: order.client_reaction,
+      clientReactionComment: order.client_reaction_comment,
+      deliveryProblem: order.delivery_problem
+    };
+  };
+
+  // Обработчики действий
+  const handleUploadPhoto = async (orderNumber) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'photo_uploaded' })
+        .eq('number', orderNumber.replace('№', ''));
+
+      if (error) throw error;
+      
+      await loadOrders(); // Перезагружаем заказы
+    } catch (error) {
+      console.error('Error updating order:', error);
+    }
+  };
+
+  const handleRespondToClientReaction = async (orderNumber, reaction) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: reaction === 'reassemble' ? 'reassembly_requested' : 'completed',
+          reassembly_requested: reaction === 'reassemble'
+        })
+        .eq('number', orderNumber.replace('№', ''));
+
+      if (error) throw error;
+      
+      await loadOrders();
+    } catch (error) {
+      console.error('Error updating order:', error);
+    }
+  };
+
+  const handleCreateOrder = () => {
+    navigate('/order/create');
+  };
+
   const statusColors = {
     'Новый': 'danger',
     'В работе': 'warning',
@@ -195,104 +333,9 @@ function OrdersPage() {
     'Проблема с доставкой': 'danger'
   };
 
-  // Данные заказов
-  const orders = {
-    today: [
-      { 
-        number: '№103800', 
-        totalPrice: '29 430₸', 
-        time: '09:00-10:00', 
-        status: 'Собран', 
-        client: '+7 (777) 123-45-67', 
-        address: 'ул. Абая 1, кв. 23', 
-        shop: 'Цветочный Рай',
-        florist: 'Анна',
-        items: [
-          { image: '/api/placeholder/80/80', description: 'Букет из 15 белых роз', price: '15 000₸' },
-          { image: '/api/placeholder/80/80', description: 'Конфеты Рафаэлло', price: '4 430₸' },
-          { image: '/api/placeholder/80/80', description: 'Открытка', price: '1 000₸' }
-        ],
-        clientComment: 'Пожалуйста, добавьте больше зелени в букет.',
-        clientReaction: 'negative',
-        clientReactionComment: 'Букет не соответствует ожиданиям. Слишком мало цветов.'
-      },
-      { 
-        number: '№103802', 
-        totalPrice: '35 000₸', 
-        time: '11:00-12:00', 
-        status: 'В работе', 
-        client: '+7 (777) 234-56-78', 
-        address: 'ул. Жандосова 58, кв. 145', 
-        shop: 'Цветочный Рай',
-        florist: 'Мария',
-        items: [
-          { image: '/api/placeholder/80/80', description: 'Букет "Весенний сад"', price: '35 000₸' }
-        ],
-        clientComment: 'Нужна срочная доставка'
-      },
-      { 
-        number: '№103803', 
-        totalPrice: '42 000₸', 
-        time: '14:00-15:00', 
-        status: 'Оплачен', 
-        client: '+7 (777) 345-67-89', 
-        address: 'пр. Аль-Фараби 77, офис 255', 
-        shop: 'Лавка Флориста',
-        items: [
-          { image: '/api/placeholder/80/80', description: '51 красная роза', price: '42 000₸' }
-        ]
-      }
-    ],
-    tomorrow: [
-      { 
-        number: '№103801', 
-        totalPrice: '22 500₸', 
-        time: '10:00-11:00', 
-        status: 'Оплачен', 
-        client: '+7 (777) 987-65-43', 
-        address: 'пр. Достык 5, офис 301', 
-        shop: 'Лавка Флориста',
-        items: [
-          { image: '/api/placeholder/80/80', description: 'Букет из 15 розовых роз', price: '16 000₸' },
-          { image: '/api/placeholder/80/80', description: 'Ваза стеклянная', price: '6 500₸' }
-        ],
-        clientComment: 'Доставьте, пожалуйста, до 10:30, у получателя день рождения.'
-      },
-      { 
-        number: '№103804', 
-        totalPrice: '18 500₸', 
-        time: '12:00-13:00', 
-        status: 'Оплачен', 
-        client: '+7 (777) 456-78-90', 
-        address: 'ул. Тимирязева 42, кв. 75', 
-        shop: 'Цветочный Рай',
-        items: [
-          { image: '/api/placeholder/80/80', description: 'Букет "Нежность"', price: '15 000₸' },
-          { image: '/api/placeholder/80/80', description: 'Открытка праздничная', price: '3 500₸' }
-        ]
-      }
-    ],
-    later: [
-      { 
-        number: '№103805', 
-        totalPrice: '55 000₸', 
-        time: '12:00-13:00', 
-        status: 'Оплачен', 
-        client: '+7 (777) 567-89-01', 
-        address: 'ул. Сатпаева 90/20, кв. 158', 
-        shop: 'Лавка Флориста',
-        items: [
-          { image: '/api/placeholder/80/80', description: 'Букет "Королевский"', price: '50 000₸' },
-          { image: '/api/placeholder/80/80', description: 'Конфеты премиум', price: '5 000₸' }
-        ],
-        clientComment: 'Доставка на 5 ноября'
-      }
-    ]
-  };
-
   const groupTitles = {
-    today: 'Сегодня, 2 ноября',
-    tomorrow: 'Завтра, 3 ноября',
+    today: 'Сегодня',
+    tomorrow: 'Завтра',
     later: 'Будущие заказы'
   };
 
@@ -304,17 +347,9 @@ function OrdersPage() {
     );
   };
 
-  const handleUploadPhoto = (orderNumber) => {
-    console.log(`Загрузка фото для заказа ${orderNumber}`);
-  };
-
-  const handleRespondToClientReaction = (orderNumber, reaction) => {
-    console.log(`Реакция на отзыв клиента для заказа ${orderNumber}: ${reaction}`);
-  };
-
   const handleOrderClick = (orderNumber) => {
     const cleanNumber = orderNumber.replace('№', '');
-    navigate(`/orders/${cleanNumber}`);
+    navigate(`/order/${cleanNumber}`);
   };
 
   // Верхняя панель
@@ -406,7 +441,7 @@ function OrdersPage() {
                     order={order}
                     onUploadPhoto={handleUploadPhoto}
                     onRespondToClientReaction={handleRespondToClientReaction}
-                    onClick={() => handleOrderClick(order.number)}
+                    onClick={handleOrderClick}
                   />
                 ))}
               </div>
