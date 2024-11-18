@@ -8,7 +8,7 @@ import {
 import PageLayout, { PageHeader, PageSection } from '../../components/layout/PageLayout/PageLayout';
 import Button from '../../components/ui/Button/Button';
 import Card from '../../components/ui/Card/Card';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Badge from '../../components/ui/Badge/Badge';
 import { OrdersSkeleton } from '../../components/ui/Skeleton/Skeleton';
 import { supabase } from '../../lib/supabase';
@@ -194,95 +194,103 @@ function OrdersPage() {
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Загрузка заказов
   useEffect(() => {
     loadOrders();
   }, []);
 
+  // Добавляем эффект для отслеживания изменения location
+  useEffect(() => {
+    if (location.state?.refresh) {
+      loadOrders();
+    }
+  }, [location]);
+
   const loadOrders = async () => {
     try {
       setLoading(true);
       
+      // Загружаем заказы с упрощенным запросом
       const { data, error } = await supabase
         .from('orders')
         .select(`
           *,
           order_items (
-            *,
-            product:products (*)
-          ),
-          store:stores (*)
+            id,
+            price
+          )
         `)
-        .order('delivery_date', { ascending: true });
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Ошибка при загрузке заказов:', error);
+        throw error;
+      }
+
+      console.log('Загруженные заказы:', data);
+
+      if (!data || data.length === 0) {
+        console.log('Нет заказов в базе данных');
+        setOrders({ today: [], tomorrow: [], later: [] });
+        return;
+      }
 
       // Группируем заказы по датам
-      const grouped = groupOrdersByDate(data);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const grouped = {
+        today: [],
+        tomorrow: [],
+        later: []
+      };
+
+      data.forEach(order => {
+        console.log('Обработка заказа:', order);
+
+        const orderDate = order.delivery_date ? new Date(order.delivery_date) : new Date();
+        orderDate.setHours(0, 0, 0, 0);
+
+        const formattedOrder = {
+          id: order.id,
+          number: order.number,
+          status: order.status || 'Не оплачен',
+          client: order.client_phone,
+          address: order.address,
+          time: order.delivery_time || 'Не указано',
+          totalPrice: `${parseFloat(order.total_price || 0).toLocaleString()} ₸`,
+          items: order.order_items?.map(item => ({
+            description: 'Товар',
+            price: `${parseFloat(item.price || 0).toLocaleString()} ₸`,
+            image: '/placeholder.jpg'
+          })) || [],
+          clientComment: order.client_comment
+        };
+
+        if (orderDate.getTime() === today.getTime()) {
+          grouped.today.push(formattedOrder);
+        } else if (orderDate.getTime() === tomorrow.getTime()) {
+          grouped.tomorrow.push(formattedOrder);
+        } else if (orderDate > today) {
+          grouped.later.push(formattedOrder);
+        } else {
+          grouped.today.push(formattedOrder);
+        }
+      });
+
+      console.log('Итоговая группировка:', grouped);
       setOrders(grouped);
       
     } catch (error) {
       console.error('Error loading orders:', error);
-      // Здесь можно добавить уведомление об ошибке
     } finally {
       setLoading(false);
     }
-  };
-
-  // Группировка заказов по датам
-  const groupOrdersByDate = (orders) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return orders.reduce((acc, order) => {
-      const orderDate = new Date(order.delivery_date);
-      orderDate.setHours(0, 0, 0, 0);
-
-      if (orderDate.getTime() === today.getTime()) {
-        acc.today.push(formatOrder(order));
-      } else if (orderDate.getTime() === tomorrow.getTime()) {
-        acc.tomorrow.push(formatOrder(order));
-      } else if (orderDate > today) {
-        acc.later.push(formatOrder(order));
-      }
-      return acc;
-    }, { today: [], tomorrow: [], later: [] });
-  };
-
-  // Форматирование заказа для отображения
-  const formatOrder = (order) => {
-    const items = order.order_items.map(item => {
-      const product = item.product;
-      return {
-        image: product?.image_url || '/placeholder.jpg',
-        description: product?.name || 'Товар не найден',
-        price: `${item.price.toLocaleString()} ₸`
-      };
-    });
-
-    // Считаем общую сумму заказа из элементов
-    const totalPrice = order.order_items.reduce((sum, item) => sum + item.price, 0);
-
-    return {
-      id: order.id,
-      number: `№${order.number}`,
-      totalPrice: `${totalPrice.toLocaleString()} ₸`,
-      time: order.delivery_time || 'Не указано',
-      status: order.status,
-      client: order.client_phone,
-      address: order.delivery_address,
-      shop: order.store?.name,
-      florist: order.florist_name,
-      items,
-      clientComment: order.client_comment,
-      clientReaction: order.client_reaction,
-      clientReactionComment: order.client_reaction_comment,
-      deliveryProblem: order.delivery_problem
-    };
   };
 
   // Обработчики действий
@@ -384,7 +392,7 @@ function OrdersPage() {
     <div className="sm:hidden">
       <div className="bg-white p-4 border-b">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold">Заказы</h1>
+          <h1 className="text-lg font-semibold">Заазы</h1>
           <div className="flex items-center space-x-2">
             <Button 
               variant="primary"
@@ -507,7 +515,7 @@ function OrdersPage() {
                   <div className="text-sm text-gray-600">{order.phone}</div>
                 </div>
 
-                {/* Состав заказа */}
+                {/* Сосав заказа */}
                 <div className="col-span-3">
                   <div className="space-y-1">
                     {order.items.map((item, index) => (

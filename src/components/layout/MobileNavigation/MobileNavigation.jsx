@@ -16,10 +16,10 @@ const MobileNavigation = () => {
   const [showServices, setShowServices] = useState(false);
 
   const tabItems = [
-    { id: 'orders', path: '/', icon: ShoppingBag, label: 'Заказы' },
+    { id: 'orders', path: '/orders', icon: ShoppingBag, label: 'Заказы' },
     { id: 'products', path: '/products', icon: Store, label: 'Товары' },
-    { id: 'stock', path: '/inventory', icon: Package, label: 'Склад' },
-    { id: 'finance', path: '/finance', icon: Wallet, label: 'Финансы' },
+    { id: 'warehouse', path: '/warehouse', icon: Package, label: 'Склад' },
+    { id: 'finances', path: '/finances', icon: Wallet, label: 'Финансы' },
   ];
 
   const serviceItems = [
@@ -31,25 +31,18 @@ const MobileNavigation = () => {
       description: 'База клиентов'
     },
     { 
-      id: 'purchase', 
-      path: '/purchase', 
+      id: 'purchases', 
+      path: '/purchases', 
       icon: ShoppingCart, 
       label: 'Закуп',
       description: 'Управление закупками'
     },
     { 
       id: 'settings', 
-      path: '/settings/shops', 
+      path: '/settings', 
       icon: Settings, 
       label: 'Настройка',
       description: 'Настройки магазина'
-    },
-    { 
-      id: 'employees', 
-      path: '/employees', 
-      icon: Users, 
-      label: 'Сотрудники',
-      description: 'Управление персоналом'
     },
     { 
       id: 'delivery', 

@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout/MainLayout';
 import OrdersPage from './pages/OrdersPage/OrdersPage';
 import OrderProcessing from './pages/OrdersPage/components/OrderProcessing';
+import CreateOrderPage from './pages/OrdersPage/CreateOrderPage';
 import InventoryPage from './pages/InventoryPage/InventoryPage';
 import DeliveryPage from './pages/DeliveryPage/DeliveryPage';
 import ClientsPage from './pages/ClientsPage/ClientsPage';
@@ -51,7 +52,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '/order/create',
-        element: <OrderProcessing />,
+        element: <CreateOrderPage />,
       },
       {
         path: '/inventory',
