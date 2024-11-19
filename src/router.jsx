@@ -11,6 +11,8 @@ import AnalyticsPage from './pages/AnalyticsPage/AnalyticsPage';
 import FinancePage from './pages/FinancePage/FinancePage';
 import SettingsPage from './pages/Settings';
 import { ShopManagement } from './pages/Settings';
+import LoginPage from './pages/LoginPage/LoginPage';
+import { ProtectedRoute } from './components/features/auth/ProtectedRoute';
 
 // Компонент для 404 страницы
 function NotFound() {
@@ -32,70 +34,92 @@ function ErrorBoundary({ error }) {
   );
 }
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
+    {
+      path: '/login',
+      element: <LoginPage />,
+    },
+    {
+      path: '/',
+      element: (
+        <ProtectedRoute>
+          <MainLayout />
+        </ProtectedRoute>
+      ),
+      errorElement: <ErrorBoundary />,
+      children: [
+        {
+          index: true,
+          element: <OrdersPage />,
+        },
+        {
+          path: 'orders',
+          children: [
+            {
+              index: true,
+              element: <OrdersPage />,
+            },
+            {
+              path: ':id',
+              element: <OrderProcessing />,
+            },
+            {
+              path: 'create',
+              element: <CreateOrderPage />,
+            },
+          ],
+        },
+        {
+          path: 'inventory',
+          element: <InventoryPage />,
+        },
+        {
+          path: 'delivery',
+          element: <DeliveryPage />,
+        },
+        {
+          path: 'clients',
+          element: <ClientsPage />,
+        },
+        {
+          path: 'products',
+          element: <ProductsPage />,
+        },
+        {
+          path: 'analytics',
+          element: <AnalyticsPage />,
+        },
+        {
+          path: 'finance',
+          element: <FinancePage />,
+        },
+        {
+          path: 'settings',
+          children: [
+            {
+              index: true,
+              element: <SettingsPage />,
+            },
+            {
+              path: 'shops',
+              element: <ShopManagement />,
+            },
+          ],
+        },
+        {
+          path: '*',
+          element: <NotFound />,
+        },
+      ],
+    },
+  ],
   {
-    path: '/',
-    element: <MainLayout />,
-    errorElement: <ErrorBoundary />,
-    children: [
-      {
-        path: '/',
-        element: <OrdersPage />,
-      },
-      {
-        path: '/orders',
-        element: <OrdersPage />,
-      },
-      {
-        path: '/order/:id',
-        element: <OrderProcessing />,
-      },
-      {
-        path: '/order/create',
-        element: <CreateOrderPage />,
-      },
-      {
-        path: '/inventory',
-        element: <InventoryPage />,
-      },
-      {
-        path: '/delivery',
-        element: <DeliveryPage />,
-      },
-      {
-        path: '/clients',
-        element: <ClientsPage />,
-      },
-      {
-        path: '/products',
-        element: <ProductsPage />,
-      },
-      {
-        path: '/analytics',
-        element: <AnalyticsPage />,
-      },
-      {
-        path: '/finance',
-        element: <FinancePage />,
-      },
-      {
-        path: '/settings',
-        element: <SettingsPage />,
-        children: [
-          {
-            path: '',
-            element: <ShopManagement />,
-          },
-          {
-            path: 'shops',
-            element: <ShopManagement />,
-          }
-        ]
-      },
-      {
-        path: '*',
-        element: <NotFound />,
-      }
-    ],
-  },
-]); 
+    future: {
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_skipActionErrorRevalidation: true,
+    },
+  }
+);

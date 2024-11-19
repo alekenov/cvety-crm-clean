@@ -4,10 +4,94 @@ import {
   ArrowLeft, Phone, MessageCircle, Camera, MapPin, 
   ThumbsUp, ThumbsDown, Gift, Clock, Map, AlertTriangle, X 
 } from 'lucide-react';
+import { supabase } from '../../../config/supabase';
+
+// Mock orders data for testing
+const mockOrders = [
+  {
+    number: '№1234',
+    totalPrice: '15,000 ₸',
+    date: '2024-11-18',
+    time: '14:00',
+    status: 'В работе',
+    client: '+7 (777) 123-45-67',
+    address: 'ул. Абая, 1',
+    shop: 'Центральный',
+    florist: 'Анна',
+    deliveryType: 'delivery',
+    items: [
+      { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Весенний"', price: '10,000 ₸' },
+      { image: '/placeholder.svg?height=48&width=48', description: 'Открытка', price: '500 ₸' },
+    ],
+    clientComment: 'Пожалуйста, добавьте больше розовых цветов',
+  },
+  {
+    number: '№1235',
+    totalPrice: '8,000 ₸',
+    date: '2024-11-19',
+    time: '16:30',
+    status: 'Оплачен',
+    client: '+7 (777) 987-65-43',
+    address: 'пр. Достык, 5',
+    shop: 'Южный',
+    deliveryType: 'pickup',
+    items: [
+      { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Летний"', price: '8,000 ₸' },
+    ],
+  },
+  {
+    number: '№1236',
+    totalPrice: '20,000 ₸',
+    date: '2024-11-18',
+    time: '10:00',
+    status: 'Не оплачен',
+    client: '+7 (777) 111-22-33',
+    address: 'ул. Жандосова, 55',
+    shop: 'Западный',
+    deliveryType: 'delivery',
+    items: [
+      { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Роскошь"', price: '18,000 ₸' },
+      { image: '/placeholder.svg?height=48&width=48', description: 'Ваза', price: '2,000 ₸' },
+    ],
+  },
+  {
+    number: '№1237',
+    totalPrice: '12,000 ₸',
+    date: '2024-11-20',
+    time: '11:30',
+    status: 'Готов к самовывозу',
+    client: '+7 (777) 444-55-66',
+    address: 'ул. Толе би, 59',
+    shop: 'Восточный',
+    deliveryType: 'pickup',
+    items: [
+      { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Нежность"', price: '12,000 ₸' },
+    ],
+  },
+  {
+    number: '№1238',
+    totalPrice: '25,000 ₸',
+    date: '2024-11-18',
+    time: '13:45',
+    status: 'В пути',
+    client: '+7 (777) 777-88-99',
+    address: 'мкр. Самал-2, д. 33',
+    shop: 'Центральный',
+    deliveryType: 'delivery',
+    items: [
+      { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Экзотика"', price: '22,000 ₸' },
+      { image: '/placeholder.svg?height=48&width=48', description: 'Шоколад', price: '3,000 ₸' },
+    ],
+    deliveryProblem: 'Клиент не отвечает на звонки',
+  },
+];
 
 const OrderProcessing = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [orderData, setOrderData] = useState(null);
+  const [error, setError] = useState(null);
   const [orderStatus, setOrderStatus] = useState('new');
   const [photo, setPhoto] = useState(null);
   const [deliveryInfo, setDeliveryInfo] = useState({
@@ -26,58 +110,121 @@ const OrderProcessing = () => {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [problemDescription, setProblemDescription] = useState('');
 
-  // Добавим эффект для инициализации состояния при монтировании
   useEffect(() => {
-    // Здесь можно добавить загрузку данных заказа
-    console.log('Loading order:', id);
-    // Для примера установим начальный статус
-    setOrderStatus('new');
+    if (id) {
+      console.log('Loading order with ID:', id);
+      loadOrder();
+    }
   }, [id]);
 
-  // Добавим эффект для отслеживания изменений статуса
-  useEffect(() => {
-    console.log('Order status changed:', orderStatus);
-  }, [orderStatus]);
+  const loadOrder = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Clean the ID to ensure we only have numbers
+      const cleanId = String(id).replace(/[^0-9]/g, '');
+      console.log('Original ID:', id);
+      console.log('Cleaned ID:', cleanId);
 
-  // Здесь мы бы получали данные заказа по id
-  const order = {
-    id: id,
-    product: { 
-      id: 1, 
-      name: 'Букет из 21 нежно-розовой розы', 
-      price: 15000, 
-      image: '/api/placeholder/100/100' 
-    },
-    card: 'Aika )) Misha xxoo.',
-    comment: 'Добрый день! Большая просьба собрать композицию цветов из нежно розового оттенка, как на картинке',
-    details: {
-      total: 15000,
-      date: '17.10.2024, Как можно скорее',
-      recipient: {
-        name: 'Aika',
-        phone: '+77775626993',
-      },
-    },
+      // For testing purposes, let's use mock data first
+      const mockOrder = mockOrders.find(order => {
+        const orderNumber = String(order.number).replace(/[^0-9]/g, '');
+        return orderNumber === cleanId;
+      });
+
+      if (mockOrder) {
+        console.log('Found mock order:', mockOrder);
+        setOrderData(mockOrder);
+        setOrderStatus(mockOrder.status || 'new');
+        setDeliveryInfo({
+          address: mockOrder.address || '',
+          apartment: mockOrder.apartment || '',
+          entrance: mockOrder.entrance || '',
+          comment: mockOrder.delivery_comment || '',
+          cost: mockOrder.delivery_cost || null,
+          distance: mockOrder.delivery_distance || null
+        });
+        setLoading(false);
+        return;
+      }
+
+      // If no mock order found, try to fetch from Supabase
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (*)
+        `)
+        .eq('number', cleanId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading order:', error);
+        setError(error.message);
+        return;
+      }
+
+      if (!data) {
+        console.log('No order found with ID:', cleanId);
+        setError('Заказ не найден');
+        return;
+      }
+
+      console.log('Order data loaded:', data);
+      setOrderData(data);
+      setOrderStatus(data.status || 'new');
+      setDeliveryInfo({
+        address: data.address || '',
+        apartment: data.apartment || '',
+        entrance: data.entrance || '',
+        comment: data.delivery_comment || '',
+        cost: data.delivery_cost || null,
+        distance: data.delivery_distance || null
+      });
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('Произошла ошибка при загрузке заказа');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Обновление статуса заказа
+  const handleStatusUpdate = async (newStatus) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('number', id);
+
+      if (error) throw error;
+
+      setOrderStatus(newStatus);
+      loadOrder(); // Перезагружаем заказ для обновления всех данных
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
   };
 
   const handleBack = () => {
     navigate('/orders');
   };
 
-  const handleAcceptOrder = () => setOrderStatus('accepted');
+  const handleAcceptOrder = () => handleStatusUpdate('accepted');
   const handleRejectOrder = () => alert('Заказ отклонен');
   
   const handlePhotoUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
       setPhoto(URL.createObjectURL(file));
-      setOrderStatus('photoUploaded');
+      handleStatusUpdate('photoUploaded');
     }
   };
 
   const handleAddressSubmit = () => {
     if (deliveryInfo.address) {
-      setOrderStatus('readyForDelivery');
+      handleStatusUpdate('readyForDelivery');
       setDeliveryInfo(prev => ({
         ...prev,
         cost: 1000,
@@ -93,7 +240,7 @@ const OrderProcessing = () => {
   };
 
   const handleDeliveryComplete = () => {
-    setOrderStatus('delivered');
+    handleStatusUpdate('delivered');
     alert('Заказ отмечен как доставленный');
   };
 
@@ -120,10 +267,10 @@ const OrderProcessing = () => {
   const renderProductInfo = () => (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
       <div className="flex items-center">
-        <img src={order.product.image} alt={order.product.name} className="w-20 h-20 object-cover rounded-lg mr-4" />
+        <img src={orderData?.image_url || "https://picsum.photos/200"} alt="Букет" className="w-20 h-20 object-cover rounded-lg mr-4" />
         <div>
-          <h3 className="font-semibold">{order.product.name}</h3>
-          <p className="text-green-600 font-bold">{order.product.price.toLocaleString()} ₸</p>
+          <h3 className="font-semibold">Букет</h3>
+          <p className="text-green-600 font-bold">{orderData?.total_price?.toLocaleString() || "0"} ₸</p>
         </div>
       </div>
     </div>
@@ -131,15 +278,15 @@ const OrderProcessing = () => {
 
   const renderCommentAndCard = () => (
     <div className="space-y-4 mb-4">
-      {order.comment && (
+      {orderData?.client_comment && (
         <div className="bg-blue-50 rounded-lg p-4 shadow-sm">
-          <p className="text-sm text-gray-800">{order.comment}</p>
+          <p className="text-sm text-gray-800">{orderData?.client_comment}</p>
         </div>
       )}
-      {order.card && (
+      {orderData?.card_text && (
         <div className="bg-pink-50 rounded-lg p-4 shadow-sm flex items-start">
           <Gift size={20} className="text-pink-500 mr-2 flex-shrink-0 mt-1" />
-          <p className="text-sm text-gray-800 italic">"{order.card}"</p>
+          <p className="text-sm text-gray-800 italic">"{orderData?.card_text}"</p>
         </div>
       )}
     </div>
@@ -182,11 +329,11 @@ const OrderProcessing = () => {
   const renderOrderDetails = () => (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
       <div className="space-y-2">
-        <p><span className="font-semibold">Дата и время:</span> {order.details.date}</p>
-        <p><span className="font-semibold">Получатель:</span> {order.details.recipient.name}</p>
+        <p><span className="font-semibold">Дата и время:</span> {orderData?.delivery_date ? new Date(orderData?.delivery_date).toLocaleDateString('ru-RU') + (orderData?.delivery_time ? `, ${orderData?.delivery_time}` : '') : 'Не указано'}</p>
+        <p><span className="font-semibold">Получатель:</span> {orderData?.client_name || 'Клиент'}</p>
         <p className="flex items-center">
           <span className="font-semibold mr-2">Телефон:</span> 
-          {order.details.recipient.phone}
+          {orderData?.client_phone}
           <Phone size={20} className="ml-2 text-green-500 cursor-pointer" />
           <MessageCircle size={20} className="ml-2 text-green-500 cursor-pointer" />
         </p>
@@ -290,163 +437,6 @@ const OrderProcessing = () => {
     </div>
   );
 
-  // Мобильная версия
-  const MobileView = () => (
-    <div className="sm:hidden bg-gray-100 min-h-screen p-4">
-      <div className="flex items-center mb-4">
-        <button onClick={handleBack} className="mr-2">
-          <ArrowLeft className="cursor-pointer" />
-        </button>
-        <h1 className="text-xl font-bold flex-grow">Заказ №{id}</h1>
-        <span className="bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded">
-          {orderStatus === 'new' ? 'Новый' : 
-           orderStatus === 'accepted' ? 'Принят' :
-           orderStatus === 'photoUploaded' ? 'Фото загружено' :
-           orderStatus === 'readyForDelivery' ? 'Готов к отправке' :
-           orderStatus === 'delivered' ? 'Доставлен' : ''}
-        </span>
-      </div>
-
-      {renderProductInfo()}
-      {renderCommentAndCard()}
-      {orderStatus !== 'new' && renderPhotoBeforeDelivery()}
-      {orderStatus === 'photoUploaded' && (
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <div className="flex items-center mb-2">
-            <input
-              type="text"
-              value={deliveryInfo.address}
-              onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})}
-              placeholder="Улица и номер дома"
-              className="flex-grow p-2 border rounded-lg"
-            />
-            <button 
-              onClick={handleMapSelect}
-              className="ml-2 bg-blue-500 text-white p-2 rounded-lg"
-            >
-              <Map size={20} />
-            </button>
-          </div>
-          <div className="flex space-x-2 mb-2">
-            <input
-              type="text"
-              value={deliveryInfo.apartment}
-              onChange={(e) => setDeliveryInfo({...deliveryInfo, apartment: e.target.value})}
-              placeholder="Квартира"
-              className="w-1/2 p-2 border rounded-lg"
-            />
-            <input
-              type="text"
-              value={deliveryInfo.entrance}
-              onChange={(e) => setDeliveryInfo({...deliveryInfo, entrance: e.target.value})}
-              placeholder="Подъезд"
-              className="w-1/2 p-2 border rounded-lg"
-            />
-          </div>
-          <button 
-            className="text-blue-500 font-semibold mb-2"
-            onClick={() => setShowCourierComment(!showCourierComment)}
-          >
-            {showCourierComment ? "Скрыть комментарий для курьера" : "Добавить комментарий для курьера"}
-          </button>
-          {showCourierComment && (
-            <textarea
-              value={deliveryInfo.comment}
-              onChange={(e) => setDeliveryInfo({...deliveryInfo, comment: e.target.value})}
-              placeholder="Комментарий для курьера"
-              className="w-full p-2 border rounded-lg mb-2"
-              rows="3"
-            />
-          )}
-          <button 
-            className="w-full bg-green-500 text-white py-2 px-4 rounded-lg font-semibold mt-2" 
-            onClick={handleAddressSubmit}
-          >
-            Подтвердить и вызвать курьера
-          </button>
-        </div>
-      )}
-      {orderStatus === 'problem' && renderProblemStatus()}
-      {renderOrderDetails()}
-      {renderOrderActions()}
-
-      <div className="mt-4 space-x-2 text-center">
-        <button 
-          className="text-blue-500 font-semibold" 
-          onClick={() => setShowPaymentModal(true)}
-        >
-          Запросить доплату
-        </button>
-        <button 
-          className="text-red-500 font-semibold" 
-          onClick={() => setShowRefundModal(true)}
-        >
-          Возврат
-        </button>
-      </div>
-    </div>
-  );
-
-  // Десктопная версия
-  const DesktopView = () => (
-    <div className="hidden sm:block">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center mb-6">
-          <button onClick={handleBack} className="mr-4">
-            <ArrowLeft className="cursor-pointer" />
-          </button>
-          <h1 className="text-2xl font-bold flex-grow">Заказ №{id}</h1>
-          <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-lg">
-            {orderStatus === 'new' ? 'Новый' : 
-             orderStatus === 'accepted' ? 'Принят' :
-             orderStatus === 'photoUploaded' ? 'Фото загружено' :
-             orderStatus === 'readyForDelivery' ? 'Готов к отправке' :
-             orderStatus === 'delivered' ? 'Доставлен' : ''}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-6">
-          {/* Левая колонка: информация о заказе */}
-          <div className="col-span-2 space-y-6">
-            {renderProductInfo()}
-            {renderCommentAndCard()}
-            {orderStatus !== 'new' && renderPhotoBeforeDelivery()}
-            {orderStatus === 'problem' && renderProblemStatus()}
-            {renderOrderDetails()}
-          </div>
-
-          {/* Правая колонка: действия и статусы */}
-          <div className="space-y-6">
-            {/* Статус заказа */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h2 className="font-semibold mb-4">Статус заказа</h2>
-              {renderOrderActions()}
-            </div>
-
-            {/* Дополнительные действия */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h2 className="font-semibold mb-4">Дополнительные действия</h2>
-              <div className="space-y-2">
-                <button 
-                  className="w-full py-2 px-4 bg-blue-50 text-blue-600 rounded-lg font-medium"
-                  onClick={() => setShowPaymentModal(true)}
-                >
-                  Запросить доплату
-                </button>
-                <button 
-                  className="w-full py-2 px-4 bg-red-50 text-red-600 rounded-lg font-medium"
-                  onClick={() => setShowRefundModal(true)}
-                >
-                  Возврат
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderPaymentModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg w-80">
@@ -507,13 +497,127 @@ const OrderProcessing = () => {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Загрузка...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  if (!orderData) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Заказ не найден</div>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <MobileView />
-      <DesktopView />
-      {showPaymentModal && renderPaymentModal()}
-      {showRefundModal && renderRefundModal()}
-    </>
+    <div className="container mx-auto p-4">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            className="p-2 hover:bg-gray-100 rounded-full mr-4"
+            onClick={handleBack}
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-2xl font-bold">Заказ {id}</h1>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-red-500 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            <p>{error}</p>
+          </div>
+        </div>
+      ) : !orderData ? (
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Заказ не найден</p>
+        </div>
+      ) : (
+        <div className="min-h-screen bg-gray-100">
+          <div className="max-w-6xl mx-auto p-4">
+            <div className="sm:hidden">
+              {/* Mobile View */}
+              {renderProductInfo()}
+              {renderCommentAndCard()}
+              {orderStatus !== 'new' && renderPhotoBeforeDelivery()}
+              {orderStatus === 'problem' && renderProblemStatus()}
+              {renderOrderDetails()}
+              {renderOrderActions()}
+              <div className="mt-4 space-x-2 text-center">
+                <button 
+                  className="text-blue-500 font-semibold" 
+                  onClick={() => setShowPaymentModal(true)}
+                >
+                  Запросить доплату
+                </button>
+                <button 
+                  className="text-red-500 font-semibold" 
+                  onClick={() => setShowRefundModal(true)}
+                >
+                  Возврат
+                </button>
+              </div>
+            </div>
+
+            {/* Desktop View */}
+            <div className="hidden sm:block">
+              <div className="grid grid-cols-3 gap-6">
+                <div className="col-span-2 space-y-6">
+                  {renderProductInfo()}
+                  {renderCommentAndCard()}
+                  {orderStatus !== 'new' && renderPhotoBeforeDelivery()}
+                  {orderStatus === 'problem' && renderProblemStatus()}
+                  {renderOrderDetails()}
+                </div>
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow-sm p-4">
+                    <h2 className="font-semibold mb-4">Статус заказа</h2>
+                    {renderOrderActions()}
+                  </div>
+                  <div className="bg-white rounded-lg shadow-sm p-4">
+                    <h2 className="font-semibold mb-4">Дополнительные действия</h2>
+                    <div className="space-y-2">
+                      <button 
+                        className="w-full text-blue-500 font-semibold py-2 px-4 rounded-lg border border-blue-500" 
+                        onClick={() => setShowPaymentModal(true)}
+                      >
+                        Запросить доплату
+                      </button>
+                      <button 
+                        className="w-full text-red-500 font-semibold py-2 px-4 rounded-lg border border-red-500" 
+                        onClick={() => setShowRefundModal(true)}
+                      >
+                        Возврат
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {showPaymentModal && renderPaymentModal()}
+            {showRefundModal && renderRefundModal()}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

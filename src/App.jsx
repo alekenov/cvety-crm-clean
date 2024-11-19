@@ -1,42 +1,19 @@
-import { useEffect, useState } from 'react'
-import { checkSupabaseConnection } from './lib/supabase'
-import { RouterProvider } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { router } from './router';
+import { Outlet } from 'react-router-dom';
+import Sidebar from './components/layout/Sidebar';
+import Header from './components/layout/Header';
 
 function App() {
-  const [isConnected, setIsConnected] = useState(false)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        const connected = await checkSupabaseConnection()
-        setIsConnected(connected)
-      } catch (error) {
-        console.error('Ошибка при проверке подключения:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    checkConnection()
-  }, [])
-
-  if (loading) {
-    return <div>Проверка подключения...</div>
-  }
-
-  if (!isConnected) {
-    return <div>Ошибка подключения к базе данных</div>
-  }
-
   return (
-    <>
-      <RouterProvider router={router} />
-      <Toaster position="top-right" />
-    </>
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 }
 
-export default App; 
+export default App;

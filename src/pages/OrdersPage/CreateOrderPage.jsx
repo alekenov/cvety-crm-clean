@@ -3,7 +3,7 @@ import { Plus, Search, X, MessageCircle, FileText, Phone, Calendar, Clock, Send,
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
-export default function OrderForm() {
+const CreateOrderPage = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [showProductSearch, setShowProductSearch] = useState(false);
@@ -641,4 +641,6 @@ export default function OrderForm() {
       )}
     </div>
   );
-}
+};
+
+export default CreateOrderPage;
