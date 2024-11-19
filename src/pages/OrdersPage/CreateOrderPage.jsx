@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Search, X, MessageCircle, FileText, Phone, Calendar, Clock, Send, MapPin, Home, ArrowLeft, ArrowRight, User, CreditCard, Truck, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { toast } from 'react-hot-toast';
+import { productsApi } from '../../services/api/productsApi';
+import { ordersApi } from '../../services/api/ordersApi';
+import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabaseQuery';
 
 const CreateOrderPage = () => {
   const navigate = useNavigate();
@@ -38,45 +41,90 @@ const CreateOrderPage = () => {
     paymentMethod: 'kaspi',
   });
 
-  const timeSlots = [
-    { label: '09:00 - 12:00', value: '09:00' },
-    { label: '12:00 - 15:00', value: '12:00' },
-    { label: '15:00 - 18:00', value: '15:00' },
-    { label: '18:00 - 21:00', value: '18:00' },
-  ];
-
-  const stores = [
-    { id: 1, name: "Магазин на Абая" },
-    { id: 2, name: "Магазин на Достык" },
-  ];
-
-  const [catalogProducts, setCatalogProducts] = useState([]);
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const loadProducts = async () => {
-    try {
-      const { data: products, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('status', 'active');
-
-      if (error) throw error;
-
-      setCatalogProducts(products.map(product => ({
-        id: product.id,
-        name: product.name,
-        price: product.price || 0
-      })));
-    } catch (error) {
-      console.error('Error loading products:', error);
+  // Загрузка продуктов с помощью хука
+  const { 
+    data: catalogProducts = [], 
+    loading: productsLoading,
+    error: productsError 
+  } = useSupabaseQuery(
+    () => productsApi.getActiveProducts(),
+    {
+      onError: (error) => {
+        toast.error('Error loading products: ' + error.message);
+      }
     }
+  );
+
+  // Мутация для создания заказа
+  const { 
+    mutate: createOrder,
+    loading: creatingOrder 
+  } = useSupabaseMutation(
+    async () => {
+      const orderData = {
+        ...prepareOrderData(),
+        items: orderItems
+      };
+      return ordersApi.createOrderWithItems(orderData);
+    },
+    {
+      onSuccess: () => {
+        toast.success('Order created successfully');
+        navigate('/orders');
+      },
+      onError: (error) => {
+        toast.error('Error creating order: ' + error.message);
+      }
+    }
+  );
+
+  const prepareOrderData = () => {
+    const { deliveryMethod, recipient, customer, ...rest } = orderForm;
+    
+    return {
+      status: 'new',
+      delivery_method: deliveryMethod,
+      client_name: recipient.name,
+      client_phone: customer.phone || recipient.phone,
+      address: deliveryMethod === 'delivery' ? formatAddress(recipient.address) : '',
+      shop: deliveryMethod === 'pickup' ? orderForm.pickupStore : '',
+      delivery_time: formatDeliveryTime(),
+      total_price: calculateTotalPrice(),
+      client_comment: orderForm.cardMessage,
+      internal_comment: orderForm.internalComment,
+      ...rest
+    };
+  };
+
+  const formatAddress = (address) => {
+    const parts = [
+      address.street,
+      address.building,
+      address.apartment && `кв. ${address.apartment}`,
+      address.floor && `этаж ${address.floor}`
+    ].filter(Boolean);
+    
+    return parts.join(', ');
+  };
+
+  const formatDeliveryTime = () => {
+    const date = orderForm.deliveryMethod === 'delivery' ? 
+      orderForm.deliveryDate : 
+      orderForm.pickupDate;
+    
+    const time = orderForm.deliveryMethod === 'delivery' ? 
+      orderForm.deliveryTime : 
+      orderForm.pickupTime;
+
+    return `${date}T${time}:00`;
+  };
+
+  const calculateTotalPrice = () => {
+    return orderItems.reduce((sum, item) => sum + (item.price || 0), 0);
   };
 
   const handleAddProduct = (product) => {
-    setOrderItems([...orderItems, { ...product, type: 'product' }]);
+    setOrderItems(prev => [...prev, { ...product, type: 'product' }]);
     setShowProductSearch(false);
   };
 
@@ -85,7 +133,7 @@ const CreateOrderPage = () => {
     const name = e.target.itemName.value;
     const price = Number(e.target.itemPrice.value);
     
-    setOrderItems([...orderItems, { 
+    setOrderItems(prev => [...prev, { 
       id: Date.now(),
       name,
       price,
@@ -97,104 +145,61 @@ const CreateOrderPage = () => {
   };
 
   const handleRemoveItem = (itemId) => {
-    setOrderItems(orderItems.filter(item => item.id !== itemId));
+    setOrderItems(prev => prev.filter(item => item.id !== itemId));
   };
 
-  const subtotal = orderItems.reduce((sum, item) => sum + item.price, 0);
-  const deliveryCost = orderForm.deliveryMethod === 'delivery' ? 1500 : 0;
-  const total = subtotal + deliveryCost;
-
-  const handleCreateOrder = async () => {
-    try {
-      console.log('Начало создания заказа');
-
-      // Проверяем обязательные поля
-      if (!orderForm.recipient.phone && !orderForm.customer.phone) {
-        throw new Error('Необходимо указать телефон получателя или заказчика');
-      }
-
-      if (orderItems.length === 0) {
-        throw new Error('Добавьте хотя бы один товар в заказ');
-      }
-
-      // Формируем адрес
-      const address = orderForm.deliveryMethod === 'delivery'
-        ? `${orderForm.recipient.address.street || ''} ${
-            orderForm.recipient.address.apartment ? `кв. ${orderForm.recipient.address.apartment}` : ''
-          } ${
-            orderForm.recipient.address.floor ? `этаж ${orderForm.recipient.address.floor}` : ''
-          }`.trim() || 'Адрес не указан'
-        : 'Самовывоз';
-
-      // Формируем данные заказа строго по структуре таблицы
-      const orderData = {
-        number: Date.now().toString(),
-        status: 'Не оплачен',
-        client_phone: orderForm.recipient.phone || orderForm.customer.phone,
-        address: address,
-        delivery_date: new Date().toISOString().split('T')[0],
-        delivery_time: orderForm.deliveryMethod === 'delivery' ? orderForm.deliveryTime : orderForm.pickupTime,
-        client_comment: orderForm.cardMessage || '',
-        total_price: total
-      };
-
-      console.log('Данные заказа для отправки:', orderData);
-
-      // Создаем заказ
-      const { data: orderResponse, error: orderError } = await supabase
-        .from('orders')
-        .insert([orderData])
-        .select();
-
-      if (orderError) {
-        console.error('Ошибка при создании заказа:', orderError);
-        throw new Error(`Ошибка при создании заказа: ${orderError.message}`);
-      }
-
-      console.log('Ответ после создания заказа:', orderResponse);
-
-      if (!orderResponse || !orderResponse[0]) {
-        throw new Error('Не удалось получить данные созданного заказа');
-      }
-
-      const orderId = orderResponse[0].id;
-
-      // Создаем записи товаров заказа
-      const orderItemsData = orderItems.map(item => ({
-        order_id: orderId,
-        product_id: item.type === 'product' ? item.id : null,
-        price: parseFloat(item.price)
-      }));
-
-      console.log('Данные товаров для отправки:', orderItemsData);
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsData);
-
-      if (itemsError) {
-        console.error('Ошибка при добавлении товаров:', itemsError);
-        // Удаляем созданный заказ, если не удалось добавить товары
-        await supabase.from('orders').delete().eq('id', orderId);
-        throw new Error(`Ошибка при добавлении товаров: ${itemsError.message}`);
-      }
-
-      console.log('Заказ успешно создан');
-      
-      // Переходим на страницу заказов с флагом обновления
-      navigate('/orders', { 
-        replace: true, 
-        state: { 
-          refresh: true,
-          newOrderId: orderId
-        }
-      });
-
-    } catch (error) {
-      console.error('Подробная ошибка:', error);
-      alert(error.message);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (orderItems.length === 0) {
+      toast.error('Please add at least one item to the order');
+      return;
     }
+
+    if (!validateForm()) {
+      return;
+    }
+
+    await createOrder();
   };
+
+  const validateForm = () => {
+    const { deliveryMethod, recipient, customer } = orderForm;
+
+    if (!customer.phone && !recipient.phone) {
+      toast.error('Please provide either customer or recipient phone');
+      return false;
+    }
+
+    if (!recipient.name) {
+      toast.error('Please provide recipient name');
+      return false;
+    }
+
+    if (deliveryMethod === 'delivery') {
+      if (!recipient.address.street || !recipient.address.building) {
+        toast.error('Please provide delivery address');
+        return false;
+      }
+    } else if (!orderForm.pickupStore) {
+      toast.error('Please select pickup store');
+      return false;
+    }
+
+    return true;
+  };
+
+  const timeSlots = [
+    { label: '09:00 - 12:00', value: '09:00' },
+    { label: '12:00 - 15:00', value: '12:00' },
+    { label: '15:00 - 18:00', value: '15:00' },
+    { label: '18:00 - 21:00', value: '18:00' },
+  ];
+
+  const stores = [
+    { id: 1, name: "Магазин на Абая" },
+    { id: 2, name: "Магазин на Достык" },
+  ];
 
   const renderStep1 = () => (
     <div className="space-y-6">
@@ -239,15 +244,15 @@ const CreateOrderPage = () => {
         <div className="mt-4 space-y-1 pt-4 border-t">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Сумма заказа:</span>
-            <span>{subtotal.toLocaleString()} ₸</span>
+            <span>{calculateTotalPrice().toLocaleString()} ₸</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Доставка:</span>
-            <span>{deliveryCost.toLocaleString()} ₸</span>
+            <span>{orderForm.deliveryMethod === 'delivery' ? 1500 : 0} ₸</span>
           </div>
           <div className="flex justify-between font-semibold text-lg pt-2 border-t">
             <span>Итого:</span>
-            <span className="text-green-600">{total.toLocaleString()} ₸</span>
+            <span className="text-green-600">{(calculateTotalPrice() + (orderForm.deliveryMethod === 'delivery' ? 1500 : 0)).toLocaleString()} ₸</span>
           </div>
         </div>
       </div>
@@ -559,7 +564,7 @@ const CreateOrderPage = () => {
         </button>
         <button 
           className="w-full sm:w-1/2 bg-green-500 text-white p-4 rounded-md text-lg font-medium flex items-center justify-center"
-          onClick={handleCreateOrder}
+          onClick={handleSubmit}
         >
           <Send size={20} className="mr-2" />
           Создать заказ

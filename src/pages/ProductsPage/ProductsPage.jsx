@@ -43,17 +43,28 @@ function ProductsPage() {
             )
           )
         `)
-        .in('category', ['Букеты', 'Композиции'])
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false });  
 
-      if (productsError) throw productsError;
+      if (productsError) {
+        console.error('Error fetching products:', productsError);
+        throw productsError;
+      }
+
+      if (!productsData) {
+        console.log('No products data received');
+        setProducts([]);
+        return;
+      }
+
+      console.log('Received products:', productsData);
 
       const productsWithDetails = productsData.map(product => {
         const composition = product.product_compositions?.map(item => ({
           id: item.id,
           name: item.inventory?.products?.name || 'Неизвестный цветок',
           quantity: parseInt(item.quantity) || 0,
-          price_per_stem: parseFloat(item.price_per_stem) || 0
+          price_per_stem: parseFloat(item.price_per_stem) || 0,
+          inventory_item_id: item.inventory?.id
         })) || [];
 
         const basePrice = parseFloat(product.base_price) || 0;
@@ -74,9 +85,11 @@ function ProductsPage() {
         };
       });
 
+      console.log('Processed products:', productsWithDetails);
       setProducts(productsWithDetails);
     } catch (error) {
       console.error('Error loading products:', error);
+      setProducts([]); 
     } finally {
       setLoading(false);
     }
@@ -124,6 +137,7 @@ function ProductsPage() {
 
   // Обработчик для просмотра букета
   const handleViewProduct = (product) => {
+    console.log('Viewing product:', product);
     setSelectedProduct(product);
     setIsViewMode(true);
     setShowAddForm(true);
@@ -358,7 +372,7 @@ function ProductsPage() {
 
   // Обновляем рендер карточки продукта в DesktopView
   const ProductCard = ({ product }) => {
-    console.log('Rendering product:', product); // Для отладки
+    console.log('Rendering product:', product); 
 
     const priceDetails = product.price_details || {
       basePrice: parseFloat(product.price) || 0,

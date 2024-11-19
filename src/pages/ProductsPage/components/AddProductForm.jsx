@@ -26,28 +26,13 @@ const SaveCloseButtons = ({ onSave, onClose, isSaving = false, viewMode = false 
   );
 };
 
-const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selectedProduct = null }) => {
+const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selectedProduct = null, onSave }) => {
   console.log('ProductCard props:', { editingProduct, viewMode, selectedProduct }); // Для отладки
   
   const [activeTab, setActiveTab] = useState('main');
   const [media, setMedia] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
-  const [composition, setComposition] = useState([
-    { 
-      id: 1,
-      name: "Роза Red Naomi",
-      length: 60,
-      quantity: 25,
-      pricePerStem: 400
-    },
-    {
-      id: 2,
-      name: "Гипсофила",
-      length: 50,
-      quantity: 3,
-      pricePerStem: 350
-    }
-  ]);
+  const [composition, setComposition] = useState([]);
 
   // Список тегов для категорий
   const tags = [
@@ -61,11 +46,39 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
 
   const [formData, setFormData] = useState({
     name: '',
-    category: '',
+    sku: '',
     price: '',
-    description: '',
-    images: []
   });
+
+  // Добавляем состояния для цен
+  const [basePrice, setBasePrice] = useState(0);
+  const [markupAmount, setMarkupAmount] = useState(0);
+  const [packagingCost, setPackagingCost] = useState(0);
+
+  // Функция для генерации SKU
+  const generateSKU = (name) => {
+    const timestamp = Date.now().toString().slice(-4);
+    const namePrefix = name.slice(0, 3).toUpperCase();
+    return `${namePrefix}-${timestamp}`;
+  };
+
+  // Обработчик изменения полей формы
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updates = {
+        ...prev,
+        [name]: value
+      };
+      
+      // Автоматически генерируем SKU при изменении названия
+      if (name === 'name' && value) {
+        updates.sku = generateSKU(value);
+      }
+      
+      return updates;
+    });
+  };
 
   const handleMediaUpload = (e) => {
     const files = Array.from(e.target.files).map(file => ({
@@ -76,20 +89,125 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
   };
 
   const handleQuantityChange = (flowerId, change) => {
-    setComposition(composition.map(flower => 
-      flower.id === flowerId 
-        ? { ...flower, quantity: Math.max(1, flower.quantity + change) }
-        : flower
-    ));
+    const updatedComposition = composition.map(flower => {
+      if (flower.id === flowerId) {
+        const newQuantity = Math.max(1, flower.quantity + change);
+        return { ...flower, quantity: newQuantity };
+      }
+      return flower;
+    });
+    
+    setComposition(updatedComposition);
+    
+    // Пересчитываем базовую цену после изменения количества
+    const newPrices = calculateFinalPrice();
+    setBasePrice(newPrices.basePrice);
   };
 
   const removeFlower = (flowerId) => {
     setComposition(composition.filter(flower => flower.id !== flowerId));
   };
 
-  const totalAmount = composition.reduce((sum, flower) => 
-    sum + (flower.quantity * flower.pricePerStem), 0
-  );
+  // Функция расчета итоговой цены
+  const calculateFinalPrice = () => {
+    try {
+      console.log('Calculating final price for composition:', composition);
+      
+      // Проверяем, что у нас есть цветы в композиции
+      if (!composition || composition.length === 0) {
+        console.log('Empty composition');
+        return {
+          basePrice: 0,
+          markupAmount: 0,
+          finalPrice: 0
+        };
+      }
+
+      // Базовая стоимость (сумма всех цветов)
+      let hasValidPrices = true;
+      const basePrice = composition.reduce((sum, flower) => {
+        // Check for either pricePerStem or price_per_stem
+        const priceValue = flower.pricePerStem || flower.price_per_stem;
+        const price = priceValue ? parseFloat(priceValue) : null;
+        const quantity = flower.quantity ? parseInt(flower.quantity) : null;
+        
+        console.log('Processing flower:', {
+          name: flower.name,
+          priceValue,
+          parsedPrice: price,
+          quantity
+        });
+
+        if (price === null || quantity === null || isNaN(price) || isNaN(quantity)) {
+          console.error('Invalid price or quantity for flower:', {
+            name: flower.name,
+            priceValue,
+            parsedPrice: price,
+            quantity
+          });
+          hasValidPrices = false;
+          return sum;
+        }
+
+        const itemTotal = price * quantity;
+        console.log(`Calculated total for ${flower.name}:`, {
+          price,
+          quantity,
+          itemTotal
+        });
+        
+        return sum + itemTotal;
+      }, 0);
+
+      if (!hasValidPrices) {
+        console.error('Some flowers have invalid prices or quantities');
+        return {
+          basePrice: 0,
+          markupAmount: 0,
+          finalPrice: 0
+        };
+      }
+
+      console.log('Base price calculated:', basePrice);
+
+      // Наценка (30%)
+      const markup = 0.3;
+      const markupAmount = basePrice * markup;
+      console.log('Markup amount:', markupAmount);
+
+      // Итоговая стоимость
+      const finalPrice = basePrice + markupAmount;
+      console.log('Final price:', finalPrice);
+
+      if (isNaN(finalPrice) || finalPrice <= 0) {
+        console.error('Invalid final price calculated:', { basePrice, markupAmount, finalPrice });
+        return {
+          basePrice: 0,
+          markupAmount: 0,
+          finalPrice: 0
+        };
+      }
+
+      return {
+        basePrice,
+        markupAmount,
+        finalPrice
+      };
+    } catch (error) {
+      console.error('Error calculating price:', error);
+      return {
+        basePrice: 0,
+        markupAmount: 0,
+        finalPrice: 0
+      };
+    }
+  };
+
+  const totalAmount = composition.reduce((sum, flower) => {
+    const price = flower.pricePerStem || flower.price_per_stem;
+    const quantity = flower.quantity ? parseInt(flower.quantity) : 0;
+    return sum + (price * quantity);
+  }, 0);
 
   // Добавляем новые состояния для маркетинга и группировки
   const [showProductSelector, setShowProductSelector] = useState(false);
@@ -149,14 +267,19 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
       if (error) throw error;
 
       // Преобразуем данные в удобный формат
-      const formattedData = data.map(item => ({
-        id: item.id,
-        name: item.products.name,
-        price: item.products.price,
-        quantity: item.quantity,
-        product_id: item.products.id
-      }));
+      const formattedData = data.map(item => {
+        const price = item.products.price ? parseFloat(item.products.price) : 0;
+        console.log(`Formatting inventory item ${item.products.name}:`, { price });
+        return {
+          id: item.id,
+          name: item.products.name,
+          price: price,
+          quantity: item.quantity,
+          product_id: item.products.id
+        };
+      });
 
+      console.log('Formatted inventory data:', formattedData);
       setInventoryItems(formattedData);
     } catch (error) {
       console.error('Error loading inventory:', error);
@@ -171,26 +294,43 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
   }, []);
 
   // Добавление цветка в состав букета
-  const handleAddFlower = (flower) => {
-    const existingFlower = composition.find(f => f.id === flower.id);
+  const handleAddFlower = (inventoryItem) => {
+    console.log('Adding flower:', inventoryItem);
     
-    if (existingFlower) {
-      setComposition(composition.map(f => 
-        f.id === flower.id 
-          ? { ...f, quantity: Math.min(f.quantity + 1, flower.quantity) }
-          : f
-      ));
-    } else {
-      setComposition([...composition, {
-        id: flower.id,
-        name: flower.name,
-        pricePerStem: flower.price,
-        quantity: 1,
-        maxQuantity: flower.quantity,
-        product_id: flower.product_id
-      }]);
+    // Проверяем, что у цветка есть цена
+    const price = inventoryItem.price_per_stem;
+    if (!price || isNaN(parseFloat(price))) {
+      console.error('Invalid price for flower:', inventoryItem);
+      alert('У выбранного цветка отсутствует цена');
+      return;
     }
-    setShowFlowerSelector(false);
+
+    // Проверяем, есть ли уже такой цветок в композиции
+    const existingFlowerIndex = composition.findIndex(
+      flower => flower.inventory_item_id === inventoryItem.id
+    );
+
+    if (existingFlowerIndex !== -1) {
+      // Если цветок уже есть, увеличиваем количество
+      const updatedComposition = [...composition];
+      updatedComposition[existingFlowerIndex] = {
+        ...updatedComposition[existingFlowerIndex],
+        quantity: (updatedComposition[existingFlowerIndex].quantity || 0) + 1
+      };
+      console.log('Updated composition:', updatedComposition);
+      setComposition(updatedComposition);
+    } else {
+      // Если цветка нет, добавляем новый
+      const newFlower = {
+        id: Date.now(),
+        inventory_item_id: inventoryItem.id,
+        name: inventoryItem.name,
+        price_per_stem: inventoryItem.price_per_stem,
+        quantity: 1
+      };
+      console.log('New flower:', newFlower);
+      setComposition(prev => [...prev, newFlower]);
+    }
   };
 
   // Модальное окно выбора цветов
@@ -239,7 +379,7 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
                     <div>
                       <div className="font-medium">{flower.name}</div>
                       <div className="text-sm text-gray-500">
-                        {flower.price.toLocaleString()} ₸/шт
+                        {(flower.price ? parseFloat(flower.price) : 0).toLocaleString()} ₸/шт
                       </div>
                     </div>
                     <div className="text-sm text-gray-600">
@@ -250,6 +390,297 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
               ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+
+  // Обновляем функцию сохранения с улучшенной обработкой ошибок
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+
+      // Валидация данных перед сохранением
+      if (!formData.name?.trim()) {
+        throw new Error('Введите название букета');
+      }
+
+      if (selectedTags.length === 0) {
+        throw new Error('Выберите хотя бы одну категорию');
+      }
+
+      if (composition.length === 0) {
+        throw new Error('Добавьте хотя бы один цветок в букет');
+      }
+
+      const priceDetails = calculateFinalPrice();
+      console.log('Price details before save:', priceDetails);
+      
+      // Проверяем корректность цен
+      if (!priceDetails.finalPrice || priceDetails.finalPrice <= 0) {
+        console.error('Invalid price details:', priceDetails);
+        throw new Error('Некорректная итоговая стоимость букета. Проверьте цены цветов и их количество.');
+      }
+
+      // Базовые данные продукта
+      const productData = {
+        name: formData.name.trim(),
+        category: selectedTags[0],
+        price: priceDetails.finalPrice,
+        description: '',
+        status: 'active',
+        image_url: media[0]?.url || null,
+        base_price: priceDetails.basePrice,
+        markup_amount: priceDetails.markupAmount
+      };
+
+      // Определяем ID продукта
+      const productId = editingProduct?.id || selectedProduct?.id;
+
+      let savedProductId;
+
+      if (productId) {
+        // Обновление существующего продукта
+        const { data, error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', productId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating product:', error);
+          throw new Error(error.message);
+        }
+
+        savedProductId = productId;
+
+        // Удаляем старый состав
+        const { error: deleteError } = await supabase
+          .from('product_compositions')
+          .delete()
+          .eq('product_id', productId);
+
+        if (deleteError) {
+          console.error('Error deleting old composition:', deleteError);
+          throw new Error('Ошибка при обновлении состава букета');
+        }
+      } else {
+        // Создание нового продукта
+        const { data, error } = await supabase
+          .from('products')
+          .insert([{
+            ...productData,
+            sku: `BQT-${Date.now()}`
+          }])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating product:', error);
+          throw new Error(error.message);
+        }
+
+        savedProductId = data.id;
+      }
+
+      // Сохраняем состав букета
+      if (composition.length > 0) {
+        const compositionData = composition.map(flower => ({
+          product_id: savedProductId,
+          inventory_item_id: flower.inventory_item_id,
+          quantity: flower.quantity,
+          price_per_stem: flower.price_per_stem
+        }));
+
+        const { error: compositionError } = await supabase
+          .from('product_compositions')
+          .insert(compositionData);
+
+        if (compositionError) {
+          console.error('Error saving composition:', compositionError);
+          throw new Error('Ошибка при сохранении состава букета');
+        }
+      }
+
+      alert('Букет успешно сохранен');
+      onClose();
+    } catch (error) {
+      console.error('Error saving bouquet:', error);
+      alert(`Ошибка при сохранении: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Обновляем компонент PriceBreakdown
+  const PriceBreakdown = () => {
+    const priceDetails = calculateFinalPrice();
+    const flowerCount = composition.reduce((sum, flower) => sum + (flower.quantity || 0), 0);
+    
+    return (
+      <div className="bg-white p-6 rounded-lg border">
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">Стоимость цветов:</span>
+            <span>{(priceDetails.basePrice || 0).toLocaleString()} ₸</span>
+          </div>
+          <div className="border-t pt-3">
+            <div className="text-sm text-gray-600">Итоговая стоимость:</div>
+            <div className="text-2xl font-bold text-green-600">
+              {(priceDetails.finalPrice || 0).toLocaleString()} ₸
+            </div>
+          </div>
+          <div className="text-sm text-gray-500">
+            {flowerCount} цветов в букете
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Добавляем состояние для отслеживания процесса сохранения
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Эффект для загрузки данных при просмотре или редактировании
+  useEffect(() => {
+    if (selectedProduct || editingProduct) {
+      const product = selectedProduct || editingProduct;
+      console.log('Loading product data:', product);
+
+      try {
+        // Загружаем состав букета
+        const formattedComposition = product.product_compositions?.map(item => ({
+          id: item.id,
+          name: item.inventory?.products?.name || 'Неизвестный цветок',
+          quantity: parseInt(item.quantity) || 0,
+          price_per_stem: parseFloat(item.price_per_stem) || 0,
+          inventory_item_id: item.inventory?.id
+        })) || [];
+
+        console.log('Formatted composition:', formattedComposition);
+
+        // Обновляем состояния с сохранением всех данных
+        setFormData({
+          name: product.name || '',
+          sku: product.sku || '',
+          price: product.price || 0,
+          base_price: product.base_price || 0,
+          markup_amount: product.markup_amount || 0,
+          packaging_cost: product.packaging_cost || 0
+        });
+
+        // Устанавливаем состав букета
+        setComposition(formattedComposition);
+
+        // Устанавливаем изображение, если оно есть
+        if (product.image_url) {
+          setMedia([{ id: 1, url: product.image_url }]);
+        }
+
+        // Пересчитываем итоговую цену
+        const priceDetails = {
+          basePrice: parseFloat(product.base_price) || 0,
+          markupAmount: parseFloat(product.markup_amount) || 0,
+          packagingCost: parseFloat(product.packaging_cost) || 0,
+          finalPrice: parseFloat(product.price) || 0
+        };
+        
+        console.log('Price details:', priceDetails);
+        
+        // Обновляем цены
+        setBasePrice(priceDetails.basePrice);
+        setMarkupAmount(priceDetails.markupAmount);
+        setPackagingCost(priceDetails.packagingCost);
+      } catch (error) {
+        console.error('Error loading product data:', error);
+      }
+    }
+  }, [selectedProduct, editingProduct]);
+
+  // Обновляем заголовок
+  const getTitle = () => {
+    if (viewMode) return `Просмотр: ${selectedProduct.name}`;
+    if (editingProduct) return `Редактирование: ${editingProduct.name}`;
+    return 'Новый букет';
+  };
+
+  // Добавляем функцию удаления
+  const handleDelete = () => {
+    if (window.confirm('Вы уверены, что хотите удалить этот букет?')) {
+      // Здесь будет логика удаления
+      console.log('Удаление букета:', editingProduct.id);
+      onClose();
+    }
+  };
+
+  // Обновляем секцию состава букета
+  const renderComposition = () => (
+    <div className="bg-white rounded-lg p-6 border">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="font-medium flex items-center">
+          <Flower size={18} className="mr-2 text-gray-500" />
+          Состав букета
+        </h2>
+        {editingProduct && (
+          <button 
+            onClick={handleSave}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+          >
+            Сохранить состав
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {composition.map((flower) => (
+          <div key={flower.id} className="bg-gray-50 p-4 rounded-lg">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <div className="font-medium">{flower.name}</div>
+                <div className="text-sm text-gray-500">
+                  {(flower.pricePerStem || flower.price_per_stem ? parseFloat(flower.pricePerStem || flower.price_per_stem) : 0).toLocaleString()} ₸/шт
+                </div>
+              </div>
+              <button 
+                onClick={() => removeFlower(flower.id)}
+                className="text-gray-400 hover:text-red-500"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                Доступно: {flower.maxQuantity} шт
+              </div>
+              <div className="flex items-center bg-white rounded-lg border">
+                <button 
+                  className="px-3 py-2 text-blue-500"
+                  onClick={() => handleQuantityChange(flower.id, -1)}
+                >
+                  <Minus size={16} />
+                </button>
+                <span className="w-12 text-center font-medium">
+                  {flower.quantity}
+                </span>
+                <button 
+                  className="px-3 py-2 text-blue-500"
+                  onClick={() => handleQuantityChange(flower.id, 1)}
+                  disabled={flower.quantity >= flower.maxQuantity}
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <button 
+          onClick={() => setShowFlowerSelector(true)}
+          className="w-full py-3 px-4 rounded-lg border border-dashed border-gray-300 text-blue-500 flex items-center justify-center"
+        >
+          <Plus size={18} className="mr-2" />
+          Добавить цветок
+        </button>
       </div>
     </div>
   );
@@ -409,302 +840,79 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
     </div>
   );
 
-  // Обновлем расчет итоговой стоимости
-  const calculateFinalPrice = () => {
-    // Базовая стоимость (сумма всех цветов)
-    const basePrice = composition.reduce((sum, flower) => 
-      sum + (flower.quantity * flower.pricePerStem), 0
-    );
-
-    // Добавляем наценку за работу (30% по умолчанию)
-    const markup = 30;
-    const markupAmount = basePrice * (markup / 100);
-
-    // Добавляем стоимость упаковки (фиксированная)
-    const packagingCost = 2000; // Стоимость упаковки
-
-    // Итоговая стоимость
-    const finalPrice = basePrice + markupAmount + packagingCost;
-
-    return {
-      basePrice,
-      markupAmount,
-      packagingCost,
-      finalPrice
-    };
-  };
-
-  // Используем расчет цены
-  const priceDetails = calculateFinalPrice();
-
-  // Обновляем отображене итоговой цены
-  const PriceBreakdown = () => (
-    <div className="bg-white p-6 rounded-lg border">
-      <div className="space-y-3">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Стоимость цветов:</span>
-          <span>{priceDetails.basePrice.toLocaleString()} ₸</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Работа флориста (30%):</span>
-          <span>{priceDetails.markupAmount.toLocaleString()} ₸</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Упаковка:</span>
-          <span>{priceDetails.packagingCost.toLocaleString()} ₸</span>
-        </div>
-        <div className="border-t pt-3">
-          <div className="text-sm text-gray-600">Итоговая стоимость:</div>
-          <div className="text-2xl font-bold text-green-600">
-            {priceDetails.finalPrice.toLocaleString()} ₸
-          </div>
-        </div>
-        <div className="text-sm text-gray-500">
-          {composition.reduce((sum, flower) => sum + flower.quantity, 0)} цветов в букете
-        </div>
-      </div>
-    </div>
-  );
-
-  // Добавляем состояние для отслеживания процесса сохранения
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Обновляем функцию сохранения
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      const priceDetails = calculateFinalPrice();
-      
-      // Данные для сохранения
-      const productData = {
-        name: formData.name || selectedProduct?.name || editingProduct?.name,
-        category: formData.category || selectedProduct?.category || editingProduct?.category || 'Букеты',
-        price: priceDetails.finalPrice,
-        description: formData.description || selectedProduct?.description || editingProduct?.description,
-        status: 'active',
-        image_url: media[0]?.url || selectedProduct?.image_url || editingProduct?.image_url,
-        base_price: priceDetails.basePrice,
-        markup_amount: priceDetails.markupAmount,
-        packaging_cost: priceDetails.packagingCost
-      };
-
-      // Определяем ID продукта для обновления
-      const productId = editingProduct?.id || selectedProduct?.id;
-
-      if (productId) {
-        // Обновляем существующий букет
-        console.log('Updating existing product:', productId);
-        
-        const { data, error } = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', productId)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Удаляем старый состав
-        const { error: deleteError } = await supabase
-          .from('product_compositions')
-          .delete()
-          .eq('product_id', productId);
-
-        if (deleteError) throw deleteError;
-
-        // Добавляем новый состав
-        if (composition.length > 0) {
-          const compositionData = composition.map(flower => ({
-            product_id: productId,
-            inventory_item_id: flower.id,
-            quantity: flower.quantity,
-            price_per_stem: flower.pricePerStem
-          }));
-
-          const { error: compositionError } = await supabase
-            .from('product_compositions')
-            .insert(compositionData);
-
-          if (compositionError) throw compositionError;
-        }
-      } else {
-        // Создаем новый букет
-        console.log('Creating new product');
-        
-        const { data, error } = await supabase
-          .from('products')
-          .insert([{
-            ...productData,
-            sku: `BQT-${Date.now()}`
-          }])
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Сохраняем состав для нового букета
-        if (composition.length > 0) {
-          const compositionData = composition.map(flower => ({
-            product_id: data.id,
-            inventory_item_id: flower.id,
-            quantity: flower.quantity,
-            price_per_stem: flower.pricePerStem
-          }));
-
-          const { error: compositionError } = await supabase
-            .from('product_compositions')
-            .insert(compositionData);
-
-          if (compositionError) throw compositionError;
-        }
-      }
-
-      alert('Букет успешно сохранен');
-      onClose();
-    } catch (error) {
-      console.error('Error saving bouquet:', error);
-      alert(`Ошибка при сохранении: ${error.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Обновляем загрузку данных при редактровании
-  useEffect(() => {
-    const loadProductDetails = async (product) => {
-      try {
-        // Загружаем состав букета
-        const { data: compositions, error: compositionError } = await supabase
-          .from('product_compositions')
-          .select(`
-            *,
-            inventory:inventory_item_id (
-              id,
-              quantity,
-              products (
-                name,
-                price
-              )
-            )
-          `)
-          .eq('product_id', product.id);
-
-        if (compositionError) throw compositionError;
-
-        // Преобразуем данные в нужный формат
-        const formattedComposition = compositions.map(item => ({
-          id: item.inventory.id,
-          name: item.inventory.products.name,
-          quantity: item.quantity,
-          pricePerStem: item.price_per_stem,
-          maxQuantity: item.inventory.quantity + item.quantity
-        }));
-
-        // Обновляем состояния
-        setFormData({
-          name: product.name,
-          category: product.category,
-          description: product.description
-        });
-        setComposition(formattedComposition);
-        if (product.image_url) {
-          setMedia([{ id: 1, url: product.image_url }]);
-        }
-      } catch (error) {
-        console.error('Error loading product details:', error);
-      }
-    };
-
-    // Загружаем данные если это редактирование или просмотр
-    if (editingProduct || selectedProduct) {
-      loadProductDetails(editingProduct || selectedProduct);
-    }
-  }, [editingProduct, selectedProduct]);
-
-  // Обновляем заголовок
-  const getTitle = () => {
-    if (viewMode) return `Просмотр: ${selectedProduct.name}`;
-    if (editingProduct) return `Редактирование: ${editingProduct.name}`;
-    return 'Новый букет';
-  };
-
-  // Добавляем функцию удаления
-  const handleDelete = () => {
-    if (window.confirm('Вы уверены, что хотите удалить этот букет?')) {
-      // Здесь будет логика удаления
-      console.log('Удаление букета:', editingProduct.id);
-      onClose();
-    }
-  };
-
-  // Обновляем секцию состава букета
-  const renderComposition = () => (
-    <div className="bg-white rounded-lg p-6 border">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-medium flex items-center">
-          <Flower size={18} className="mr-2 text-gray-500" />
-          Состав букета
-        </h2>
-        {editingProduct && (
-          <button 
-            onClick={handleSave}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-          >
-            Сохранить состав
-          </button>
-        )}
+  const renderMainTab = () => (
+    <div className="space-y-6">
+      {/* Название букета */}
+      <div className="bg-white rounded-lg p-6 border">
+        <h2 className="font-medium mb-4">Название букета</h2>
+        <input
+          type="text"
+          className="w-full p-3 border rounded-lg"
+          placeholder="Введите название букета"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        />
       </div>
 
-      <div className="space-y-3">
-        {composition.map((flower) => (
-          <div key={flower.id} className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <div className="font-medium">{flower.name}</div>
-                <div className="text-sm text-gray-500">
-                  {flower.pricePerStem.toLocaleString()} ₸/шт
-                </div>
-              </div>
-              <button 
-                onClick={() => removeFlower(flower.id)}
-                className="text-gray-400 hover:text-red-500"
+      {/* Категории */}
+      <div className="bg-white rounded-lg p-6 border">
+        <h2 className="font-medium mb-4">Категории букета</h2>
+        <div className="flex flex-wrap gap-2">
+          {tags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => {
+                if (selectedTags.includes(tag)) {
+                  setSelectedTags(selectedTags.filter(t => t !== tag));
+                } else {
+                  setSelectedTags([...selectedTags, tag]);
+                }
+              }}
+              className={`px-3 py-1 rounded-full text-sm ${
+                selectedTags.includes(tag) 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Фото букета */}
+      <div className="bg-white rounded-lg p-6 border">
+        <h2 className="font-medium mb-4">Фотографии букета</h2>
+        <div className="grid grid-cols-5 gap-4">
+          {media.map(item => (
+            <div key={item.id} className="relative aspect-square">
+              <img
+                src={item.url}
+                alt="Товар"
+                className="w-full h-full object-cover rounded-lg"
+              />
+              <button
+                className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full"
+                onClick={() => setMedia(media.filter(m => m.id !== item.id))}
               >
-                <X size={16} />
+                <X size={12} />
               </button>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500">
-                Доступно: {flower.maxQuantity} шт
-              </div>
-              <div className="flex items-center bg-white rounded-lg border">
-                <button 
-                  className="px-3 py-2 text-blue-500"
-                  onClick={() => handleQuantityChange(flower.id, -1)}
-                >
-                  <Minus size={16} />
-                </button>
-                <span className="w-12 text-center font-medium">
-                  {flower.quantity}
-                </span>
-                <button 
-                  className="px-3 py-2 text-blue-500"
-                  onClick={() => handleQuantityChange(flower.id, 1)}
-                  disabled={flower.quantity >= flower.maxQuantity}
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        <button 
-          onClick={() => setShowFlowerSelector(true)}
-          className="w-full py-3 px-4 rounded-lg border border-dashed border-gray-300 text-blue-500 flex items-center justify-center"
-        >
-          <Plus size={18} className="mr-2" />
-          Добавить цветок
-        </button>
+          ))}
+          {media.length < 5 && (
+            <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer bg-white">
+              <Upload size={24} className="text-gray-400 mb-2" />
+              <span className="text-sm text-gray-500">Добавить фото</span>
+              <input 
+                type="file" 
+                className="hidden" 
+                accept="image/*" 
+                multiple 
+                onChange={handleMediaUpload}
+              />
+            </label>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -763,71 +971,72 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
             <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Левая колонка */}
               <div className="space-y-6">
-                {/* Категории */}
-                <div className="bg-white rounded-lg p-6 border">
-                  <h2 className="font-medium mb-4">Категории букета</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map(tag => (
-                      <button
-                        key={tag}
-                        onClick={() => {
-                          if (selectedTags.includes(tag)) {
-                            setSelectedTags(selectedTags.filter(t => t !== tag));
-                          } else {
-                            setSelectedTags([...selectedTags, tag]);
-                          }
-                        }}
-                        className={`px-3 py-1 rounded-full text-sm ${
-                          selectedTags.includes(tag) 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Фото букета */}
-                <div className="bg-white rounded-lg p-6 border">
-                  <h2 className="font-medium mb-4">Фотографии букета</h2>
-                  <div className="grid grid-cols-5 gap-4">
-                    {media.map(item => (
-                      <div key={item.id} className="relative aspect-square">
-                        <img
-                          src={item.url}
-                          alt="Товар"
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                        <button
-                          className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full"
-                          onClick={() => setMedia(media.filter(m => m.id !== item.id))}
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-                    {media.length < 5 && (
-                      <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer bg-white">
-                        <Upload size={24} className="text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-500">Добавить фото</span>
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*" 
-                          multiple 
-                          onChange={handleMediaUpload}
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
+                {renderMainTab()}
               </div>
 
               {/* Правая колонка */}
               <div className="space-y-6">
-                {renderComposition()}
+                {/* Состав букета */}
+                <div className="bg-white rounded-lg p-6 border">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="font-medium flex items-center">
+                      <Flower size={18} className="mr-2 text-gray-500" />
+                      Состав букета
+                    </h2>
+                    <button 
+                      onClick={() => setShowFlowerSelector(true)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                    >
+                      Добавить цветок
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {composition.map((flower) => (
+                      <div key={flower.id} className="bg-gray-50 p-4 rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="font-medium">{flower.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {(flower.pricePerStem || flower.price_per_stem ? parseFloat(flower.pricePerStem || flower.price_per_stem) : 0).toLocaleString()} ₸/шт
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => removeFlower(flower.id)}
+                            className="text-gray-400 hover:text-red-500"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-500">
+                            Доступно: {flower.maxQuantity} шт
+                          </div>
+                          <div className="flex items-center bg-white rounded-lg border">
+                            <button 
+                              className="px-3 py-2 text-blue-500"
+                              onClick={() => handleQuantityChange(flower.id, -1)}
+                            >
+                              <Minus size={16} />
+                            </button>
+                            <span className="w-12 text-center font-medium">
+                              {flower.quantity}
+                            </span>
+                            <button 
+                              className="px-3 py-2 text-blue-500"
+                              onClick={() => handleQuantityChange(flower.id, 1)}
+                              disabled={flower.quantity >= flower.maxQuantity}
+                            >
+                              <Plus size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Расчет стоимости */}
                 <PriceBreakdown />
               </div>
             </div>

@@ -4,7 +4,7 @@ import {
   ArrowLeft, Phone, MessageCircle, Camera, MapPin, 
   ThumbsUp, ThumbsDown, Gift, Clock, Map, AlertTriangle, X 
 } from 'lucide-react';
-import { supabase } from '../../../config/supabase';
+import { supabase } from '../../../lib/supabase';
 
 // Mock orders data for testing
 const mockOrders = [

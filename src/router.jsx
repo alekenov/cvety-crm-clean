@@ -34,6 +34,18 @@ function ErrorBoundary({ error }) {
   );
 }
 
+// Configure all future flags
+const routerConfig = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+    v7_fetcherPersist: true,
+    v7_normalizeFormMethod: true,
+    v7_partialHydration: true,
+    v7_skipActionErrorRevalidation: true
+  }
+};
+
 export const router = createBrowserRouter(
   [
     {
@@ -49,77 +61,26 @@ export const router = createBrowserRouter(
       ),
       errorElement: <ErrorBoundary />,
       children: [
-        {
-          index: true,
-          element: <OrdersPage />,
-        },
-        {
-          path: 'orders',
-          children: [
-            {
-              index: true,
-              element: <OrdersPage />,
-            },
-            {
-              path: ':id',
-              element: <OrderProcessing />,
-            },
-            {
-              path: 'create',
-              element: <CreateOrderPage />,
-            },
-          ],
-        },
-        {
-          path: 'inventory',
-          element: <InventoryPage />,
-        },
-        {
-          path: 'delivery',
-          element: <DeliveryPage />,
-        },
-        {
-          path: 'clients',
-          element: <ClientsPage />,
-        },
-        {
-          path: 'products',
-          element: <ProductsPage />,
-        },
-        {
-          path: 'analytics',
-          element: <AnalyticsPage />,
-        },
-        {
-          path: 'finance',
-          element: <FinancePage />,
-        },
+        { index: true, element: <OrdersPage /> },
+        { path: 'orders', element: <OrdersPage /> },
+        { path: 'orders/create', element: <CreateOrderPage /> },
+        { path: 'orders/:id', element: <OrderProcessing /> },
+        { path: 'inventory', element: <InventoryPage /> },
+        { path: 'delivery', element: <DeliveryPage /> },
+        { path: 'clients', element: <ClientsPage /> },
+        { path: 'products', element: <ProductsPage /> },
+        { path: 'analytics', element: <AnalyticsPage /> },
+        { path: 'finance', element: <FinancePage /> },
         {
           path: 'settings',
           children: [
-            {
-              index: true,
-              element: <SettingsPage />,
-            },
-            {
-              path: 'shops',
-              element: <ShopManagement />,
-            },
-          ],
+            { index: true, element: <SettingsPage /> },
+            { path: 'shop', element: <ShopManagement /> }
+          ]
         },
-        {
-          path: '*',
-          element: <NotFound />,
-        },
-      ],
-    },
+        { path: '*', element: <NotFound /> }
+      ]
+    }
   ],
-  {
-    future: {
-      v7_fetcherPersist: true,
-      v7_normalizeFormMethod: true,
-      v7_partialHydration: true,
-      v7_skipActionErrorRevalidation: true,
-    },
-  }
+  routerConfig
 );
