@@ -106,6 +106,49 @@
 - Обновлен компонент `PriceBreakdown` для точного отображения цен
 - Добавлены дополнительные проверки валидации данных
 
+## 2024-03-19
+### Оптимизация UI компонентов и структуры проекта
+
+#### Добавлено
+- Интеграция shadcn/ui компонентов
+- Новые компоненты UI с улучшенным дизайном:
+  - Button
+  - Badge
+  - Card
+  - Calendar
+  - Popover
+  - Select
+
+#### Изменено
+- Обновлены импорты компонентов в:
+  - AnalyticsPage
+  - DeliveryPage
+- Улучшена структура директорий компонентов
+- Оптимизирована организация layout компонентов
+
+#### Удалено
+- Устаревшие UI компоненты:
+  - components/ui/Button/Button
+  - components/ui/Badge/Badge
+  - components/ui/Card/Card
+  - components/ui/Calendar/Calendar
+  - components/ui/Popover/Popover
+  - components/ui/Select/Select
+- Дублирующиеся layout компоненты:
+  - components/layout/Sidebar.jsx
+
+#### Технические детали
+- Переход на единый стиль именования компонентов
+- Обновлены пути импорта во всех затронутых файлах
+- Оптимизирована структура директорий
+- Улучшена организация компонентов layout
+
+#### Следующие шаги
+- [ ] Объединить Layout/Layout.jsx и MainLayout/MainLayout.jsx
+- [ ] Рассмотреть объединение PageLayout с MainLayout
+- [ ] Перенести MobileNavigation в features/navigation
+- [ ] Провести полное тестирование UI после обновлений
+
 ## [Unreleased]
 ### Changed
 - Полностью удалены CSS модули в пользу Tailwind CSS

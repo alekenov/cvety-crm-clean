@@ -17,8 +17,8 @@ import PageLayout, {
   PageHeader, 
   PageSection 
 } from '../../components/layout/PageLayout/PageLayout';
-import Button from '../../components/ui/Button/Button';
-import Badge from '../../components/ui/Badge/Badge';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
 import toast from 'react-hot-toast';
 
 export default function DeliveryPage() {

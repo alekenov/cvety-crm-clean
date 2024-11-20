@@ -5,7 +5,7 @@ import OrderProcessing from './pages/OrdersPage/components/OrderProcessing';
 import CreateOrderPage from './pages/OrdersPage/CreateOrderPage';
 import InventoryPage from './pages/InventoryPage/InventoryPage';
 import DeliveryPage from './pages/DeliveryPage/DeliveryPage';
-import ClientsPage from './pages/ClientsPage/ClientsPage';
+import { ClientsPage, ClientProfile } from './pages/ClientsPage';
 import ProductsPage from './pages/ProductsPage/ProductsPage';
 import AnalyticsPage from './pages/AnalyticsPage/AnalyticsPage';
 import FinancePage from './pages/FinancePage/FinancePage';
@@ -61,24 +61,77 @@ export const router = createBrowserRouter(
       ),
       errorElement: <ErrorBoundary />,
       children: [
-        { index: true, element: <OrdersPage /> },
-        { path: 'orders', element: <OrdersPage /> },
-        { path: 'orders/create', element: <CreateOrderPage /> },
-        { path: 'orders/:id', element: <OrderProcessing /> },
-        { path: 'inventory', element: <InventoryPage /> },
-        { path: 'delivery', element: <DeliveryPage /> },
-        { path: 'clients', element: <ClientsPage /> },
-        { path: 'products', element: <ProductsPage /> },
-        { path: 'analytics', element: <AnalyticsPage /> },
-        { path: 'finance', element: <FinancePage /> },
+        {
+          index: true,
+          element: <OrdersPage />,
+        },
+        {
+          path: 'orders',
+          children: [
+            {
+              index: true,
+              element: <OrdersPage />,
+            },
+            {
+              path: ':id',
+              element: <OrderProcessing />,
+            },
+            {
+              path: 'create',
+              element: <CreateOrderPage />,
+            },
+          ],
+        },
+        {
+          path: 'inventory',
+          element: <InventoryPage />,
+        },
+        {
+          path: 'delivery',
+          element: <DeliveryPage />,
+        },
+        {
+          path: 'clients',
+          children: [
+            {
+              index: true,
+              element: <ClientsPage />,
+            },
+            {
+              path: ':id',
+              element: <ClientProfile />,
+            },
+          ],
+        },
+        {
+          path: 'products',
+          element: <ProductsPage />,
+        },
+        {
+          path: 'analytics',
+          element: <AnalyticsPage />,
+        },
+        {
+          path: 'finance',
+          element: <FinancePage />,
+        },
         {
           path: 'settings',
           children: [
-            { index: true, element: <SettingsPage /> },
-            { path: 'shop', element: <ShopManagement /> }
-          ]
+            {
+              index: true,
+              element: <SettingsPage />,
+            },
+            {
+              path: 'shop',
+              element: <ShopManagement />,
+            },
+          ],
         },
-        { path: '*', element: <NotFound /> }
+        {
+          path: '*',
+          element: <NotFound />,
+        },
       ]
     }
   ],

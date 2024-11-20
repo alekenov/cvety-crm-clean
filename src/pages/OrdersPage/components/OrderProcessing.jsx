@@ -1,10 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Phone, MessageCircle, Camera, MapPin, 
   ThumbsUp, ThumbsDown, Gift, Clock, Map, AlertTriangle, X 
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+
+// Order status constants
+const ORDER_STATUS = {
+  NEW: 'new',
+  ACCEPTED: 'accepted',
+  REJECTED: 'rejected',
+  IN_PROGRESS: 'in_progress',
+  PHOTO_UPLOADED: 'photo_uploaded',
+  READY_FOR_DELIVERY: 'ready_for_delivery',
+  IN_DELIVERY: 'in_delivery',
+  DELIVERED: 'delivered',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
+  PROBLEM: 'problem'
+};
+
+// Initial states
+const INITIAL_DELIVERY_INFO = {
+  address: '',
+  apartment: '',
+  entrance: '',
+  comment: '',
+  cost: null,
+  distance: null
+};
 
 // Mock orders data for testing
 const mockOrders = [
@@ -86,22 +111,84 @@ const mockOrders = [
   },
 ];
 
+// Order status display component
+const OrderStatus = ({ status }) => {
+  const getStatusColor = () => {
+    switch (status) {
+      case ORDER_STATUS.NEW:
+        return 'bg-blue-100 text-blue-800';
+      case ORDER_STATUS.ACCEPTED:
+        return 'bg-green-100 text-green-800';
+      case ORDER_STATUS.REJECTED:
+        return 'bg-red-100 text-red-800';
+      case ORDER_STATUS.IN_PROGRESS:
+        return 'bg-yellow-100 text-yellow-800';
+      case ORDER_STATUS.PHOTO_UPLOADED:
+        return 'bg-purple-100 text-purple-800';
+      case ORDER_STATUS.READY_FOR_DELIVERY:
+        return 'bg-indigo-100 text-indigo-800';
+      case ORDER_STATUS.IN_DELIVERY:
+        return 'bg-cyan-100 text-cyan-800';
+      case ORDER_STATUS.DELIVERED:
+        return 'bg-emerald-100 text-emerald-800';
+      case ORDER_STATUS.COMPLETED:
+        return 'bg-teal-100 text-teal-800';
+      case ORDER_STATUS.CANCELLED:
+        return 'bg-gray-100 text-gray-800';
+      case ORDER_STATUS.PROBLEM:
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = () => {
+    switch (status) {
+      case ORDER_STATUS.NEW:
+        return 'Новый заказ';
+      case ORDER_STATUS.ACCEPTED:
+        return 'Принят';
+      case ORDER_STATUS.REJECTED:
+        return 'Отклонен';
+      case ORDER_STATUS.IN_PROGRESS:
+        return 'В работе';
+      case ORDER_STATUS.PHOTO_UPLOADED:
+        return 'Фото загружено';
+      case ORDER_STATUS.READY_FOR_DELIVERY:
+        return 'Готов к доставке';
+      case ORDER_STATUS.IN_DELIVERY:
+        return 'В доставке';
+      case ORDER_STATUS.DELIVERED:
+        return 'Доставлен';
+      case ORDER_STATUS.COMPLETED:
+        return 'Завершен';
+      case ORDER_STATUS.CANCELLED:
+        return 'Отменен';
+      case ORDER_STATUS.PROBLEM:
+        return 'Проблема';
+      default:
+        return 'Неизвестный статус';
+    }
+  };
+
+  return (
+    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}>
+      {getStatusText()}
+    </div>
+  );
+};
+
 const OrderProcessing = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  // State management
   const [loading, setLoading] = useState(true);
   const [orderData, setOrderData] = useState(null);
   const [error, setError] = useState(null);
-  const [orderStatus, setOrderStatus] = useState('new');
+  const [orderStatus, setOrderStatus] = useState(ORDER_STATUS.NEW);
   const [photo, setPhoto] = useState(null);
-  const [deliveryInfo, setDeliveryInfo] = useState({
-    address: '',
-    apartment: '',
-    entrance: '',
-    comment: '',
-    cost: null,
-    distance: null
-  });
+  const [deliveryInfo, setDeliveryInfo] = useState(INITIAL_DELIVERY_INFO);
   const [showCourierComment, setShowCourierComment] = useState(false);
   const [customerRating, setCustomerRating] = useState(null);
   const [courierInfo, setCourierInfo] = useState(null);
@@ -110,33 +197,31 @@ const OrderProcessing = () => {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [problemDescription, setProblemDescription] = useState('');
 
-  useEffect(() => {
-    if (id) {
-      console.log('Loading order with ID:', id);
-      loadOrder();
+  // Memoized functions
+  const loadOrder = useCallback(async () => {
+    if (!id) {
+      setError('ID заказа не указан');
+      setLoading(false);
+      return;
     }
-  }, [id]);
 
-  const loadOrder = async () => {
     try {
       setLoading(true);
       setError(null);
       
       // Clean the ID to ensure we only have numbers
       const cleanId = String(id).replace(/[^0-9]/g, '');
-      console.log('Original ID:', id);
-      console.log('Cleaned ID:', cleanId);
+      console.log('Loading order:', { originalId: id, cleanId });
 
-      // For testing purposes, let's use mock data first
-      const mockOrder = mockOrders.find(order => {
-        const orderNumber = String(order.number).replace(/[^0-9]/g, '');
-        return orderNumber === cleanId;
-      });
+      // Try mock data first for testing
+      const mockOrder = mockOrders.find(order => 
+        String(order.number).replace(/[^0-9]/g, '') === cleanId
+      );
 
       if (mockOrder) {
-        console.log('Found mock order:', mockOrder);
+        console.log('Using mock order data:', mockOrder);
         setOrderData(mockOrder);
-        setOrderStatus(mockOrder.status || 'new');
+        setOrderStatus(mockOrder.status || ORDER_STATUS.NEW);
         setDeliveryInfo({
           address: mockOrder.address || '',
           apartment: mockOrder.apartment || '',
@@ -150,7 +235,7 @@ const OrderProcessing = () => {
       }
 
       // If no mock order found, try to fetch from Supabase
-      const { data, error } = await supabase
+      const { data, error: supabaseError } = await supabase
         .from('orders')
         .select(`
           *,
@@ -159,21 +244,18 @@ const OrderProcessing = () => {
         .eq('number', cleanId)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error loading order:', error);
-        setError(error.message);
-        return;
+      if (supabaseError) {
+        console.error('Supabase error:', supabaseError);
+        throw new Error('Ошибка при загрузке заказа из базы данных');
       }
 
       if (!data) {
-        console.log('No order found with ID:', cleanId);
-        setError('Заказ не найден');
-        return;
+        throw new Error('Заказ не найден');
       }
 
-      console.log('Order data loaded:', data);
+      console.log('Order loaded from Supabase:', data);
       setOrderData(data);
-      setOrderStatus(data.status || 'new');
+      setOrderStatus(data.status || ORDER_STATUS.NEW);
       setDeliveryInfo({
         address: data.address || '',
         apartment: data.apartment || '',
@@ -183,87 +265,94 @@ const OrderProcessing = () => {
         distance: data.delivery_distance || null
       });
     } catch (err) {
-      console.error('Unexpected error:', err);
-      setError('Произошла ошибка при загрузке заказа');
+      console.error('Error in loadOrder:', err);
+      setError(err.message || 'Произошла ошибка при загрузке заказа');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  // Обновление статуса заказа
-  const handleStatusUpdate = async (newStatus) => {
+  // Load order data on component mount or id change
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
+
+  // Status update handler with optimistic updates
+  const handleStatusUpdate = useCallback(async (newStatus) => {
+    if (!id || !Object.values(ORDER_STATUS).includes(newStatus)) {
+      console.error('Invalid status update:', { id, newStatus });
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      // Optimistic update
+      setOrderStatus(newStatus);
+
+      const { error: updateError } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
         .eq('number', id);
 
-      if (error) throw error;
+      if (updateError) {
+        throw updateError;
+      }
 
-      setOrderStatus(newStatus);
-      loadOrder(); // Перезагружаем заказ для обновления всех данных
+      // Reload order data to ensure consistency
+      await loadOrder();
     } catch (error) {
       console.error('Error updating order status:', error);
+      // Revert optimistic update
+      setOrderStatus(orderData?.status || ORDER_STATUS.NEW);
+      setError('Ошибка при обновлении статуса заказа');
     }
-  };
+  }, [id, orderData?.status, loadOrder]);
 
-  const handleBack = () => {
+  // Navigation handlers
+  const handleBack = useCallback(() => {
     navigate('/orders');
-  };
+  }, [navigate]);
 
-  const handleAcceptOrder = () => handleStatusUpdate('accepted');
-  const handleRejectOrder = () => alert('Заказ отклонен');
-  
-  const handlePhotoUpload = (event) => {
+  // Order action handlers
+  const handleAcceptOrder = useCallback(() => 
+    handleStatusUpdate(ORDER_STATUS.ACCEPTED), [handleStatusUpdate]);
+
+  const handleRejectOrder = useCallback(() => 
+    handleStatusUpdate(ORDER_STATUS.REJECTED), [handleStatusUpdate]);
+
+  const handlePhotoUpload = useCallback((event) => {
     const file = event.target.files[0];
     if (file) {
+      // TODO: Implement actual photo upload to storage
       setPhoto(URL.createObjectURL(file));
-      handleStatusUpdate('photoUploaded');
+      handleStatusUpdate(ORDER_STATUS.PHOTO_UPLOADED);
     }
-  };
+  }, [handleStatusUpdate]);
 
-  const handleAddressSubmit = () => {
+  const handleAddressSubmit = useCallback(() => {
     if (deliveryInfo.address) {
-      handleStatusUpdate('readyForDelivery');
+      handleStatusUpdate(ORDER_STATUS.READY_FOR_DELIVERY);
       setDeliveryInfo(prev => ({
         ...prev,
-        cost: 1000,
-        distance: 5.2
+        cost: 1000, // TODO: Implement actual delivery cost calculation
+        distance: 5.2 // TODO: Implement actual distance calculation
       }));
       setCourierInfo({
         name: "Алексей",
         arrivalTime: "15:30"
       });
     } else {
-      alert('Пожалуйста, введите адрес доставки');
+      setError('Пожалуйста, введите адрес доставки');
     }
-  };
+  }, [deliveryInfo.address, handleStatusUpdate]);
 
-  const handleDeliveryComplete = () => {
-    handleStatusUpdate('delivered');
-    alert('Заказ отмечен как доставленный');
-  };
+  const handleDeliveryComplete = useCallback(() => {
+    handleStatusUpdate(ORDER_STATUS.DELIVERED);
+  }, [handleStatusUpdate]);
 
-  const handleMapSelect = () => {
-    alert('Здесь будет открываться карта для выбора адреса');
-  };
-
-  const handlePaymentRequest = () => {
-    if (paymentAmount) {
-      alert(`Запрос на доплату на сумму ${paymentAmount} ₸ отправлен`);
-      setShowPaymentModal(false);
-      setPaymentAmount('');
-    }
-  };
-
-  const handleRefund = () => {
-    if (paymentAmount) {
-      alert(`Запрос на возврат на сумму ${paymentAmount} �� отправлен`);
-      setShowRefundModal(false);
-      setPaymentAmount('');
-    }
-  };
-
+  // UI Components
   const renderProductInfo = () => (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
       <div className="flex items-center">
@@ -329,6 +418,10 @@ const OrderProcessing = () => {
   const renderOrderDetails = () => (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
       <div className="space-y-2">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Детали заказа</h3>
+          <OrderStatus status={orderStatus} />
+        </div>
         <p><span className="font-semibold">Дата и время:</span> {orderData?.delivery_date ? new Date(orderData?.delivery_date).toLocaleDateString('ru-RU') + (orderData?.delivery_time ? `, ${orderData?.delivery_time}` : '') : 'Не указано'}</p>
         <p><span className="font-semibold">Получатель:</span> {orderData?.client_name || 'Клиент'}</p>
         <p className="flex items-center">
@@ -360,7 +453,7 @@ const OrderProcessing = () => {
 
   const renderOrderActions = () => {
     switch (orderStatus) {
-      case 'new':
+      case ORDER_STATUS.NEW:
         return (
           <div className="space-y-2 mt-4">
             <button 
@@ -377,7 +470,7 @@ const OrderProcessing = () => {
             </button>
           </div>
         );
-      case 'accepted':
+      case ORDER_STATUS.ACCEPTED:
         return (
           <div className="mt-4">
             <label className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-semibold text-center cursor-pointer inline-block">
@@ -387,7 +480,7 @@ const OrderProcessing = () => {
             </label>
           </div>
         );
-      case 'photoUploaded':
+      case ORDER_STATUS.PHOTO_UPLOADED:
         return (
           <div className="mt-4">
             <div className="bg-blue-100 p-4 rounded-lg">
@@ -395,8 +488,8 @@ const OrderProcessing = () => {
             </div>
           </div>
         );
-      case 'readyForDelivery':
-      case 'delivered':
+      case ORDER_STATUS.READY_FOR_DELIVERY:
+      case ORDER_STATUS.DELIVERED:
         return (
           <div className="mt-4 space-y-2">
             {courierInfo && (
@@ -405,7 +498,7 @@ const OrderProcessing = () => {
                 <p>Ожидаемое время прибытия: {courierInfo.arrivalTime}</p>
               </div>
             )}
-            {orderStatus !== 'delivered' && (
+            {orderStatus !== ORDER_STATUS.DELIVERED && (
               <button 
                 className="w-full bg-green-500 text-white py-3 px-4 rounded-lg font-semibold" 
                 onClick={handleDeliveryComplete}
@@ -430,7 +523,7 @@ const OrderProcessing = () => {
             <p className="text-red-600">{problemDescription}</p>
           </div>
         </div>
-        <button onClick={() => {setOrderStatus('photoUploaded'); setProblemDescription('');}}>
+        <button onClick={() => {setOrderStatus(ORDER_STATUS.PHOTO_UPLOADED); setProblemDescription('');}}>
           <X size={20} className="text-red-500" />
         </button>
       </div>
@@ -452,7 +545,7 @@ const OrderProcessing = () => {
         <div className="flex flex-col space-y-2">
           <button 
             className="bg-blue-500 text-white py-2 px-4 rounded-lg" 
-            onClick={handlePaymentRequest}
+            onClick={() => alert(`Запрос на доплату на сумму ${paymentAmount} ₸ отправлен`)}
           >
             Запросить доплату
           </button>
@@ -482,7 +575,7 @@ const OrderProcessing = () => {
         <div className="flex flex-col space-y-2">
           <button 
             className="bg-red-500 text-white py-2 px-4 rounded-lg" 
-            onClick={handleRefund}
+            onClick={() => alert(`Запрос на возврат на сумму ${paymentAmount} ₸ отправлен`)}
           >
             Выполнить возврат
           </button>
@@ -557,8 +650,8 @@ const OrderProcessing = () => {
               {/* Mobile View */}
               {renderProductInfo()}
               {renderCommentAndCard()}
-              {orderStatus !== 'new' && renderPhotoBeforeDelivery()}
-              {orderStatus === 'problem' && renderProblemStatus()}
+              {orderStatus !== ORDER_STATUS.NEW && renderPhotoBeforeDelivery()}
+              {orderStatus === ORDER_STATUS.PROBLEM && renderProblemStatus()}
               {renderOrderDetails()}
               {renderOrderActions()}
               <div className="mt-4 space-x-2 text-center">
@@ -583,8 +676,8 @@ const OrderProcessing = () => {
                 <div className="col-span-2 space-y-6">
                   {renderProductInfo()}
                   {renderCommentAndCard()}
-                  {orderStatus !== 'new' && renderPhotoBeforeDelivery()}
-                  {orderStatus === 'problem' && renderProblemStatus()}
+                  {orderStatus !== ORDER_STATUS.NEW && renderPhotoBeforeDelivery()}
+                  {orderStatus === ORDER_STATUS.PROBLEM && renderProblemStatus()}
                   {renderOrderDetails()}
                 </div>
                 <div className="space-y-6">

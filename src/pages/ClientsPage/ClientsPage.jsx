@@ -1,241 +1,357 @@
 import React, { useState } from 'react';
-import { Search, MessageCircle, Phone, Plus, ShoppingBag, Star, ArrowLeft } from 'lucide-react';
-
-// Выносим компоненты карточек на уровень выше
-const MobileClientCard = ({ client }) => (
-  <div className="bg-white rounded-lg shadow p-4 mb-3">
-    <div className="flex justify-between items-start">
-      <div>
-        <div className="flex items-center">
-          <h3 className="font-semibold">{client.name}</h3>
-          {client.isVip && (
-            <Star size={16} className="ml-1 text-yellow-400 fill-yellow-400" />
-          )}
-        </div>
-        <p className="text-sm text-gray-600 mt-1">{client.phone}</p>
-      </div>
-      <div className="text-right">
-        <p className="text-sm text-gray-600">{client.totalOrders} заказов</p>
-        <p className="text-sm font-medium">{client.totalSpent.toLocaleString()} ₸</p>
-      </div>
-    </div>
-
-    {client.tags && client.tags.length > 0 && (
-      <div className="mt-3">
-        {client.tags.map((tag, index) => (
-          <span
-            key={index}
-            className="inline-block bg-gray-100 text-xs text-gray-600 px-2 py-1 rounded-full mr-2 mb-1"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-    )}
-
-    <div className="flex justify-between mt-3">
-      <button
-        onClick={() => window.location.href = `tel:${client.phone}`}
-        className="flex items-center justify-center py-2 px-4 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium flex-1 mr-2"
-      >
-        <Phone size={16} className="mr-1" />
-        Позвонить
-      </button>
-      <button
-        onClick={() => window.open(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`)}
-        className="flex items-center justify-center py-2 px-4 bg-green-50 text-green-600 rounded-lg text-sm font-medium flex-1"
-      >
-        <MessageCircle size={16} className="mr-1" />
-        WhatsApp
-      </button>
-    </div>
-  </div>
-);
-
-const DesktopClientRow = ({ client }) => (
-  <div className="bg-white hover:bg-gray-50 p-4 border-b border-gray-100 flex items-center">
-    <div className="w-1/4">
-      <div className="flex items-center">
-        <div className="font-medium">{client.name}</div>
-        {client.isVip && <Star size={16} className="ml-1 text-yellow-400 fill-yellow-400" />}
-      </div>
-      <div className="text-sm text-gray-500">{client.phone}</div>
-    </div>
-
-    <div className="w-1/4 text-sm">
-      <div>Всего заказов: {client.totalOrders}</div>
-      <div className="text-green-600">Сумма: {client.totalSpent.toLocaleString()} ₸</div>
-    </div>
-
-    <div className="w-1/4 flex flex-wrap gap-1">
-      {client.tags?.map((tag, index) => (
-        <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-          {tag}
-        </span>
-      ))}
-    </div>
-
-    <div className="w-1/4 flex justify-end space-x-2">
-      <button 
-        onClick={() => window.location.href = `tel:${client.phone}`}
-        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-        title="Позвонить"
-      >
-        <Phone size={20} />
-      </button>
-      <button
-        onClick={() => window.open(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`)}
-        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
-        title="WhatsApp"
-      >
-        <MessageCircle size={20} />
-      </button>
-      <button
-        onClick={() => alert('Создание заказа')}
-        className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100"
-        title="Создать заказ"
-      >
-        <ShoppingBag size={20} />
-      </button>
-    </div>
-  </div>
-);
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, X } from 'lucide-react';
+import ClientForm from './components/ClientForm';
 
 function ClientsPage() {
+  const navigate = useNavigate();
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
-  
-  // Локальное состояние вместо Redux
-  const [clients] = useState([
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTag, setNewTag] = useState('');
+
+  // Mock clients data
+  const [clients, setClients] = useState([
     {
       id: 1,
-      name: 'Анна Иванова',
-      phone: '+7 (777) 123-45-67',
+      name: "Anna Smith",
+      phone: "+7 (777) 123-45-67",
       totalOrders: 5,
       totalSpent: 125000,
-      isVip: true,
-      tags: ['Постоянный клиент', 'VIP']
+      lastOrder: "2024-01-15",
+      tags: ['Regular', 'Prefers roses']
     },
     {
       id: 2,
-      name: 'Сергей Петров',
-      phone: '+7 (777) 234-56-78',
+      name: "John Doe",
+      phone: "+7 (777) 234-56-78",
       totalOrders: 3,
       totalSpent: 75000,
-      isVip: false,
-      tags: ['Новый клиент']
+      lastOrder: "2024-01-10",
+      tags: ['New']
+    },
+    {
+      id: 3,
+      name: "Maria Johnson",
+      phone: "+7 (777) 345-67-89",
+      totalOrders: 7,
+      totalSpent: 180000,
+      lastOrder: "2024-01-05",
+      tags: ['Regular', 'Birthday: March 15']
     }
   ]);
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.phone.includes(searchQuery)
+  const allTags = Array.from(
+    new Set(clients.flatMap(client => client.tags))
   );
 
-  const MobileView = () => (
-    <div className="max-w-md mx-auto bg-gray-100 min-h-screen sm:hidden">
-      <div className="bg-white p-4 flex items-center justify-between shadow-sm">
-        {showForm ? (
-          <>
-            <button onClick={() => setShowForm(false)} className="mr-2">
-              <ArrowLeft size={24} />
-            </button>
-            <h1 className="text-lg font-semibold">Новый клиент</h1>
-          </>
-        ) : (
-          <>
-            <h1 className="text-lg font-semibold">Мои клиенты</h1>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowSearch(!showSearch)}
-                className="p-2 rounded-full hover:bg-gray-100"
-              >
-                <Search size={20} />
-              </button>
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-xl"
-              >
-                +
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+  const handleTagSelect = (tag) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
 
-      <div className="p-4">
-        {showSearch && (
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Поиск по имени или телефону"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-3 pl-10 pr-4 border border-gray-300 rounded-lg"
-              />
-            </div>
-          </div>
-        )}
+  const handleAddTag = (clientId) => {
+    if (newTag.trim()) {
+      setClients(prevClients => 
+        prevClients.map(client => 
+          client.id === clientId
+            ? { ...client, tags: [...client.tags, newTag.trim()] }
+            : client
+        )
+      );
+      setNewTag('');
+      setShowTagInput(false);
+    }
+  };
 
-        <div className="space-y-3">
-          {filteredClients.map(client => (
-            <MobileClientCard key={client.id} client={client} />
-          ))}
+  const handleRemoveTag = (clientId, tagToRemove) => {
+    setClients(prevClients => 
+      prevClients.map(client => 
+        client.id === clientId
+          ? { ...client, tags: client.tags.filter(tag => tag !== tagToRemove) }
+          : client
+      )
+    );
+  };
+
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = !searchQuery || 
+      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.phone.includes(searchQuery);
+
+    const matchesTags = selectedTags.length === 0 ||
+      selectedTags.every(tag => client.tags.includes(tag));
+
+    return matchesSearch && matchesTags;
+  });
+
+  // Desktop view client row
+  const ClientRow = ({ client }) => (
+    <tr 
+      className="hover:bg-gray-50 cursor-pointer"
+      onClick={() => navigate(`/clients/${client.id}`)}
+    >
+      <td className="px-6 py-4">
+        <div>
+          <div className="font-medium text-gray-900">{client.name}</div>
+          <div className="text-sm text-gray-500">{client.phone}</div>
         </div>
-      </div>
-    </div>
-  );
-
-  const DesktopView = () => (
-    <div className="hidden sm:block min-h-screen bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Мои клиенты</h1>
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Поиск клиента..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64"
-              />
-            </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+      </td>
+      <td className="px-6 py-4">
+        <div className="flex flex-wrap gap-2">
+          {client.tags.map((tag, index) => (
+            <span
+              key={index}
+              className="group inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveTag(client.id, tag);
+              }}
             >
-              <Plus size={20} className="mr-2" />
-              Добавить клиента
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow">
-          <div className="bg-gray-50 p-4 border-b border-gray-200 flex items-center font-medium text-gray-500">
-            <div className="w-1/4">Клиент</div>
-            <div className="w-1/4">Статистика</div>
-            <div className="w-1/4">Заметки</div>
-            <div className="w-1/4 text-right">Действия</div>
-          </div>
-
-          {filteredClients.map(client => (
-            <DesktopClientRow key={client.id} client={client} />
+              {tag}
+              <X className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100" />
+            </span>
           ))}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowTagInput(client.id);
+            }}
+            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Tag
+          </button>
+          {showTagInput === client.id && (
+            <div 
+              className="absolute bg-white shadow-lg rounded-lg p-2 z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  className="border rounded px-2 py-1 text-sm"
+                  placeholder="New tag"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleAddTag(client.id)}
+                  className="px-2 py-1 bg-blue-500 text-white rounded text-sm"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+      </td>
+      <td className="px-6 py-4 text-right">{client.totalOrders}</td>
+      <td className="px-6 py-4 text-right font-medium text-green-600">
+        {client.totalSpent.toLocaleString()} ₸
+      </td>
+      <td className="px-6 py-4 text-right text-sm text-gray-500">
+        {new Date(client.lastOrder).toLocaleDateString()}
+      </td>
+    </tr>
+  );
+
+  // Mobile view client card
+  const ClientCard = ({ client }) => (
+    <div 
+      className="bg-white p-4 rounded-lg shadow-sm"
+      onClick={() => navigate(`/clients/${client.id}`)}
+    >
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h3 className="font-medium">{client.name}</h3>
+          <p className="text-sm text-gray-500">{client.phone}</p>
+        </div>
+        <span className="text-sm font-medium text-green-600">
+          {client.totalSpent.toLocaleString()} ₸
+        </span>
+      </div>
+      
+      <div className="flex flex-wrap gap-2 mt-2">
+        {client.tags.map((tag, index) => (
+          <span
+            key={index}
+            className="group inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveTag(client.id, tag);
+            }}
+          >
+            {tag}
+            <X className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100" />
+          </span>
+        ))}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowTagInput(client.id);
+          }}
+          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
+        >
+          <Plus className="w-3 h-3 mr-1" />
+          Add Tag
+        </button>
+        {showTagInput === client.id && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowTagInput(false);
+            }}
+          >
+            <div 
+              className="bg-white p-4 rounded-lg w-80"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="font-medium mb-4">Add New Tag</h3>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  className="flex-1 border rounded-lg px-3 py-2"
+                  placeholder="Enter tag name"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleAddTag(client.id)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 
   return (
-    <>
-      <MobileView />
-      <DesktopView />
-    </>
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Clients</h1>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowSearch(!showSearch)}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <Search className="w-5 h-5 text-gray-600" />
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Client
+          </button>
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div className="flex flex-wrap gap-4">
+          {showSearch && (
+            <div className="w-full md:w-auto flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search clients..."
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          
+          <div className="flex flex-wrap gap-2">
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => handleTagSelect(tag)}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  selectedTags.includes(tag)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {tag}
+                {selectedTags.includes(tag) && (
+                  <X className="w-4 h-4 ml-1 inline-block" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden md:block bg-white rounded-lg shadow">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Client
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tags
+              </th>
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Orders
+              </th>
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total Spent
+              </th>
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Last Order
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {filteredClients.map(client => (
+              <ClientRow key={client.id} client={client} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile View */}
+      <div className="md:hidden space-y-4">
+        {filteredClients.map(client => (
+          <ClientCard key={client.id} client={client} />
+        ))}
+      </div>
+
+      {/* Add/Edit Client Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add New Client</h2>
+            <ClientForm
+              onSave={(data) => {
+                console.log('Save client:', data);
+                setShowForm(false);
+              }}
+              onCancel={() => setShowForm(false)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

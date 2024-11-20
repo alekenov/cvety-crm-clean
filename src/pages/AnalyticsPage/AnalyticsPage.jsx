@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PageLayout, { PageHeader, PageSection } from '../../components/layout/PageLayout/PageLayout';
 import { BarChart, PieChart, TrendingUp, Calendar, Download, Filter } from 'lucide-react';
-import Button from '../../components/ui/Button/Button';
+import { Button } from '../../components/ui/button';
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState('month');
