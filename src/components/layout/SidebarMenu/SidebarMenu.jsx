@@ -25,7 +25,7 @@ function SidebarMenu() {
     { id: 'purchase', path: '/purchase', icon: ShoppingCart, label: 'Закуп' },
     { id: 'delivery', path: '/delivery', icon: Truck, label: 'Доставка' },
     { id: 'analytics', path: '/analytics', icon: BarChart2, label: 'Аналитика' },
-    { id: 'settings', path: '/settings/shops', icon: Settings, label: 'Настройки' },
+    { id: 'settings', path: '/settings', icon: Settings, label: 'Настройки' },
   ];
 
   function getLinkClass(isActive) {

@@ -117,23 +117,14 @@ export const router = createBrowserRouter(
         },
         {
           path: 'settings',
-          children: [
-            {
-              index: true,
-              element: <SettingsPage />,
-            },
-            {
-              path: 'shop',
-              element: <ShopManagement />,
-            },
-          ],
+          element: <ShopManagement />,
         },
         {
           path: '*',
           element: <NotFound />,
         },
-      ]
-    }
+      ],
+    },
   ],
   routerConfig
 );
