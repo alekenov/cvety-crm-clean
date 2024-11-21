@@ -5,6 +5,7 @@ import {
   ThumbsUp, ThumbsDown, Gift, Clock, Map, AlertTriangle, X 
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import toast from 'react-hot-toast';
 
 // Order status constants
 const ORDER_STATUS = {
@@ -302,11 +303,13 @@ const OrderProcessing = () => {
 
       // Reload order data to ensure consistency
       await loadOrder();
+      toast.success('Статус заказа успешно обновлен');
     } catch (error) {
       console.error('Error updating order status:', error);
       // Revert optimistic update
       setOrderStatus(orderData?.status || ORDER_STATUS.NEW);
       setError('Ошибка при обновлении статуса заказа');
+      toast.error('Ошибка при обновлении статуса заказа');
     }
   }, [id, orderData?.status, loadOrder]);
 
@@ -328,6 +331,7 @@ const OrderProcessing = () => {
       // TODO: Implement actual photo upload to storage
       setPhoto(URL.createObjectURL(file));
       handleStatusUpdate(ORDER_STATUS.PHOTO_UPLOADED);
+      toast.success('Фотография успешно загружена');
     }
   }, [handleStatusUpdate]);
 
@@ -343,13 +347,16 @@ const OrderProcessing = () => {
         name: "Алексей",
         arrivalTime: "15:30"
       });
+      toast.success('Адрес доставки успешно обновлен');
     } else {
       setError('Пожалуйста, введите адрес доставки');
+      toast.error('Пожалуйста, введите адрес доставки');
     }
   }, [deliveryInfo.address, handleStatusUpdate]);
 
   const handleDeliveryComplete = useCallback(() => {
     handleStatusUpdate(ORDER_STATUS.DELIVERED);
+    toast.success('Заказ доставлен');
   }, [handleStatusUpdate]);
 
   // UI Components

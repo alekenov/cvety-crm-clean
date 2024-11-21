@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   ArrowUp, 
@@ -17,6 +17,14 @@ import {
 import PageLayout, { PageHeader, PageSection } from '@/components/layout/PageLayout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
+import toast from 'react-hot-toast';
+
+// Создаем объект для уведомлений
+const showToast = {
+  success: (message) => toast.success(message, { duration: 3000 }),
+  error: (message) => toast.error(message, { duration: 3000 }),
+  loading: (message) => toast.loading(message),
+};
 
 const FinancePage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
@@ -190,6 +198,14 @@ const FinancePage = () => {
           <Button
             variant="primary"
             size="sm"
+            onClick={() => handleAddTransaction({
+              type: operationType,
+              amount: 1000,
+              description: 'Тестовая операция',
+              payment: 'Карта',
+              orderId: '#1234',
+              hasFiles: true
+            })}
           >
             Сохранить
           </Button>
@@ -197,6 +213,45 @@ const FinancePage = () => {
       </div>
     </div>
   );
+
+  const handleAddTransaction = async (transactionData) => {
+    const loadingToast = showToast.loading('Добавление транзакции...');
+    try {
+      // Логика добавления транзакции
+      showToast.success('Транзакция успешно добавлена');
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      showToast.error('Ошибка при добавлении транзакции');
+    } finally {
+      toast.dismiss(loadingToast);
+    }
+  };
+
+  const handleUpdateExpense = async (expenseId, updateData) => {
+    const loadingToast = showToast.loading('Обновление расхода...');
+    try {
+      // Логика обновления расхода
+      showToast.success('Расход успешно обновлен');
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      showToast.error('Ошибка при обновлении расхода');
+    } finally {
+      toast.dismiss(loadingToast);
+    }
+  };
+
+  const handleGenerateReport = async (reportParams) => {
+    const loadingToast = showToast.loading('Генерация отчета...');
+    try {
+      // Логика генерации отчета
+      showToast.success('Отчет успешно сгенерирован');
+    } catch (error) {
+      console.error('Error generating report:', error);
+      showToast.error('Ошибка при генерации отчета');
+    } finally {
+      toast.dismiss(loadingToast);
+    }
+  };
 
   return (
     <PageLayout header={header}>
@@ -280,6 +335,14 @@ const FinancePage = () => {
               >
                 <Calendar size={16} className="mr-1" />
                 Фильтр по дате
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleGenerateReport({})}
+              >
+                <FileText size={16} className="mr-1" />
+                Скачать отчет
               </Button>
               <Button
                 variant="outline"

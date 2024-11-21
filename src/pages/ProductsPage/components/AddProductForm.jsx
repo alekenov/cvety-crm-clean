@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Minus, X, ArrowLeft, Upload, Truck, Percent, Calendar, Flower, Search } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import toast from 'react-hot-toast';
 
 // Обновляем компонент кнопок
 const SaveCloseButtons = ({ onSave, onClose, isSaving = false, viewMode = false }) => {
@@ -80,12 +81,22 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
     });
   };
 
-  const handleMediaUpload = (e) => {
-    const files = Array.from(e.target.files).map(file => ({
-      id: Date.now() + Math.random(),
-      url: URL.createObjectURL(file)
-    }));
-    setMedia([...media, ...files]);
+  // Обработчик загрузки изображений
+  const handleMediaUpload = async (e) => {
+    const loadingToast = toast.loading('Загрузка изображений...');
+    try {
+      const files = Array.from(e.target.files).map(file => ({
+        id: Date.now() + Math.random(),
+        url: URL.createObjectURL(file)
+      }));
+      setMedia([...media, ...files]);
+      toast.success('Изображения успешно загружены');
+    } catch (error) {
+      console.error('Error uploading media:', error);
+      toast.error('Ошибка при загрузке изображений');
+    } finally {
+      toast.dismiss(loadingToast);
+    }
   };
 
   const handleQuantityChange = (flowerId, change) => {
@@ -396,6 +407,7 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
 
   // Обновляем функцию сохранения с улучшенной обработкой ошибок
   const handleSave = async () => {
+    const loadingToast = toast.loading('Сохранение продукта...');
     try {
       setIsSaving(true);
 
@@ -502,11 +514,13 @@ const ProductCard = ({ onClose, editingProduct = null, viewMode = false, selecte
         }
       }
 
-      alert('Букет успешно сохранен');
-      onClose();
+      toast.success('Продукт успешно сохранен');
+      toast.dismiss(loadingToast);
+      onSave && onSave();
     } catch (error) {
       console.error('Error saving bouquet:', error);
-      alert(`Ошибка при сохранении: ${error.message}`);
+      toast.error('Ошибка при сохранении: ' + error.message);
+      toast.dismiss(loadingToast);
     } finally {
       setIsSaving(false);
     }

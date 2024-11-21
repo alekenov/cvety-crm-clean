@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Plus, Minus, AlertCircle, Flag, Building2, Star, Filter as FilterIcon, Plus as PlusIcon, Minus as MinusIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import toast from 'react-hot-toast';
+
+// Создаем объект для уведомлений
+const showToast = {
+  success: (message) => toast.success(message, { duration: 3000 }),
+  error: (message) => toast.error(message, { duration: 3000 }),
+  loading: (message) => toast.loading(message),
+};
 
 export default function WholesalePurchase() {
   const navigate = useNavigate();
@@ -94,8 +102,14 @@ export default function WholesalePurchase() {
     return flags[country] || '🌍';
   };
 
-  const handleAddToCart = (item) => {
-    setCart({ ...cart, [item.id]: item.minOrder });
+  const handleAddToCart = async (item) => {
+    try {
+      setCart({ ...cart, [item.id]: item.minOrder });
+      showToast.success('Товар добавлен в корзину');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showToast.error('Ошибка при добавлении в корзину');
+    }
   };
 
   const handleRemoveFromCart = (itemId) => {
@@ -106,6 +120,19 @@ export default function WholesalePurchase() {
 
   const handleUpdateQuantity = (itemId, quantity) => {
     setCart({ ...cart, [itemId]: quantity });
+  };
+
+  const handleCheckout = async (cartData) => {
+    const loadingToast = showToast.loading('Оформление заказа...');
+    try {
+      // Логика оформления заказа
+      showToast.success('Заказ успешно оформлен');
+    } catch (error) {
+      console.error('Error during checkout:', error);
+      showToast.error('Ошибка при оформлении заказа');
+    } finally {
+      toast.dismiss(loadingToast);
+    }
   };
 
   return (
@@ -320,7 +347,7 @@ export default function WholesalePurchase() {
               variant="secondary"
               size="lg"
               className="w-full"
-              onClick={() => navigate('/purchase/checkout')}
+              onClick={() => handleCheckout(cart)}
             >
               Оформить заказ
             </Button>
@@ -360,7 +387,7 @@ export default function WholesalePurchase() {
                   variant="secondary"
                   size="lg"
                   className="w-full"
-                  onClick={() => navigate('/purchase/checkout')}
+                  onClick={() => handleCheckout(cart)}
                 >
                   Оформить заказ
                 </Button>

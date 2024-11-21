@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
 import { X, Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+// Создаем объект для уведомлений
+const showToast = {
+  success: (message) => toast.success(message, { duration: 3000 }),
+  error: (message) => toast.error(message, { duration: 3000 }),
+  loading: (message) => toast.loading(message),
+};
 
 function ClientForm({ client, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -12,9 +20,18 @@ function ClientForm({ client, onSave, onCancel }) {
   const [newTag, setNewTag] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(formData);
+    const loadingToast = showToast.loading('Сохранение данных клиента...');
+    try {
+      await onSave(formData);
+      showToast.success('Данные клиента успешно сохранены');
+    } catch (error) {
+      console.error('Error saving client:', error);
+      showToast.error('Ошибка при сохранении данных клиента');
+    } finally {
+      toast.dismiss(loadingToast);
+    }
   };
 
   const handleAddTag = () => {
@@ -25,6 +42,9 @@ function ClientForm({ client, onSave, onCancel }) {
       });
       setNewTag('');
       setShowTagInput(false);
+      showToast.success('Тег успешно добавлен');
+    } else if (formData.tags.includes(newTag.trim())) {
+      showToast.error('Этот тег уже существует');
     }
   };
 

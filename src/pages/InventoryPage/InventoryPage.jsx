@@ -22,6 +22,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import RevisionMode from './components/RevisionMode';
 import HistoryMode from './components/HistoryMode';
+import toast from 'react-hot-toast';
+
+const showToast = {
+  success: (message) => toast.success(message, { duration: 3000 }),
+  error: (message) => toast.error(message, { duration: 3000 }),
+  loading: (message) => toast.loading(message),
+};
 
 const InventoryPage = () => {
   const [mode, setMode] = useState('inventory'); // 'inventory', 'revision', 'history'
@@ -117,6 +124,7 @@ const InventoryPage = () => {
   };
 
   const handleUpdateInventory = async (updatedInventory) => {
+    const loadingToast = showToast.loading('Обновление количества...');
     try {
       for (const item of updatedInventory) {
         await updateData(item.id, {
@@ -125,8 +133,12 @@ const InventoryPage = () => {
           status: getStatus(item.quantity)
         });
       }
+      showToast.success('Количество успешно обновлено');
     } catch (err) {
       console.error('Error updating inventory:', err);
+      showToast.error('Ошибка при обновлении количества');
+    } finally {
+      toast.dismiss(loadingToast);
     }
   };
 
@@ -134,8 +146,10 @@ const InventoryPage = () => {
     if (window.confirm('Удалить позицию?')) {
       try {
         await updateData(id, { active: false });
+        showToast.success('Позиция успешно удалена');
       } catch (err) {
         console.error('Error deleting item:', err);
+        showToast.error('Ошибка при удалении позиции');
       }
     }
   };
