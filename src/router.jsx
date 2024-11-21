@@ -13,6 +13,10 @@ import SettingsPage from './pages/Settings';
 import { ShopManagement } from './pages/Settings';
 import LoginPage from './pages/LoginPage/LoginPage';
 import { ProtectedRoute } from './components/features/auth/ProtectedRoute';
+import { WholesalePage } from './pages/WholesalePage';
+import ProductDetails from './pages/WholesalePage/ProductDetails';
+import CheckoutPage from './pages/WholesalePage/CheckoutPage';
+import OrderConfirmationPage from './pages/WholesalePage/OrderConfirmationPage';
 
 // Компонент для 404 страницы
 function NotFound() {
@@ -118,6 +122,22 @@ export const router = createBrowserRouter(
         {
           path: 'settings',
           element: <ShopManagement />,
+        },
+        {
+          path: 'purchase',
+          element: <WholesalePage />,
+        },
+        {
+          path: 'purchase/product/:id',
+          element: <ProductDetails />,
+        },
+        {
+          path: 'purchase/checkout',
+          element: <CheckoutPage />,
+        },
+        {
+          path: 'purchase/confirmation',
+          element: <OrderConfirmationPage />,
         },
         {
           path: '*',

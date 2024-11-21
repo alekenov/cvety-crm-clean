@@ -92,7 +92,7 @@ const MobileNavigation = () => {
       )}
 
       {/* Нижняя навигация */}
-      <div className="block lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)] z-50">
         <div className="flex justify-between px-2">
           {tabItems.map(item => (
             <NavLink
@@ -115,7 +115,7 @@ const MobileNavigation = () => {
             <span className="text-xs mt-1">Сервисы</span>
           </button>
         </div>
-      </div>
+      </nav>
     </>
   );
 };
