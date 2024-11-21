@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { 
   Plus, Edit2, MessageCircle, Instagram, MapPin, Phone, 
-  Map, Clock, Settings, X, Briefcase 
+  Map, Clock, Settings, X, Briefcase, Pencil 
 } from 'lucide-react';
+import { showToast } from '@/lib/utils/toast';
 
 function ShopManagement() {
   const [selectedShop, setSelectedShop] = useState(1);
@@ -26,69 +27,41 @@ function ShopManagement() {
         weekend: { open: "10:00", close: "18:00" },
       },
       settings: {
-        pickupOnly: false,
-        deliveryOnly: false,
-        isActive: true
+        pickup: true,
+        delivery: true,
+        marketplace: true
       },
       employees: [
         { 
           id: 1, 
           name: "Анна Иванова", 
           role: "Флорист", 
-          phone: "+7 (777) 123-45-67",
-          schedule: "2/2",
-          salary: "150000"
-        },
-        { 
-          id: 2, 
-          name: "Петр Сидоров", 
-          role: "Курьер", 
-          phone: "+7 (777) 234-56-78",
-          schedule: "5/2",
-          salary: "120000"
+          phone: "+7 (777) 123-45-67"
         }
       ]
     },
-    { 
-      id: 2, 
-      name: "ТЦ Мега", 
-      address: "пр. Сейфуллина, 500", 
+    {
+      id: 2,
+      name: "Достык",
+      address: "пр. Достык, 89",
       phone: "+7 (777) 222-22-22",
       whatsapp: "+7 (777) 222-22-23",
-      instagram: "@mega_flowers",
+      instagram: "@dostyk_flowers",
       workingHours: {
-        weekdays: { open: "10:00", close: "22:00" },
-        weekend: { open: "10:00", close: "22:00" },
+        weekdays: { open: "09:00", close: "21:00" },
+        weekend: { open: "10:00", close: "19:00" },
       },
       settings: {
-        pickupOnly: false,
-        deliveryOnly: false,
-        isActive: true
+        pickup: true,
+        delivery: false,
+        marketplace: true
       },
       employees: [
-        { 
-          id: 3, 
-          name: "Елена Смирнова", 
-          role: "Менеджер", 
-          phone: "+7 (777) 345-67-89",
-          schedule: "5/2",
-          salary: "200000"
-        },
-        { 
-          id: 4, 
-          name: "Алексей Петров", 
-          role: "Флорист", 
-          phone: "+7 (777) 456-78-90",
-          schedule: "2/2",
-          salary: "150000"
-        },
-        { 
-          id: 5, 
-          name: "Дмитрий Иванов", 
-          role: "Курьер", 
-          phone: "+7 (777) 567-89-01",
-          schedule: "6/1",
-          salary: "120000"
+        {
+          id: 1,
+          name: "Мария Петрова",
+          role: "Флорист",
+          phone: "+7 (777) 234-56-78"
         }
       ]
     }
@@ -97,473 +70,427 @@ function ShopManagement() {
   // Получаем текущий магазин
   const currentShop = shops.find(s => s.id === selectedShop);
 
-  // Функции управления состоянием
-  const handleNewShopStart = () => {
-    setEditingShop({
-      id: Date.now(),
-      name: '',
-      address: '',
-      phone: '',
-      whatsapp: '',
-      instagram: '',
+  const handleSaveShop = () => {
+    if (!editingShop) return;
+
+    setShops(prevShops =>
+      prevShops.map(shop =>
+        shop.id === editingShop.id
+          ? {
+              ...shop,
+              name: editingShop.name,
+              address: editingShop.address,
+              phone: editingShop.phone,
+              whatsapp: editingShop.whatsapp,
+              instagram: editingShop.instagram,
+              workingHours: editingShop.workingHours,
+              settings: editingShop.settings,
+              employees: editingShop.employees
+            }
+          : shop
+      )
+    );
+
+    setEditingShop(null);
+    setEditMode(false);
+    showToast.success('Магазин успешно обновлен');
+  };
+
+  const handleSaveEmployee = async (employeeData) => {
+    try {
+      const updatedShops = shops.map(shop => {
+        if (shop.id === selectedShop) {
+          let updatedEmployees;
+          if (editingEmployee) {
+            // Обновляем существующего сотрудника
+            updatedEmployees = shop.employees.map(emp => 
+              emp.id === employeeData.id ? employeeData : emp
+            );
+          } else {
+            // Проверяем, нет ли сотрудника с таким телефоном
+            const existingEmployee = shop.employees.find(emp => emp.phone === employeeData.phone);
+            if (existingEmployee) {
+              throw new Error('Сотрудник с таким номером телефона уже существует');
+            }
+            // Добавляем нового сотрудника
+            updatedEmployees = [...shop.employees, { ...employeeData, id: Date.now() }];
+          }
+          
+          return {
+            ...shop,
+            employees: updatedEmployees
+          };
+        }
+        return shop;
+      });
+      
+      setShops(updatedShops);
+      setShowEmployeeForm(false);
+      setEditingEmployee(null);
+      showToast.success(editingEmployee ? 'Данные сотрудника обновлены' : 'Новый сотрудник добавлен');
+    } catch (error) {
+      showToast.error(error.message || 'Ошибка при сохранении данных сотрудника');
+    }
+  };
+
+  const handleDeleteEmployee = (employeeId) => {
+    try {
+      const updatedShops = shops.map(shop => {
+        if (shop.id === selectedShop) {
+          return {
+            ...shop,
+            employees: shop.employees.filter(emp => emp.id !== employeeId)
+          };
+        }
+        return shop;
+      });
+      setShops(updatedShops);
+      showToast.success('Сотрудник удален');
+    } catch (error) {
+      showToast.error('Ошибка при удалении сотрудника');
+    }
+  };
+
+  const handleEditClick = (shop) => {
+    if (editingShop?.id === shop.id) {
+      setEditingShop(null);
+    } else {
+      setEditingShop({ ...shop });
+    }
+  };
+
+  const handleCancelEditShop = () => {
+    setEditingShop(null);
+    setEditMode(false);
+  };
+
+  const handleUpdateShopInfo = (field, value) => {
+    setEditingShop(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleUpdateWorkingHours = (type, time, value) => {
+    setEditingShop(prev => ({
+      ...prev,
       workingHours: {
-        weekdays: { open: '09:00', close: '20:00' },
-        weekend: { open: '10:00', close: '18:00' }
+        ...prev.workingHours,
+        [type]: {
+          ...prev.workingHours[type],
+          [time]: value
+        }
       }
-    });
-    setNewShopMode(true);
+    }));
   };
 
-  const handleEditStart = () => {
-    setEditingShop(shops.find(s => s.id === selectedShop));
-    setEditMode(true);
-  };
-
-  const handleAddEmployee = (newEmployee) => {
-    const updatedShops = shops.map(shop => {
-      if (shop.id === selectedShop) {
-        return {
-          ...shop,
-          employees: [...shop.employees, { ...newEmployee, id: Date.now() }]
-        };
+  const handleUpdateShopSettings = (shopId, key) => {
+    setEditingShop(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        [key]: !prev.settings[key]
       }
-      return shop;
-    });
-    setShops(updatedShops);
-    setShowEmployeeForm(false);
+    }));
   };
 
-  const handleEditEmployee = (updatedEmployee) => {
-    const updatedShops = shops.map(shop => {
-      if (shop.id === selectedShop) {
-        return {
-          ...shop,
-          employees: shop.employees.map(emp => 
-            emp.id === updatedEmployee.id ? updatedEmployee : emp
-          )
-        };
-      }
-      return shop;
-    });
-    setShops(updatedShops);
-    setEditingEmployee(null);
-  };
-
-  // Обновим компонент EditForm
-  const EditForm = ({ shop, isDesktop = false }) => (
-    <div className="space-y-6">
-      <div className={`space-y-3 ${isDesktop ? 'grid grid-cols-2 gap-4' : ''}`}>
-        <div>
-          <label className="text-sm text-gray-600 block mb-1">Название магазина</label>
-          <input
-            type="text"
-            defaultValue={shop.name}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-gray-600 block mb-1">Адрес</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              defaultValue={shop.address}
-              className="flex-grow p-2 border rounded"
-            />
-            <button className="p-2 bg-blue-50 text-blue-500 rounded">
-              <Map size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-sm text-gray-600 block mb-1">Телефон</label>
-          <input
-            type="tel"
-            defaultValue={shop.phone}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-gray-600 block mb-1">WhatsApp</label>
-          <input
-            type="tel"
-            defaultValue={shop.whatsapp}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-gray-600 block mb-1">Instagram</label>
-          <input
-            type="text"
-            defaultValue={shop.instagram}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-
-        <div className="col-span-2">
-          <label className="text-sm text-gray-600 block mb-2">Время работы</label>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm mb-1">Будни</p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  defaultValue={shop.workingHours.weekdays.open}
-                  className="p-2 border rounded"
-                />
-                <span>—</span>
-                <input
-                  type="time"
-                  defaultValue={shop.workingHours.weekdays.close}
-                  className="p-2 border rounded"
-                />
-              </div>
-            </div>
-            <div>
-              <p className="text-sm mb-1">Выходные</p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  defaultValue={shop.workingHours.weekend.open}
-                  className="p-2 border rounded"
-                />
-                <span>—</span>
-                <input
-                  type="time"
-                  defaultValue={shop.workingHours.weekend.close}
-                  className="p-2 border rounded"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+  const SettingItem = ({ label, checked, onChange }) => (
+    <div className="flex items-center justify-between p-3 bg-white rounded-lg mb-2 shadow-sm">
+      <div className="flex items-center">
+        <input 
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="ml-3 text-sm text-gray-700">{label}</span>
       </div>
-
-      <div className="border-t pt-4">
-        <h3 className="font-medium text-gray-900 mb-4">Настройки магазина</h3>
-        <div className="space-y-4">
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700">Только самовывоз</span>
-            <input
-              type="checkbox"
-              checked={shop.settings.pickupOnly}
-              onChange={(e) => {
-                const updatedShop = {
-                  ...shop,
-                  settings: {
-                    ...shop.settings,
-                    pickupOnly: e.target.checked,
-                    deliveryOnly: e.target.checked ? false : shop.settings.deliveryOnly
-                  }
-                };
-                setEditingShop(updatedShop);
-              }}
-              className="form-checkbox h-5 w-5 text-blue-500"
-            />
-          </label>
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700">Только доставка</span>
-            <input
-              type="checkbox"
-              checked={shop.settings.deliveryOnly}
-              onChange={(e) => {
-                const updatedShop = {
-                  ...shop,
-                  settings: {
-                    ...shop.settings,
-                    deliveryOnly: e.target.checked,
-                    pickupOnly: e.target.checked ? false : shop.settings.pickupOnly
-                  }
-                };
-                setEditingShop(updatedShop);
-              }}
-              className="form-checkbox h-5 w-5 text-blue-500"
-            />
-          </label>
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700">Магазин активен</span>
-            <input
-              type="checkbox"
-              checked={shop.settings.isActive}
-              onChange={(e) => {
-                const updatedShop = {
-                  ...shop,
-                  settings: {
-                    ...shop.settings,
-                    isActive: e.target.checked
-                  }
-                };
-                setEditingShop(updatedShop);
-              }}
-              className="form-checkbox h-5 w-5 text-blue-500"
-            />
-          </label>
-        </div>
-      </div>
+      <span className={`px-2 py-1 rounded text-sm ${checked ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+        {checked ? 'Активно' : 'Неактивно'}
+      </span>
     </div>
   );
 
-  // Обновим отображение информации в десктопной версии
   const InfoDisplay = ({ shop }) => (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <h3 className="font-medium text-gray-900">{shop.name}</h3>
-          <p className="text-sm text-gray-500 mt-1">Название магазина</p>
-        </div>
-
-        <div>
-          <p className="flex items-center text-gray-900">
-            <MapPin size={18} className="mr-2" />
-            {shop.address}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">Адрес</p>
-        </div>
-
-        <div>
-          <p className="flex items-center text-gray-900">
-            <Phone size={18} className="mr-2" />
-            {shop.phone}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">Телефон</p>
-        </div>
-
-        <div>
-          <p className="flex items-center text-gray-900">
-            <MessageCircle size={18} className="mr-2" />
-            {shop.whatsapp}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">WhatsApp</p>
-        </div>
-
-        <div>
-          <p className="flex items-center text-gray-900">
-            <Instagram size={18} className="mr-2" />
-            {shop.instagram}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">Instagram</p>
-        </div>
-
-        <div>
-          <p className="flex items-center text-gray-900">
-            <Clock size={18} className="mr-2" />
-            {`${shop.workingHours.weekdays.open}-${shop.workingHours.weekdays.close}`}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">Будни</p>
-        </div>
-
-        <div>
-          <p className="flex items-center text-gray-900">
-            <Clock size={18} className="mr-2" />
-            {`${shop.workingHours.weekend.open}-${shop.workingHours.weekend.close}`}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">Выходные</p>
-        </div>
-      </div>
-
-      <div className="border-t pt-4">
-        <h3 className="font-medium text-gray-900 mb-4">Настройки магазина</h3>
-        <div className="space-y-4">
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700">Только самовывоз</span>
-            <input
-              type="checkbox"
-              checked={shop.settings.pickupOnly}
-              className="form-checkbox h-5 w-5 text-blue-500"
-            />
-          </label>
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700">Только доставка</span>
-            <input
-              type="checkbox"
-              checked={shop.settings.deliveryOnly}
-              className="form-checkbox h-5 w-5 text-blue-500"
-            />
-          </label>
-          <label className="flex items-center justify-between">
-            <span className="text-gray-700">Магазин активен</span>
-            <input
-              type="checkbox"
-              checked={shop.settings.isActive}
-              className="form-checkbox h-5 w-5 text-blue-500"
-            />
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Мобилная версия
-  const MobileView = () => (
-    <div className="max-w-md mx-auto bg-gray-100 min-h-screen sm:hidden">
-      <div className="bg-white p-4 flex items-center justify-between shadow-sm">
-        <h1 className="text-lg font-semibold flex items-center">
-          <Settings className="text-blue-500 mr-2" size={20} />
-          Управление магазинами
-        </h1>
-        {!editMode && !newShopMode && (
+      {/* Shop Information Section */}
+      <div className="bg-white rounded-lg p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-medium text-gray-900">
+            {currentShop.name}
+          </h2>
           <button
-            onClick={handleNewShopStart}
-            className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center"
+            onClick={() => handleEditClick(currentShop)}
+            className="p-2 text-gray-400 hover:text-gray-500"
           >
-            <Plus size={20} />
+            {editingShop?.id === currentShop.id ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Pencil className="w-5 h-5" />
+            )}
           </button>
+        </div>
+
+        {editingShop?.id === currentShop.id ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Название</label>
+              <input
+                type="text"
+                value={editingShop.name}
+                onChange={(e) => handleUpdateShopInfo('name', e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Адрес</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={editingShop.address}
+                  onChange={(e) => handleUpdateShopInfo('address', e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-10"
+                />
+                <button 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600"
+                  onClick={() => {/* TODO: Add map selection functionality */}}
+                >
+                  <Map size={20} />
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Телефон</label>
+              <input
+                type="text"
+                value={editingShop.phone}
+                onChange={(e) => handleUpdateShopInfo('phone', e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">WhatsApp</label>
+              <input
+                type="text"
+                value={editingShop.whatsapp}
+                onChange={(e) => handleUpdateShopInfo('whatsapp', e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Instagram</label>
+              <input
+                type="text"
+                value={editingShop.instagram}
+                onChange={(e) => handleUpdateShopInfo('instagram', e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Рабочие дни</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="time"
+                    value={editingShop.workingHours.weekdays.open}
+                    onChange={(e) => handleUpdateWorkingHours('weekdays', 'open', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  <input
+                    type="time"
+                    value={editingShop.workingHours.weekdays.close}
+                    onChange={(e) => handleUpdateWorkingHours('weekdays', 'close', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Выходные</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="time"
+                    value={editingShop.workingHours.weekend.open}
+                    onChange={(e) => handleUpdateWorkingHours('weekend', 'open', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  <input
+                    type="time"
+                    value={editingShop.workingHours.weekend.close}
+                    onChange={(e) => handleUpdateWorkingHours('weekend', 'close', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 border-t pt-4 mt-4">
+              <h3 className="font-medium text-gray-900">Настройки магазина</h3>
+              <div className="space-y-2">
+                <SettingItem
+                  label="Самовывоз"
+                  checked={editingShop.settings.pickup}
+                  onChange={() => handleUpdateShopSettings(editingShop.id, 'pickup')}
+                />
+                <SettingItem
+                  label="Доставка"
+                  checked={editingShop.settings.delivery}
+                  onChange={() => handleUpdateShopSettings(editingShop.id, 'delivery')}
+                />
+                <SettingItem
+                  label="Продажа на Cvety.kz"
+                  checked={editingShop.settings.marketplace}
+                  onChange={() => handleUpdateShopSettings(editingShop.id, 'marketplace')}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-4">
+              <button
+                onClick={handleSaveShop}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <MapPin size={16} className="text-gray-500 mr-2" />
+              <span>{currentShop.address}</span>
+            </div>
+            <div className="flex items-center">
+              <Phone size={16} className="text-gray-500 mr-2" />
+              <span>{currentShop.phone}</span>
+            </div>
+            <div className="flex items-center">
+              <MessageCircle size={16} className="text-gray-500 mr-2" />
+              <span>{currentShop.whatsapp}</span>
+            </div>
+            <div className="flex items-center">
+              <Instagram size={16} className="text-gray-500 mr-2" />
+              <span>{currentShop.instagram}</span>
+            </div>
+            <div className="flex items-center">
+              <Clock size={16} className="text-gray-500 mr-2" />
+              <span>
+                Рабочие дни: {currentShop.workingHours.weekdays.open} - {currentShop.workingHours.weekdays.close}
+              </span>
+            </div>
+            <div className="flex items-center">
+              <Clock size={16} className="text-gray-500 mr-2" />
+              <span>
+                Выходные: {currentShop.workingHours.weekend.open} - {currentShop.workingHours.weekend.close}
+              </span>
+            </div>
+
+            <div className="border-t pt-3 mt-3">
+              <div className="space-y-2">
+                <div className="flex items-center text-sm justify-between">
+                  <span className={currentShop.settings.pickup ? 'text-gray-700' : 'text-gray-400'}>
+                    {currentShop.settings.pickup ? '✓' : '•'} Самовывоз
+                  </span>
+                  <span className={`px-2 py-1 rounded ${currentShop.settings.pickup ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {currentShop.settings.pickup ? 'Активно' : 'Неактивно'}
+                  </span>
+                </div>
+                <div className="flex items-center text-sm justify-between">
+                  <span className={currentShop.settings.delivery ? 'text-gray-700' : 'text-gray-400'}>
+                    {currentShop.settings.delivery ? '✓' : '•'} Доставка
+                  </span>
+                  <span className={`px-2 py-1 rounded ${currentShop.settings.delivery ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {currentShop.settings.delivery ? 'Активно' : 'Неактивно'}
+                  </span>
+                </div>
+                <div className="flex items-center text-sm justify-between">
+                  <span className={currentShop.settings.marketplace ? 'text-gray-700' : 'text-gray-400'}>
+                    {currentShop.settings.marketplace ? '✓' : '•'} Продажа на Cvety.kz
+                  </span>
+                  <span className={`px-2 py-1 rounded ${currentShop.settings.marketplace ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {currentShop.settings.marketplace ? 'Активно' : 'Неактивно'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
-      <div className="p-4">
-        <div className="flex flex-wrap gap-2 mb-4">
-          {shops.map((shop) => (
-            <button
-              key={shop.id}
-              className={`px-3 py-1 rounded-full text-sm ${
-                selectedShop === shop.id && !newShopMode 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-200 text-gray-700'
-              }`}
-              onClick={() => !editMode && !newShopMode && setSelectedShop(shop.id)}
-            >
-              {shop.name}
-            </button>
+      {/* Сотрудники */}
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">Сотрудники</h3>
+          <button
+            onClick={() => setShowEmployeeForm(true)}
+            className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+          >
+            <Plus size={20} />
+            <span>Добавить</span>
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {shop.employees.map((employee) => (
+            <div key={employee.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-4">
+                <div>
+                  <h4 className="font-medium">{employee.name}</h4>
+                  <div className="text-sm text-gray-500 space-y-1">
+                    <div className="flex items-center">
+                      <Briefcase size={14} className="mr-1" />
+                      <span>{employee.role}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Phone size={14} className="mr-1" />
+                      <span>{employee.phone}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setEditingEmployee(employee);
+                    setShowEmployeeForm(true);
+                  }}
+                  className="p-2 text-blue-600 hover:text-blue-700 rounded-full hover:bg-blue-50"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  onClick={() => handleDeleteEmployee(employee.id)}
+                  className="p-2 text-red-600 hover:text-red-700 rounded-full hover:bg-red-50"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
           ))}
         </div>
-
-        {/* Остальной контент мобильной версии */}
-        {/* ... */}
       </div>
     </div>
   );
 
-  // Десктопная версия
-  const DesktopView = () => (
-    <div className="hidden sm:block min-h-screen bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Верхняя панель */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <h1 className="text-xl font-bold">Управление магазинами</h1>
-              </div>
-              <button
-                className="px-4 py-2 bg-green-500 text-white rounded-lg flex items-center"
-              >
-                <Plus size={20} className="mr-2" />
-                Добавить магазин
-              </button>
-            </div>
-          </div>
-
-          <div className="px-4 pb-4 flex items-center space-x-2">
-            {shops.map((shop) => (
-              <button
-                key={shop.id}
-                className={`px-3 py-1.5 rounded-full text-sm ${
-                  selectedShop === shop.id 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                onClick={() => setSelectedShop(shop.id)}
-              >
-                {shop.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Основной контент */}
-        <div className="grid grid-cols-3 gap-6">
-          {/* Информация о магазине */}
-          <div className="col-span-2 bg-white rounded-lg shadow-sm p-6">
-            <div className="flex justify-between items-start mb-6">
-              <h2 className="text-lg font-semibold">Информация о магазине</h2>
-              {!isEditing ? (
-                <button 
-                  onClick={handleEditStart}
-                  className="p-2 bg-blue-50 text-blue-500 rounded-lg"
-                >
-                  <Edit2 size={20} />
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg"
-                >
-                  Сохраить
-                </button>
-              )}
-            </div>
-            
-            {isEditing ? (
-              <EditForm shop={currentShop} isDesktop={true} />
-            ) : (
-              <InfoDisplay shop={currentShop} />
-            )}
-          </div>
-
-          {/* Сотрудники */}
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="p-4 border-b">
-              <div className="flex justify-between items-center">
-                <h2 className="font-semibold">Сотрудники ({currentShop.employees.length})</h2>
-                <button
-                  onClick={() => setShowEmployeeForm(true)}
-                  className="p-2 bg-green-50 text-green-500 rounded-lg hover:bg-green-100"
-                >
-                  <Plus size={20} />
-                </button>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="space-y-3">
-                {currentShop.employees.map(employee => (
-                  <div key={employee.id} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">{employee.name}</p>
-                      <p className="text-sm text-gray-600 flex items-center">
-                        <Briefcase size={14} className="mr-1" />
-                        {employee.role}
-                      </p>
-                      <p className="text-sm text-gray-600 flex items-center">
-                        <Phone size={14} className="mr-1" />
-                        {employee.phone}
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setEditingEmployee(employee);
-                        setShowEmployeeForm(true);
-                      }}
-                      className="p-2 text-blue-500 hover:bg-blue-50 rounded"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Обновленный компонент формы сотрудника
-  const EmployeeForm = ({ employee, onSave, onCancel }) => {
+  const EmployeeForm = ({ employee, onCancel }) => {
     const [formData, setFormData] = useState(
       employee || {
         name: '',
         role: 'Флорист',
-        phone: '',
+        phone: ''
       }
     );
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
-      onSave(formData);
+      if (!formData.name || !formData.phone) {
+        showToast.error('Заполните обязательные поля');
+        return;
+      }
+      try {
+        await handleSaveEmployee(formData);
+      } catch (error) {
+        showToast.error('Ошибка при сохранении данных сотрудника');
+      }
     };
 
     return (
@@ -604,7 +531,6 @@ function ShopManagement() {
                 <option value="Флорист">Флорист</option>
                 <option value="Курьер">Курьер</option>
                 <option value="Менеджер">Менеджер</option>
-                <option value="Администратор">Администратор</option>
               </select>
             </div>
 
@@ -630,7 +556,7 @@ function ShopManagement() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
               >
                 {employee ? 'Сохранить' : 'Добавить'}
               </button>
@@ -641,50 +567,43 @@ function ShopManagement() {
     );
   };
 
-  // Добавим модальное окно формы
-  {(showEmployeeForm) && (
-    <EmployeeForm
-      employee={editingEmployee}
-      onSave={(employee) => {
-        if (editingEmployee) {
-          handleEditEmployee(employee);
-        } else {
-          handleAddEmployee(employee);
-        }
-        setShowEmployeeForm(false);
-        setEditingEmployee(null);
-      }}
-      onCancel={() => {
-        setShowEmployeeForm(false);
-        setEditingEmployee(null);
-      }}
-    />
-  )}
-
   return (
-    <>
-      <MobileView />
-      <DesktopView />
-      {showEmployeeForm && (
-        <EmployeeForm
-          employee={editingEmployee}
-          onSave={(employee) => {
-            if (editingEmployee) {
-              handleEditEmployee(employee);
-            } else {
-              handleAddEmployee(employee);
-            }
-            setShowEmployeeForm(false);
-            setEditingEmployee(null);
-          }}
-          onCancel={() => {
-            setShowEmployeeForm(false);
-            setEditingEmployee(null);
-          }}
-        />
+    <div className="container mx-auto p-6 max-w-5xl">
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Управление магазином</h2>
+        <div className="flex space-x-2">
+          {shops.map((shop) => (
+            <button
+              key={shop.id}
+              onClick={() => setSelectedShop(shop.id)}
+              className={`px-4 py-2 rounded-lg ${
+                selectedShop === shop.id
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              {shop.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {currentShop && (
+        <>
+          <InfoDisplay shop={currentShop} />
+          {showEmployeeForm && (
+            <EmployeeForm
+              employee={editingEmployee}
+              onCancel={() => {
+                setShowEmployeeForm(false);
+                setEditingEmployee(null);
+              }}
+            />
+          )}
+        </>
       )}
-    </>
+    </div>
   );
 }
 
-export default ShopManagement; 
+export default ShopManagement;
