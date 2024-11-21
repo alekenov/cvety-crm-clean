@@ -1,6 +1,7 @@
 import React from 'react';
-import Input from '../../../../components/ui/Input/Input';
-import Button from '../../../../components/ui/Button/Button';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/button';
+import { Save } from 'lucide-react';
 
 const ShopSettings = () => {
   return (
@@ -17,10 +18,13 @@ const ShopSettings = () => {
           name="address"
           placeholder="Введите адрес магазина"
         />
-        <Button type="submit">Сохранить</Button>
+        <Button type="submit">
+          <Save className="h-4 w-4 mr-2" />
+          Сохранить
+        </Button>
       </form>
     </div>
   );
 };
 
-export default ShopSettings; 
+export default ShopSettings;

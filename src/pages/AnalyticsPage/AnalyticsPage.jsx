@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import PageLayout, { PageHeader, PageSection } from '../../components/layout/PageLayout/PageLayout';
+import PageLayout, { PageHeader, PageSection } from '@/components/layout/PageLayout/PageLayout';
 import { BarChart, PieChart, TrendingUp, Calendar, Download, Filter } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { Button } from '@/components/ui/button';
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState('month');
@@ -35,29 +35,31 @@ export default function AnalyticsPage() {
   const header = (
     <PageHeader title="Аналитика">
       <div className="flex items-center space-x-3">
-        <div className="flex rounded-lg border overflow-hidden">
-          <button 
+        <div className="flex rounded-lg overflow-hidden">
+          <Button 
+            variant={period === 'week' ? 'default' : 'outline'}
             onClick={() => setPeriod('week')}
-            className={`px-4 py-2 ${period === 'week' ? 'bg-blue-500 text-white' : 'bg-white'}`}
           >
             Неделя
-          </button>
-          <button 
+          </Button>
+          <Button 
+            variant={period === 'month' ? 'default' : 'outline'}
             onClick={() => setPeriod('month')}
-            className={`px-4 py-2 ${period === 'month' ? 'bg-blue-500 text-white' : 'bg-white'}`}
           >
             Месяц
-          </button>
-          <button 
+          </Button>
+          <Button 
+            variant={period === 'year' ? 'default' : 'outline'}
             onClick={() => setPeriod('year')}
-            className={`px-4 py-2 ${period === 'year' ? 'bg-blue-500 text-white' : 'bg-white'}`}
           >
             Год
-          </button>
+          </Button>
         </div>
-        <Button variant="secondary" icon={<Calendar size={20} />} />
-        <Button variant="secondary" icon={<Download size={20} />}>
-          Экспорт
+        <Button variant="outline" size="icon">
+          <Calendar className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon">
+          <Download className="h-4 w-4" />
         </Button>
       </div>
     </PageHeader>
@@ -98,8 +100,8 @@ export default function AnalyticsPage() {
           <PageSection 
             title="Динамика продаж" 
             actions={
-              <Button variant="secondary" icon={<Filter size={16} />} size="sm">
-                Фильтры
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4" />
               </Button>
             }
           >
