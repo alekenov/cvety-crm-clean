@@ -1,6 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSupabase } from '../../hooks/useSupabase';
-import { Package, Search, Edit2, Trash2, Plus, Minus, ClipboardCheck, Check, X, Percent, Wallet, Calendar, Box, History, Image as ImageIcon, DollarSign } from 'lucide-react';
+import { useSupabase } from '@/hooks/useSupabase';
+import { 
+  Package, 
+  Search, 
+  Edit2, 
+  Trash2, 
+  Plus, 
+  Minus, 
+  ClipboardCheck, 
+  Check, 
+  X, 
+  Percent, 
+  Wallet, 
+  Calendar, 
+  Box, 
+  History, 
+  Image as ImageIcon, 
+  DollarSign 
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
 import RevisionMode from './components/RevisionMode';
 import HistoryMode from './components/HistoryMode';
 
@@ -49,186 +68,6 @@ const InventoryPage = () => {
       }));
     }
   };
-
-  // Модальное окно добавления товара
-  const AddProductModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Добавить товар</h2>
-            <button onClick={() => setShowAddModal(false)} className="text-gray-500">
-              ✕
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {/* Загрузка фото */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Фото товара
-              </label>
-              <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                {newProduct.photoPreview ? (
-                  <div className="relative">
-                    <img 
-                      src={newProduct.photoPreview} 
-                      alt="Preview" 
-                      className="max-h-40 mx-auto rounded"
-                    />
-                    <button 
-                      onClick={() => setNewProduct(prev => ({
-                        ...prev,
-                        photo: null,
-                        photoPreview: null
-                      }))}
-                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer">
-                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <span className="mt-2 block text-sm text-gray-600">
-                      Нажмите чтобы загрузить фото
-                    </span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
-
-            {/* Название */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Название
-              </label>
-              <input
-                type="text"
-                value={newProduct.name}
-                onChange={(e) => setNewProduct(prev => ({
-                  ...prev,
-                  name: e.target.value
-                }))}
-                className="w-full p-2 border rounded-lg"
-                placeholder="Введите название товара"
-              />
-            </div>
-
-            {/* Себестоимость */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Себестоимость
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={newProduct.costPrice}
-                  onChange={(e) => setNewProduct(prev => ({
-                    ...prev,
-                    costPrice: e.target.value
-                  }))}
-                  className="w-full p-2 border rounded-lg pl-8"
-                  placeholder="0"
-                />
-                <DollarSign className="absolute left-2 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-
-            {/* Наценка */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Наценка
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={newProduct.markup}
-                  onChange={(e) => setNewProduct(prev => ({
-                    ...prev,
-                    markup: e.target.value
-                  }))}
-                  className="w-full p-2 border rounded-lg pl-8"
-                  placeholder="30"
-                />
-                <Percent className="absolute left-2 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-
-            {/* Конечная стоимость */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600">Конечная стоимость:</div>
-              <div className="text-2xl font-bold text-green-600">
-                {finalPrice.toLocaleString()} ₸
-              </div>
-            </div>
-
-            {/* Количество и локация */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Количество
-                </label>
-                <input
-                  type="number"
-                  value={newProduct.quantity}
-                  onChange={(e) => setNewProduct(prev => ({
-                    ...prev,
-                    quantity: e.target.value
-                  }))}
-                  className="w-full p-2 border rounded-lg"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Локация
-                </label>
-                <input
-                  type="text"
-                  value={newProduct.location}
-                  onChange={(e) => setNewProduct(prev => ({
-                    ...prev,
-                    location: e.target.value
-                  }))}
-                  className="w-full p-2 border rounded-lg"
-                  placeholder="A1"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex space-x-3">
-            <button
-              onClick={() => setShowAddModal(false)}
-              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg"
-            >
-              Отмена
-            </button>
-            <button
-              onClick={() => {
-                // Здесь будет логика сохранения
-                console.log('Новый товар:', {
-                  ...newProduct,
-                  finalPrice
-                });
-                setShowAddModal(false);
-              }}
-              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg"
-            >
-              Добавить
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   const { data: inventoryData, loading, error, updateData } = useSupabase('inventory', {
     select: `
@@ -552,27 +391,30 @@ const InventoryPage = () => {
               <h1 className="text-xl font-bold">Склад</h1>
             </div>
             <div className="flex space-x-2">
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setShowAddModal(true)}
-                className="p-2 bg-green-500 text-white rounded-lg flex items-center"
               >
                 <Plus size={20} className="mr-1" />
                 <span className="hidden md:inline">Добавить товар</span>
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setMode('revision')}
-                className="p-2 bg-blue-500 text-white rounded-lg flex items-center"
               >
                 <ClipboardCheck size={20} className="mr-1" />
                 <span className="hidden md:inline">Ревизия</span>
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setMode('history')}
-                className="p-2 bg-gray-100 rounded-lg flex items-center"
               >
                 <History size={20} className="mr-1" />
                 <span className="hidden md:inline">История</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -608,7 +450,119 @@ const InventoryPage = () => {
       )}
 
       {/* Модальное окно */}
-      {showAddModal && <AddProductModal />}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-md">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="font-semibold">Новый товар</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddModal(false)}
+              >
+                <X size={20} />
+              </Button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <Input
+                type="text"
+                placeholder="Название товара"
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    type="number"
+                    placeholder="Себестоимость"
+                    value={newProduct.costPrice}
+                    onChange={(e) => setNewProduct({ ...newProduct, costPrice: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    placeholder="Наценка %"
+                    value={newProduct.markup}
+                    onChange={(e) => setNewProduct({ ...newProduct, markup: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    type="number"
+                    placeholder="Количество"
+                    value={newProduct.quantity}
+                    onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="text"
+                    placeholder="Место на складе"
+                    value={newProduct.location}
+                    onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('photo-upload').click()}
+                  className="w-full"
+                >
+                  <ImageIcon size={16} className="mr-1" />
+                  {newProduct.photoPreview ? 'Изменить фото' : 'Добавить фото'}
+                </Button>
+                <input
+                  id="photo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+                {newProduct.photoPreview && (
+                  <img
+                    src={newProduct.photoPreview}
+                    alt="Preview"
+                    className="mt-2 rounded-lg w-full h-48 object-cover"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddModal(false)}
+              >
+                Отмена
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  // Здесь будет логика сохранения
+                  console.log('Новый товар:', {
+                    ...newProduct,
+                    finalPrice
+                  });
+                  setShowAddModal(false);
+                }}
+              >
+                Сохранить
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

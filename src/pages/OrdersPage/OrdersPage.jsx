@@ -184,7 +184,7 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
                     e.stopPropagation();
                     onRespondToClientReaction(order.number, 'reassemble');
                   }}
-                  className="mt-2 bg-blue-500 hover:bg-blue-600 text-white"
+                  variant="primary"
                   size="sm"
                 >
                   <RefreshCw size={14} className="mr-1" />
@@ -207,13 +207,12 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
           <div className="flex flex-wrap justify-end gap-2">
             {order.status === 'Оплачен' && (
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   onUploadPhoto(order.number);
                 }}
-                className="bg-green-500 hover:bg-green-600 text-white"
               >
                 <Camera size={16} className="mr-1" />
                 Загрузить фото
@@ -221,13 +220,12 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
             )}
             {nextStatus[order.status] && (
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   onStatusChange(order.number, nextStatus[order.status]);
                 }}
-                className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 <ArrowRight size={16} className="mr-1" />
                 {nextStatus[order.status]}
@@ -388,7 +386,11 @@ export default function OrdersPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
-          <Button onClick={handleNewOrder} className="bg-green-500 hover:bg-green-600 text-white">
+          <Button 
+            onClick={handleNewOrder} 
+            variant="primary"
+            size="md"
+          >
             <Plus size={20} className="mr-2" />
             Новый заказ
           </Button>
@@ -420,61 +422,67 @@ export default function OrdersPage() {
               <div>
                 <h3 className="text-sm font-medium mb-2">Тип доставки</h3>
                 <div className="flex gap-2">
-                  <Badge
-                    variant={deliveryTypeFilter === 'delivery' ? "default" : "outline"}
-                    className="cursor-pointer"
+                  <Button
+                    variant={deliveryTypeFilter === 'all' ? 'primary' : 'outline'}
+                    size="sm"
+                    onClick={() => handleDeliveryTypeFilterChange('all')}
+                  >
+                    Все типы доставки
+                  </Button>
+                  <Button
+                    variant={deliveryTypeFilter === 'delivery' ? 'primary' : 'outline'}
+                    size="sm"
                     onClick={() => handleDeliveryTypeFilterChange('delivery')}
                   >
-                    <Truck className="mr-1 h-3 w-3" />
+                    <Truck size={16} className="mr-1" />
                     Доставка
-                    {deliveryTypeFilter === 'delivery' && <X className="ml-1 h-3 w-3" />}
-                  </Badge>
-                  <Badge
-                    variant={deliveryTypeFilter === 'pickup' ? "default" : "outline"}
-                    className="cursor-pointer"
+                  </Button>
+                  <Button
+                    variant={deliveryTypeFilter === 'pickup' ? 'primary' : 'outline'}
+                    size="sm"
                     onClick={() => handleDeliveryTypeFilterChange('pickup')}
                   >
-                    <Store className="mr-1 h-3 w-3" />
+                    <Store size={16} className="mr-1" />
                     Самовывоз
-                    {deliveryTypeFilter === 'pickup' && <X className="ml-1 h-3 w-3" />}
-                  </Badge>
+                  </Button>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium mb-2">Дата заказа</h3>
                 <div className="flex flex-wrap gap-2">
-                  <Badge
-                    variant={dateFilter === 'today' ? "default" : "outline"}
-                    className="cursor-pointer"
+                  <Button
+                    variant={dateFilter === 'all' ? 'primary' : 'outline'}
+                    size="sm"
+                    onClick={() => handleDateFilterChange('all')}
+                  >
+                    Все даты
+                  </Button>
+                  <Button
+                    variant={dateFilter === 'today' ? 'primary' : 'outline'}
+                    size="sm"
                     onClick={() => handleDateFilterChange('today')}
                   >
                     Сегодня
-                    {dateFilter === 'today' && <X className="ml-1 h-3 w-3" />}
-                  </Badge>
-                  <Badge
-                    variant={dateFilter === 'tomorrow' ? "default" : "outline"}
-                    className="cursor-pointer"
+                  </Button>
+                  <Button
+                    variant={dateFilter === 'tomorrow' ? 'primary' : 'outline'}
+                    size="sm"
                     onClick={() => handleDateFilterChange('tomorrow')}
                   >
                     Завтра
-                    {dateFilter === 'tomorrow' && <X className="ml-1 h-3 w-3" />}
-                  </Badge>
+                  </Button>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Badge
-                        variant={dateFilter === 'custom' ? "default" : "outline"}
-                        className="cursor-pointer"
+                      <Button
+                        variant={dateFilter === 'custom' ? 'primary' : 'outline'}
+                        size="sm"
                       >
-                        <Calendar className="mr-1 h-3 w-3" />
-                        {customDate ? format(customDate, "dd.MM.yyyy") : "Выбрать дату"}
-                        {dateFilter === 'custom' && <X className="ml-1 h-3 w-3" onClick={(e) => {
-                          e.stopPropagation();
-                          handleDateFilterChange('all');
-                        }} />}
-                      </Badge>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {customDate ? format(customDate, 'PPP') : 'Выбрать дату'}
+                      </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <CalendarComponent
                         mode="single"
                         selected={customDate}

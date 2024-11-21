@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import DevLogin from '../../components/features/auth/DevLogin';
+import { AlertCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
+import DevLogin from '@/components/features/auth/DevLogin';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -25,7 +27,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -35,7 +37,7 @@ const LoginPage = () => {
     } catch (error) {
       setError(error.message);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -50,45 +52,36 @@ const LoginPage = () => {
             Система управления цветочным магазином
           </p>
         </div>
+        
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Пароль
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Пароль"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </div>
+          <div className="space-y-4">
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+            />
+            
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              placeholder="Пароль"
+              value={formData.password}
+              onChange={handleChange}
+            />
           </div>
 
           {error && (
             <div className="rounded-md bg-red-50 p-4">
               <div className="flex">
+                <AlertCircle className="h-5 w-5 text-red-400" />
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800">
                     Ошибка при входе
@@ -101,18 +94,15 @@ const LoginPage = () => {
             </div>
           )}
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
-              ) : null}
-              {loading ? 'Вход...' : 'Войти'}
-            </button>
-          </div>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            isLoading={isLoading}
+            className="w-full"
+          >
+            Войти в систему
+          </Button>
         </form>
         
         {process.env.NODE_ENV === 'development' && <DevLogin />}

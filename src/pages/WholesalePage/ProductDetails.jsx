@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Star, Calendar, Heart, Building2, Package, ShoppingCart, Minus, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { 
+  ChevronLeft as ArrowLeftIcon, 
+  ChevronLeft as ChevronLeftIcon, 
+  ChevronRight as ChevronRightIcon,
+  Heart as HeartIcon,
+  Star, 
+  Calendar, 
+  Building2, 
+  Package, 
+  ShoppingCart,
+  Minus,
+  Plus
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 export default function ProductDetails() {
+  const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAllInfo, setShowAllInfo] = useState(false);
   const [quantity, setQuantity] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   // Product data
   const product = {
@@ -74,12 +89,20 @@ export default function ProductDetails() {
     }
   };
 
+  const toggleFavorite = () => setIsFavorite(!isFavorite);
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Back button - visible on mobile */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white z-10 p-4">
         <Link to="/purchase" className="flex items-center text-gray-600">
-          <ChevronLeft className="w-5 h-5" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </Button>
           <span>Назад</span>
         </Link>
       </div>
@@ -96,18 +119,22 @@ export default function ProductDetails() {
               />
               {/* Navigation arrows */}
               <div className="absolute inset-0 flex items-center justify-between p-4">
-                <button 
-                  className="bg-white/80 p-2 rounded-full"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setCurrentImageIndex(i => i > 0 ? i - 1 : product.images.length - 1)}
+                  disabled={currentImageIndex === 0}
                 >
-                  <ChevronLeft />
-                </button>
-                <button 
-                  className="bg-white/80 p-2 rounded-full"
+                  <ChevronLeftIcon className="w-5 h-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setCurrentImageIndex(i => i < product.images.length - 1 ? i + 1 : 0)}
+                  disabled={currentImageIndex === product.images.length - 1}
                 >
-                  <ChevronRight />
-                </button>
+                  <ChevronRightIcon className="w-5 h-5" />
+                </Button>
               </div>
             </div>
 
@@ -130,9 +157,13 @@ export default function ProductDetails() {
             <div className="bg-white p-4 rounded-lg">
               <div className="flex justify-between items-start mb-3">
                 <h1 className="text-2xl lg:text-3xl font-bold">{product.name}</h1>
-                <button className={`p-2 rounded-full ${product.inFavorites ? 'bg-red-50' : 'bg-gray-100'}`}>
-                  <Heart className={product.inFavorites ? 'text-red-500' : 'text-gray-400'} />
-                </button>
+                <Button
+                  variant={isFavorite ? 'danger' : 'ghost'}
+                  size="icon"
+                  onClick={toggleFavorite}
+                >
+                  <HeartIcon className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+                </Button>
               </div>
 
               {/* Farm info */}
@@ -232,15 +263,15 @@ export default function ProductDetails() {
       {/* Order button - fixed on mobile, normal on desktop */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white border-t lg:relative lg:mt-4 lg:max-w-7xl lg:mx-auto">
         {quantity === 0 ? (
-          <button 
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full"
             onClick={handleAddToCart}
-            className="w-full bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg text-lg font-bold transition-colors"
+            disabled={!product.available}
           >
-            <div className="flex items-center justify-center">
-              <ShoppingCart className="w-6 h-6 mr-2" />
-              <span>Добавить в корзину</span>
-            </div>
-          </button>
+            {product.available ? 'Добавить в корзину' : 'Нет в наличии'}
+          </Button>
         ) : (
           <div className="space-y-2">
             <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">

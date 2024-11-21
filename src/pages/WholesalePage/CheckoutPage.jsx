@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Truck, Store, CreditCard, Wallet } from 'lucide-react';
+import { ChevronLeft as ArrowLeftIcon, Truck, Store, CreditCard, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState('pickup');
@@ -61,9 +62,13 @@ export default function CheckoutPage() {
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 bg-white z-10">
         <div className="flex items-center p-4">
-          <Link to="/purchase" className="flex items-center text-gray-600">
-            <ChevronLeft className="w-5 h-5" />
-          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </Button>
           <h1 className="flex-1 text-center font-semibold">Оформление заказа</h1>
           <div className="w-5"></div>
         </div>
@@ -113,28 +118,15 @@ export default function CheckoutPage() {
             <h2 className="font-semibold mb-4">Способ оплаты</h2>
             <div className="space-y-3">
               {paymentMethods.map((method) => (
-                <label
+                <Button
                   key={method.id}
-                  className={`flex items-start p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                    paymentMethod === method.id
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200'
-                  }`}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPaymentMethod(method.id)}
+                  className={paymentMethod === method.id ? 'border-green-500 text-green-600' : ''}
                 >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={method.id}
-                    checked={paymentMethod === method.id}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="sr-only"
-                  />
-                  <method.icon className="w-5 h-5 text-gray-600 mt-0.5" />
-                  <div className="ml-3">
-                    <div className="font-medium">{method.name}</div>
-                    <div className="text-sm text-gray-600">{method.description}</div>
-                  </div>
-                </label>
+                  {method.name}
+                </Button>
               ))}
             </div>
           </div>
@@ -174,13 +166,16 @@ export default function CheckoutPage() {
       <div className="fixed left-0 right-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] bg-white border-t border-gray-200">
         <div className="max-w-2xl mx-auto">
           <div className="p-4">
-            <button
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
               onClick={handleConfirmOrder}
+              isLoading={isProcessing}
               disabled={isProcessing}
-              className="w-full bg-blue-600 text-white py-3 lg:py-2.5 rounded-lg font-medium disabled:bg-blue-400 hover:bg-blue-700 transition-colors"
             >
               {isProcessing ? 'Обработка...' : 'Подтвердить заказ'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Search, ShoppingCart, Plus, Minus, AlertCircle, Flag, Building2, Star } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, AlertCircle, Flag, Building2, Star, Filter as FilterIcon, Plus as PlusIcon, Minus as MinusIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 export default function WholesalePurchase() {
   const navigate = useNavigate();
@@ -114,12 +115,14 @@ export default function WholesalePurchase() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
           <div className="flex justify-between items-center lg:w-auto">
             <h1 className="text-xl lg:text-2xl font-bold">Закупка товаров</h1>
-            <button 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setShowSearch(!showSearch)}
-              className="p-2 bg-gray-100 rounded-lg lg:hidden"
+              className="lg:hidden"
             >
               <Search size={20} />
-            </button>
+            </Button>
           </div>
 
           {/* Поиск для десктопа */}
@@ -154,18 +157,20 @@ export default function WholesalePurchase() {
 
           {/* Табы категорий */}
           <div className="flex rounded-lg overflow-hidden bg-gray-100 lg:w-1/4">
-            <button 
+            <Button
+              variant={activeTab === 'flowers' ? 'primary' : 'ghost'}
+              className="flex-1"
               onClick={() => setActiveTab('flowers')}
-              className={`flex-1 py-3 ${activeTab === 'flowers' ? 'bg-green-500 text-white' : ''}`}
             >
               Цветы
-            </button>
-            <button 
+            </Button>
+            <Button
+              variant={activeTab === 'supplies' ? 'primary' : 'ghost'}
+              className="flex-1"
               onClick={() => setActiveTab('supplies')}
-              className={`flex-1 py-3 ${activeTab === 'supplies' ? 'bg-green-500 text-white' : ''}`}
             >
               Фурнитура
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -255,18 +260,21 @@ export default function WholesalePurchase() {
 
                     {/* Add to Cart */}
                     {quantity === 0 ? (
-                      <button 
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        className="w-full"
                         onClick={() => handleAddToCart(item)}
-                        className="w-full bg-green-500 hover:bg-green-600 transition-colors text-white p-3 rounded-lg font-medium flex items-center justify-center"
                       >
-                        <Plus size={20} className="mr-2" />
                         В корзину
-                      </button>
+                      </Button>
                     ) : (
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center bg-gray-100 rounded-lg">
-                            <button 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => {
                                 if (quantity <= (item.minOrder || 1)) {
                                   handleRemoveFromCart(item.id);
@@ -276,17 +284,19 @@ export default function WholesalePurchase() {
                               }}
                               className="w-10 h-10 flex items-center justify-center text-red-500 hover:bg-gray-200 rounded-l-lg transition-colors"
                             >
-                              <Minus size={20} />
-                            </button>
+                              <MinusIcon className="w-5 h-5" />
+                            </Button>
                             <span className="mx-4 font-medium">
                               {quantity} {item.packSize > 1 ? 'пачек' : 'шт'}
                             </span>
-                            <button 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleUpdateQuantity(item.id, quantity + 1)}
                               className="w-10 h-10 flex items-center justify-center text-green-500 hover:bg-gray-200 rounded-r-lg transition-colors"
                             >
-                              <Plus size={20} />
-                            </button>
+                              <PlusIcon className="w-5 h-5" />
+                            </Button>
                           </div>
                           <div className="font-bold text-green-600">
                             {total.toLocaleString()} ₸
@@ -306,13 +316,14 @@ export default function WholesalePurchase() {
         {/* Mobile Cart Button */}
         <div className="lg:hidden fixed left-0 right-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] bg-white border-t border-gray-200">
           <div className="px-4 py-3">
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
+              className="w-full"
               onClick={() => navigate('/purchase/checkout')}
-              className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium flex items-center justify-center"
             >
-              <ShoppingCart size={20} className="mr-2" />
               Оформить заказ
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -345,13 +356,14 @@ export default function WholesalePurchase() {
                   <span className="font-bold text-lg">Итого:</span>
                   <span className="font-bold text-lg text-green-600">{total.toLocaleString()} ₸</span>
                 </div>
-                <button 
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="w-full"
                   onClick={() => navigate('/purchase/checkout')}
-                  className="w-full bg-green-500 text-white p-4 rounded-lg text-lg font-bold flex items-center justify-center"
                 >
-                  <ShoppingCart size={24} className="mr-2" />
-                  {isWholesale ? 'Оформить оптом' : 'Оформить заказ'}
-                </button>
+                  Оформить заказ
+                </Button>
                 {isWholesale && (
                   <div className="text-center text-green-600 text-sm mt-2">
                     Применена оптовая цена

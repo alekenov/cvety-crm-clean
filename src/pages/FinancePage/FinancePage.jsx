@@ -14,7 +14,9 @@ import {
   Upload,
   Search
 } from 'lucide-react';
-import PageLayout, { PageHeader, PageSection } from '../../components/layout/PageLayout/PageLayout';
+import PageLayout, { PageHeader, PageSection } from '@/components/layout/PageLayout/PageLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
 
 const FinancePage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
@@ -80,120 +82,118 @@ const FinancePage = () => {
 
   const header = (
     <PageHeader title="Финансы">
-      <div className="flex space-x-3">
-        <button 
-          className="p-2.5 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          onClick={() => alert('Отправить отчет')}
-        >
-          <Share size={22} className="text-gray-600" />
-        </button>
-        <button 
-          className="p-2.5 bg-green-500 text-white rounded-lg flex items-center hover:bg-green-600 transition-colors"
+      <div className="flex space-x-2">
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => setShowNewOperation(true)}
         >
-          <Plus size={22} />
-        </button>
+          <Plus size={16} className="mr-1" />
+          Новая операция
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+        >
+          <FileText size={16} className="mr-1" />
+          Отчет
+        </Button>
       </div>
     </PageHeader>
   );
 
   // Модальное окно добавления операции
   const AddOperationModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
-        {/* Заголовок */}
-        <div className="flex justify-between items-center">
-          <h3 className="text-xl font-bold">
-            {operationType === 'income' ? 'Новый доход' : 'Новый расход'}
-          </h3>
-          <button onClick={() => setShowNewOperation(false)} className="text-gray-500 hover:text-gray-700">
-            <X size={24} />
-          </button>
-        </div>
-
-        {/* Переключатель типа */}
-        <div className="flex rounded-lg bg-gray-100 p-1">
-          <button
-            className={`flex-1 py-2 rounded-lg transition-colors ${
-              operationType === 'income' 
-                ? 'bg-green-500 text-white' 
-                : 'text-gray-600 hover:bg-gray-200'
-            }`}
-            onClick={() => setOperationType('income')}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg w-full max-w-md">
+        <div className="p-4 border-b flex justify-between items-center">
+          <h3 className="font-semibold">Новая операция</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowNewOperation(false)}
           >
-            Доход
-          </button>
-          <button
-            className={`flex-1 py-2 rounded-lg transition-colors ${
-              operationType === 'expense' 
-                ? 'bg-red-500 text-white' 
-                : 'text-gray-600 hover:bg-gray-200'
-            }`}
-            onClick={() => setOperationType('expense')}
-          >
-            Расход
-          </button>
+            <X size={20} />
+          </Button>
         </div>
 
-        {/* Сумма */}
-        <div>
-          <label htmlFor="amount" className="block text-sm text-gray-600 mb-1">Сумма</label>
-          <input
-            id="amount"
-            type="number"
-            placeholder="0 ₸"
-            className="w-full p-3 border rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        {/* Категория */}
-        <div>
-          <label htmlFor="category" className="block text-sm text-gray-600 mb-1">Категория</label>
-          <div className="relative">
-            <select 
-              id="category"
-              className="w-full p-3 border rounded-lg appearance-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        <div className="p-4 space-y-4">
+          <div className="flex space-x-2">
+            <Button
+              variant={operationType === 'income' ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setOperationType('income')}
             >
-              {categories[operationType].map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-3.5 text-gray-400 pointer-events-none" size={20} />
+              <ArrowUp size={16} className="mr-1" />
+              Приход
+            </Button>
+            <Button
+              variant={operationType === 'expense' ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setOperationType('expense')}
+            >
+              <ArrowDown size={16} className="mr-1" />
+              Расход
+            </Button>
           </div>
-        </div>
 
-        {/* Описание */}
-        <div>
-          <label htmlFor="description" className="block text-sm text-gray-600 mb-1">Описание</label>
-          <input
-            id="description"
+          <Input
             type="text"
-            placeholder="За что получили/потратили деньги"
-            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Сумма"
+            className="w-full"
           />
-        </div>
 
-        {/* Прикрепление файлов */}
-        <div className="space-y-2">
-          <label className="block text-sm text-gray-600">Прикрепить файл</label>
           <div className="grid grid-cols-2 gap-2">
-            <button className="flex items-center justify-center p-3 border border-dashed rounded-lg text-gray-500 hover:bg-gray-50 transition-colors">
-              <Camera size={24} className="mr-2" />
-              Сделать фото
-            </button>
-            <button className="flex items-center justify-center p-3 border border-dashed rounded-lg text-gray-500 hover:bg-gray-50 transition-colors">
-              <Upload size={24} className="mr-2" />
-              Загрузить файл
-            </button>
+            {categories[operationType].map(category => (
+              <Button
+                key={category.id}
+                variant="outline"
+                size="sm"
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
+
+          <Input
+            type="text"
+            placeholder="Комментарий"
+            className="w-full"
+          />
+
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+            >
+              <Camera size={16} className="mr-1" />
+              Фото чека
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+            >
+              <Upload size={16} className="mr-1" />
+              Загрузить чек
+            </Button>
           </div>
         </div>
 
-        {/* Кнопка сохранения */}
-        <button className={`w-full py-3 rounded-lg text-white font-medium transition-colors ${
-          operationType === 'income' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
-        }`}>
-          Сохранить
-        </button>
+        <div className="p-4 border-t flex justify-end space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowNewOperation(false)}
+          >
+            Отмена
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+          >
+            Сохранить
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -203,20 +203,38 @@ const FinancePage = () => {
       <div className="space-y-6">
         {/* Основная информация */}
         <PageSection>
-          <div className="flex flex-wrap gap-2 mb-6">
-            {['Сегодня', 'Неделя', 'Месяц', 'Квартал', 'Год'].map(tab => (
-              <button
-                key={tab}
-                className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                  selectedPeriod === tab.toLowerCase() 
-                    ? 'bg-green-500 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
-                onClick={() => setSelectedPeriod(tab.toLowerCase())}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedPeriod('today')}
+              className={selectedPeriod === 'today' ? 'bg-primary text-white' : ''}
+            >
+              Сегодня
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedPeriod('week')}
+              className={selectedPeriod === 'week' ? 'bg-primary text-white' : ''}
+            >
+              Неделя
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedPeriod('month')}
+              className={selectedPeriod === 'month' ? 'bg-primary text-white' : ''}
+            >
+              Месяц
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+            >
+              <Calendar size={16} className="mr-1" />
+              Выбрать
+            </Button>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -255,15 +273,21 @@ const FinancePage = () => {
         <PageSection
           title="История операций"
           actions={
-            <div className="flex items-center gap-4">
-              <button className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-2">
-                <Calendar size={16} />
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+              >
+                <Calendar size={16} className="mr-1" />
                 Фильтр по дате
-              </button>
-              <button className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-2">
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+              >
                 <Trash size={16} />
                 Очистить
-              </button>
+              </Button>
             </div>
           }
         >
@@ -280,31 +304,33 @@ const FinancePage = () => {
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button 
-                  className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                    filterType === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-                  }`}
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setFilterType('all')}
+                  className={filterType === 'all' ? 'bg-primary text-white' : ''}
                 >
                   Все
-                </button>
-                <button 
-                  className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                    filterType === 'income' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-                  }`}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setFilterType('income')}
+                  className={filterType === 'income' ? 'bg-primary text-white' : ''}
                 >
-                  Доходы
-                </button>
-                <button 
-                  className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                    filterType === 'expense' ? 'bg-red-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-                  }`}
+                  <ArrowUp size={16} className="mr-1" />
+                  Приход
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setFilterType('expense')}
+                  className={filterType === 'expense' ? 'bg-primary text-white' : ''}
                 >
-                  Расходы
-                </button>
+                  <ArrowDown size={16} className="mr-1" />
+                  Расход
+                </Button>
               </div>
             </div>
 

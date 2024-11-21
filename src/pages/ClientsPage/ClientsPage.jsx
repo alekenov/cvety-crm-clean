@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { Plus, Search, X } from 'lucide-react';
 import ClientForm from './components/ClientForm';
 
@@ -117,16 +118,17 @@ function ClientsPage() {
               <X className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100" />
             </span>
           ))}
-          <button
+          <Button
             onClick={(e) => {
               e.stopPropagation();
               setShowTagInput(client.id);
             }}
-            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
+            variant="ghost"
+            size="sm"
           >
             <Plus className="w-3 h-3 mr-1" />
             Add Tag
-          </button>
+          </Button>
           {showTagInput === client.id && (
             <div 
               className="absolute bg-white shadow-lg rounded-lg p-2 z-10"
@@ -141,12 +143,13 @@ function ClientsPage() {
                   placeholder="New tag"
                   autoFocus
                 />
-                <button
+                <Button
                   onClick={() => handleAddTag(client.id)}
-                  className="px-2 py-1 bg-blue-500 text-white rounded text-sm"
+                  variant="primary"
+                  size="sm"
                 >
                   Add
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -192,16 +195,17 @@ function ClientsPage() {
             <X className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100" />
           </span>
         ))}
-        <button
+        <Button
           onClick={(e) => {
             e.stopPropagation();
             setShowTagInput(client.id);
           }}
-          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
+          variant="ghost"
+          size="sm"
         >
           <Plus className="w-3 h-3 mr-1" />
           Add Tag
-        </button>
+        </Button>
         {showTagInput === client.id && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
@@ -224,12 +228,13 @@ function ClientsPage() {
                   placeholder="Enter tag name"
                   autoFocus
                 />
-                <button
+                <Button
                   onClick={() => handleAddTag(client.id)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+                  variant="primary"
+                  size="md"
                 >
                   Add
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -244,19 +249,21 @@ function ClientsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Clients</h1>
         <div className="flex items-center gap-4">
-          <button
+          <Button
             onClick={() => setShowSearch(!showSearch)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            variant="ghost"
+            size="icon"
           >
-            <Search className="w-5 h-5 text-gray-600" />
-          </button>
-          <button
+            <Search className="w-5 h-5" />
+          </Button>
+          <Button
             onClick={() => setShowForm(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center"
+            variant="primary"
+            size="md"
           >
             <Plus className="w-5 h-5 mr-2" />
             Add Client
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -280,20 +287,17 @@ function ClientsPage() {
           
           <div className="flex flex-wrap gap-2">
             {allTags.map(tag => (
-              <button
+              <Button
                 key={tag}
                 onClick={() => handleTagSelect(tag)}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  selectedTags.includes(tag)
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                variant={selectedTags.includes(tag) ? "secondary" : "outline"}
+                size="sm"
               >
                 {tag}
                 {selectedTags.includes(tag) && (
-                  <X className="w-4 h-4 ml-1 inline-block" />
+                  <X className="w-4 h-4 ml-1" />
                 )}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

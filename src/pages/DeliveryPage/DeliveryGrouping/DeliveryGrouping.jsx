@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Clock, Phone, Star, MapPin, MessageCircle, CheckCircle, User, AlertCircle } from 'lucide-react';
-import PageLayout, { PageHeader } from '../../../components/layout/PageLayout/PageLayout';
-import Button from '../../../components/ui/Button/Button';
+import PageLayout, { PageHeader } from '@/components/layout/PageLayout/PageLayout';
+import { Button } from '@/components/ui/button';
 
-function DeliveryGrouping() {
+function DeliveryGrouping({ group, totalRegularCost, groupCost, savings, handleConfirmGrouping }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { selectedDeliveries, totalCost } = location.state || {};
   const [deliveryStatus, setDeliveryStatus] = useState('searching');
 
   const statuses = {
@@ -73,7 +71,7 @@ function DeliveryGrouping() {
                 <h2 className="font-bold">Групповая доставка</h2>
                 <p className="text-sm text-gray-600">Создана в {new Date().toLocaleTimeString()}</p>
               </div>
-              <span className="font-bold">{totalCost} ₸</span>
+              <span className="font-bold">{groupCost} ₸</span>
             </div>
 
             <div className={`p-3 rounded-lg ${statuses[deliveryStatus].color} bg-opacity-10 mb-4`}>
@@ -124,7 +122,7 @@ function DeliveryGrouping() {
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <h3 className="font-bold mb-4">Заказы в доставке</h3>
           <div className="space-y-4">
-            {selectedDeliveries?.map((order, index) => (
+            {group.orders.map((order, index) => (
               <div key={order.id} className="flex items-start">
                 <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
                   {index + 1}

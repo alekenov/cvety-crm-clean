@@ -3,6 +3,7 @@ import { Search, Plus, ChevronDown, ArrowUpDown, Filter, MoreVertical } from 'lu
 import AddProductForm from './components/AddProductForm';
 import { supabase } from '../../lib/supabase';
 import styles from './ProductsPage.module.css';
+import { Button } from '@/components/ui/button';
 
 function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -155,30 +156,38 @@ function ProductsPage() {
   // Компонент меню действий
   const ActionMenu = ({ product }) => (
     <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10">
-      <button
+      <Button
         onClick={() => handleViewProduct(product)}
+        variant="ghost"
+        size="md"
         className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
       >
         Просмотреть
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={() => handleEditProduct(product)}
+        variant="ghost"
+        size="md"
         className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
       >
         Редактировать
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={() => handleToggleStatus(product)}
+        variant="ghost"
+        size="md"
         className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
       >
         {product.status === 'active' ? 'Скрыть' : 'Показать'}
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={() => handleDeleteProduct(product.id)}
+        variant="ghost"
+        size="md"
         className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm text-red-500"
       >
         Удалить
-      </button>
+      </Button>
     </div>
   );
 
@@ -220,13 +229,14 @@ function ProductsPage() {
               <option value="inactive">Неактивные</option>
             </select>
 
-            <button 
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center"
+            <Button 
               onClick={() => setShowAddForm(true)}
+              variant="primary"
+              size="md"
             >
-              <Plus size={20} className="mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               Добавить букет
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -261,18 +271,20 @@ function ProductsPage() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold">Мои букеты</h1>
           <div className="flex items-center space-x-2">
-            <button 
+            <Button 
               onClick={() => setShowFilters(!showFilters)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              variant="ghost"
+              size="icon"
             >
-              <Filter size={20} />
-            </button>
-            <button 
-              className="bg-blue-500 text-white p-2 rounded-lg"
+              <Filter className="w-5 h-5" />
+            </Button>
+            <Button 
               onClick={() => setShowAddForm(true)}
+              variant="primary"
+              size="icon"
             >
-              <Plus size={20} />
-            </button>
+              <Plus className="w-5 h-5" />
+            </Button>
           </div>
         </div>
 
@@ -322,12 +334,13 @@ function ProductsPage() {
               <div className="flex-1">
                 <div className="flex justify-between items-start">
                   <h3 className="font-medium">{product.name}</h3>
-                  <button 
+                  <Button 
                     onClick={() => setShowActionMenu(showActionMenu === product.id ? null : product.id)}
-                    className="p-2 hover:bg-gray-100 rounded-lg"
+                    variant="ghost"
+                    size="icon"
                   >
                     <MoreVertical size={20} className="text-gray-400" />
-                  </button>
+                  </Button>
                 </div>
                 <div className="text-sm text-gray-500">{product.category}</div>
                 <div className="mt-2 flex items-center justify-between">
@@ -344,24 +357,30 @@ function ProductsPage() {
             </div>
             {showActionMenu === product.id && (
               <div className="border-t px-4 py-2">
-                <button
+                <Button
                   onClick={() => handleEditProduct(product)}
+                  variant="ghost"
+                  size="md"
                   className="w-full py-2 text-left hover:bg-gray-50 text-sm"
                 >
                   Редактировать
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleToggleStatus(product)}
+                  variant="ghost"
+                  size="md"
                   className="w-full py-2 text-left hover:bg-gray-50 text-sm"
                 >
                   {product.status === 'active' ? 'Скрыть' : 'Показать'}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleDeleteProduct(product.id)}
+                  variant="ghost"
+                  size="md"
                   className="w-full py-2 text-left hover:bg-gray-50 text-sm text-red-500"
                 >
                   Удалить
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -434,15 +453,16 @@ function ProductsPage() {
           </span>
         </td>
         <td className="py-4 text-right relative">
-          <button 
+          <Button 
             onClick={(e) => {
               e.stopPropagation();
               setShowActionMenu(showActionMenu === product.id ? null : product.id);
             }}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            variant="ghost"
+            size="icon"
           >
             <MoreVertical size={20} className="text-gray-400" />
-          </button>
+          </Button>
           {showActionMenu === product.id && <ActionMenu product={product} />}
         </td>
       </tr>

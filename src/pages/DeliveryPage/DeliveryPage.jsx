@@ -3,23 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { 
   MapPin, 
   Clock, 
-  Calendar, 
-  Phone, 
   User, 
-  AlertTriangle, 
-  Bell, 
-  Truck, 
-  ArrowLeft, 
-  CheckCircle, 
-  ChevronRight 
+  Truck,
+  AlertTriangle,
+  CheckCircle,
+  ArrowLeft,
+  ChevronRight,
+  Calendar
 } from 'lucide-react';
-import PageLayout, { 
-  PageHeader, 
-  PageSection 
-} from '../../components/layout/PageLayout/PageLayout';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import toast from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
+import PageLayout, { PageHeader } from '@/components/layout/PageLayout/PageLayout';
+import DeliveryGrouping from './DeliveryGrouping/DeliveryGrouping';
 
 export default function DeliveryPage() {
   const navigate = useNavigate();
@@ -121,12 +115,14 @@ export default function DeliveryPage() {
 
   const handleGroupDeliveries = () => {
     if (selectedDeliveries.length >= 2) {
-      navigate('/delivery/group', { 
-        state: { 
-          selectedDeliveries,
-          totalCost: calculateGroupDeliveryCost(selectedDeliveries)
-        } 
-      });
+      const newGroup = {
+        id: Date.now(),
+        orders: selectedDeliveries,
+        status: 'pending',
+        createdAt: new Date()
+      };
+      setGroupedDeliveries([...groupedDeliveries, newGroup]);
+      setView('grouping');
     }
   };
 
@@ -139,17 +135,14 @@ export default function DeliveryPage() {
       <div className="mb-6">
         <div className="flex flex-wrap gap-2">
           {statusFilters.map(status => (
-            <button
+            <Button
               key={status.id}
               onClick={() => setActiveStatus(status.id)}
-              className={`px-4 py-2 rounded-full text-sm transition-all ${
-                activeStatus === status.id 
-                  ? 'bg-blue-500 text-white shadow-sm' 
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
+              variant={activeStatus === status.id ? "primary" : "outline"}
+              size="sm"
             >
               {status.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -215,16 +208,17 @@ export default function DeliveryPage() {
             <div className="text-sm text-gray-600">
               Выбрано заказов: <span className="font-medium">{selectedDeliveries.length}</span>
             </div>
-            <button 
+            <Button 
               onClick={handleGroupDeliveries}
-              className="bg-blue-500 text-white px-6 py-3 rounded-lg flex items-center justify-center font-medium hover:bg-blue-600 transition-colors"
+              variant="primary"
+              size="lg"
             >
               <Truck size={20} className="mr-2" />
               Объединить заказы
-              <span className="ml-2 bg-blue-600 px-2 py-1 rounded text-sm">
+              <span className="ml-2 bg-blue-600/20 px-2 py-1 rounded">
                 {calculateGroupDeliveryCost(selectedDeliveries)} ₸
               </span>
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -238,78 +232,13 @@ export default function DeliveryPage() {
     const savings = totalRegularCost - groupCost;
 
     return (
-      <>
-        <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
-          <h2 className="font-semibold mb-2">Расчет стоимости</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Обычная стоимость:</span>
-              <span className="line-through">{totalRegularCost} ₸</span>
-            </div>
-            <div className="flex justify-between font-medium">
-              <span>Групповая доставка:</span>
-              <span className="text-primary">{groupCost} ₸</span>
-            </div>
-            <div className="flex justify-between text-primary">
-              <span>Экономия:</span>
-              <span>{savings} ₸</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-yellow-50 p-4 rounded-lg mb-6">
-          <div className="flex items-start">
-            <AlertTriangle size={20} className="text-yellow-500 mr-2 mt-1 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium mb-1">Обратите внимание</p>
-              <ul className="list-disc list-inside space-y-1 text-gray-600">
-                <li>Доставки будут объединены в один маршрут</li>
-                <li>Курьер заберет все заказы одновременно</li>
-                <li>Время доставки может измениться</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4 mb-6">
-          {group.orders.map((delivery, index) => (
-            <div key={delivery.id} className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="flex items-center mb-2">
-                <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center font-medium mr-2">
-                  {index + 1}
-                </div>
-                <span className="font-medium">Заказ #{delivery.orderNumber}</span>
-                {delivery.isUrgent && (
-                  <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">Срочно</span>
-                )}
-              </div>
-              <div className="text-sm space-y-1 text-gray-600">
-                <div className="flex items-center">
-                  <Clock size={14} className="mr-1" />
-                  Примерное время доставки: {delivery.estimatedDeliveryTime}
-                </div>
-                <div className="flex items-center">
-                  <MapPin size={14} className="mr-1" />
-                  {delivery.address}
-                </div>
-                <div className="flex items-center">
-                  <User size={14} className="mr-1" />
-                  {delivery.client.name}
-                </div>
-                <div>{delivery.items[0].name}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={handleConfirmGrouping}
-          className="w-full bg-primary text-white py-3 rounded-lg font-medium flex items-center justify-center"
-        >
-          <Truck size={20} className="mr-2" />
-          Подтвердить объединение
-        </button>
-      </>
+      <DeliveryGrouping 
+        group={group}
+        totalRegularCost={totalRegularCost}
+        groupCost={groupCost}
+        savings={savings}
+        handleConfirmGrouping={handleConfirmGrouping}
+      />
     );
   };
 
@@ -353,12 +282,13 @@ export default function DeliveryPage() {
           ))}
         </div>
 
-        <button 
+        <Button 
           onClick={() => setView('list')}
-          className="w-full bg-primary text-white py-3 rounded-lg font-medium"
+          variant="primary"
+          size="lg"
         >
           Вернуться к доставкам
-        </button>
+        </Button>
       </div>
     );
   };
@@ -369,15 +299,6 @@ export default function DeliveryPage() {
         <Button variant="secondary" icon={<Calendar size={20} />}>
           Расписание
         </Button>
-        {selectedDeliveries.length >= 2 && (
-          <Button 
-            variant="primary" 
-            icon={<Truck size={20} />}
-            onClick={handleGroupDeliveries}
-          >
-            Объединить заказы ({selectedDeliveries.length})
-          </Button>
-        )}
       </div>
     </PageHeader>
   );
