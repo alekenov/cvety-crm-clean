@@ -40,7 +40,9 @@ export const TABLES = {
   ORDERS: 'orders',
   ORDER_ITEMS: 'order_items',
   PRODUCTS: 'products',
-  INVENTORY: 'inventory'
+  INVENTORY: 'inventory',
+  SHOPS: 'shops',
+  EMPLOYEES: 'employees'
 };
 
 // Error handling utility
@@ -166,5 +168,172 @@ export const ordersApi = {
       .eq('id', id);
     handleSupabaseError(error);
     return { error };
+  }
+};
+
+// Функции для работы с магазинами
+export const shopsApi = {
+  // Получить все магазины
+  async getAll() {
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.SHOPS)
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { data: null, error };
+    }
+  },
+
+  // Создать новый магазин
+  async create(shop) {
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.SHOPS)
+        .insert([{
+          name: shop.name,
+          address: shop.address,
+          phone: shop.phone,
+          whatsapp: shop.whatsapp,
+          instagram: shop.instagram,
+          working_hours: shop.workingHours,
+          settings: shop.settings,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { data: null, error };
+    }
+  },
+
+  // Обновить существующий магазин
+  async update(id, updates) {
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.SHOPS)
+        .update({
+          name: updates.name,
+          address: updates.address,
+          phone: updates.phone,
+          whatsapp: updates.whatsapp,
+          instagram: updates.instagram,
+          working_hours: updates.workingHours,
+          settings: updates.settings,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { data: null, error };
+    }
+  },
+
+  // Удалить магазин
+  async delete(id) {
+    try {
+      const { error } = await supabase
+        .from(TABLES.SHOPS)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { error };
+    }
+  },
+
+  // Получить сотрудников магазина
+  async getEmployees(shopId) {
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.EMPLOYEES)
+        .select('*')
+        .eq('shop_id', shopId)
+        .order('name');
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { data: null, error };
+    }
+  },
+
+  // Добавить сотрудника в магазин
+  async addEmployee(employee) {
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.EMPLOYEES)
+        .insert([{
+          shop_id: employee.shopId,
+          name: employee.name,
+          role: employee.role,
+          phone: employee.phone,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { data: null, error };
+    }
+  },
+
+  // Обновить данные сотрудника
+  async updateEmployee(id, updates) {
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.EMPLOYEES)
+        .update({
+          name: updates.name,
+          role: updates.role,
+          phone: updates.phone,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { data: null, error };
+    }
+  },
+
+  // Удалить сотрудника
+  async deleteEmployee(id) {
+    try {
+      const { error } = await supabase
+        .from(TABLES.EMPLOYEES)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { error };
+    }
   }
 };

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, ChevronDown, ArrowUpDown, Filter, MoreVertical } from 'lucide-react';
 import AddProductForm from './components/AddProductForm';
 import { supabase } from '../../lib/supabase';
-import styles from './ProductsPage.module.css';
 import { Button } from '@/components/ui/button';
+import styles from '@/styles/pages.module.css';
 
 function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -194,7 +194,7 @@ function ProductsPage() {
   // Обновляем DesktopView
   const DesktopView = ({ products }) => (
     <div className="hidden sm:block">
-      <div className="bg-white p-6 rounded-lg shadow">
+      <div className={styles.pageSection}>
         {/* Фильтры и поиск */}
         <div className="flex justify-between items-center mb-6">
           <div className="relative w-64">
@@ -267,7 +267,7 @@ function ProductsPage() {
   const MobileView = ({ products }) => (
     <div className="sm:hidden">
       {/* Заголовок и поиск */}
-      <div className="bg-white p-4 border-b sticky top-0 z-10">
+      <div className={styles.pageHeader}>
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold">Мои букеты</h1>
           <div className="flex items-center space-x-2">
@@ -326,33 +326,31 @@ function ProductsPage() {
       </div>
 
       {/* Список букетов */}
-      <div className="p-4">
+      <div className={styles.pageSection}>
         {products.map(product => (
-          <div key={product.id} className="bg-white rounded-lg shadow mb-4">
-            <div className="p-4 flex items-center space-x-4">
-              <img src={product.image} alt="" className="w-16 h-16 rounded-lg object-cover" />
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-medium">{product.name}</h3>
-                  <Button 
-                    onClick={() => setShowActionMenu(showActionMenu === product.id ? null : product.id)}
-                    variant="ghost"
-                    size="icon"
-                  >
-                    <MoreVertical size={20} className="text-gray-400" />
-                  </Button>
-                </div>
-                <div className="text-sm text-gray-500">{product.category}</div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="font-medium">{product.price.toLocaleString()} ₸</span>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    product.status === 'active' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {product.status === 'active' ? 'Активный' : 'Неактивный'}
-                  </span>
-                </div>
+          <div key={product.id} className={styles.productCard}>
+            <img src={product.image} alt="" className="w-16 h-16 rounded-lg object-cover" />
+            <div className="p-4 flex-1">
+              <div className="flex justify-between items-start">
+                <h3 className="font-medium">{product.name}</h3>
+                <Button 
+                  onClick={() => setShowActionMenu(showActionMenu === product.id ? null : product.id)}
+                  variant="ghost"
+                  size="icon"
+                >
+                  <MoreVertical size={20} className="text-gray-400" />
+                </Button>
+              </div>
+              <div className="text-sm text-gray-500">{product.category}</div>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="font-medium">{product.price.toLocaleString()} ₸</span>
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                  product.status === 'active' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {product.status === 'active' ? 'Активный' : 'Неактивный'}
+                </span>
               </div>
             </div>
             {showActionMenu === product.id && (
@@ -477,7 +475,7 @@ function ProductsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={styles.page}>
       <DesktopView products={filteredProducts} />
       <MobileView products={filteredProducts} />
       {showAddForm && (

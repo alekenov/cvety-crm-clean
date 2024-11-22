@@ -1,0 +1,95 @@
+/* Common page styles */
+.page {
+  @apply w-full h-full p-4 overflow-auto;
+}
+
+.pageHeader {
+  @apply mb-6;
+}
+
+.pageSection {
+  @apply mb-8;
+}
+
+/* Product page specific styles */
+.productGrid {
+  @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4;
+}
+
+.productCard {
+  @apply bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow;
+}
+
+.productForm {
+  @apply space-y-4 max-w-2xl mx-auto p-4;
+}
+
+/* Order page specific styles */
+.orderGrid {
+  @apply grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
+}
+
+.orderCard {
+  @apply bg-white rounded-lg shadow hover:shadow-md transition-all;
+}
+
+/* Inventory page specific styles */
+.inventoryTable {
+  @apply w-full border-collapse;
+}
+
+.inventoryRow {
+  @apply hover:bg-gray-50;
+}
+
+/* Analytics page specific styles */
+.analyticsGrid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
+}
+
+.analyticsCard {
+  @apply bg-white p-4 rounded-lg shadow;
+}
+
+/* Delivery page specific styles */
+.deliveryMap {
+  @apply w-full h-[400px] rounded-lg;
+}
+
+.deliveryList {
+  @apply space-y-2;
+}
+
+/* Client page specific styles */
+.clientGrid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
+}
+
+.clientCard {
+  @apply bg-white p-4 rounded-lg shadow hover:shadow-md transition-all;
+}
+
+/* Common utility classes */
+.actionButton {
+  @apply inline-flex items-center justify-center;
+}
+
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+
+.card {
+  @apply bg-white rounded-lg shadow-sm hover:shadow transition-shadow;
+}
+
+.input {
+  @apply w-full rounded-md border border-input bg-background px-3 py-2;
+}
+
+.select {
+  @apply w-full rounded-md border border-input bg-background px-3 py-2;
+}
+
+.textarea {
+  @apply w-full rounded-md border border-input bg-background px-3 py-2;
+}
