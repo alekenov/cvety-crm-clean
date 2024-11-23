@@ -77,17 +77,7 @@ const InventoryPage = () => {
   };
 
   const { data: inventoryData, loading, error, updateData } = useSupabase('inventory', {
-    select: `
-      *,
-      products (
-        id,
-        name,
-        description,
-        price,
-        category,
-        sku
-      )
-    `
+    select: '*'
   });
 
   useEffect(() => {
@@ -103,23 +93,22 @@ const InventoryPage = () => {
     if (!data) return [];
     
     return data.map(item => ({
-      id: item.id || Date.now(),
-      name: item.products?.name || 'Неизвестный товар',
-      quantity: item.quantity || 0,
-      price: item.products?.price || 0,
-      costPrice: item.products?.price || 0,
-      markup: 30,
-      active: true,
-      location: item.location || '',
-      status: getStatus(item.quantity || 0),
-      product_id: item.product_id
+      id: item.id,
+      name: item.name,
+      quantity: item.stock,
+      price: item.price,
+      min_quantity: item.min_stock,
+      location: '',
+      status: getStatus(item.stock, item.min_stock),
+      type: item.type,
+      unit: item.unit
     }));
   };
 
   // Функция определения статуса на основе количества
-  const getStatus = (quantity) => {
+  const getStatus = (quantity, minQuantity) => {
     if (quantity === 0) return 'out_of_stock';
-    if (quantity < 5) return 'low_stock';
+    if (quantity <= minQuantity) return 'low_stock';
     return 'in_stock';
   };
 
@@ -128,9 +117,9 @@ const InventoryPage = () => {
     try {
       for (const item of updatedInventory) {
         await updateData(item.id, {
-          quantity: item.quantity,
+          stock: item.quantity,
           location: item.location,
-          status: getStatus(item.quantity)
+          status: getStatus(item.quantity, item.min_quantity)
         });
       }
       showToast.success('Количество успешно обновлено');
@@ -235,9 +224,9 @@ const InventoryPage = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left">Наименование</th>
+                <th className="px-4 py-3 text-left">Тип</th>
                 <th className="px-4 py-3 text-right">Количество</th>
                 <th className="px-4 py-3 text-right">Цена</th>
-                <th className="px-4 py-3 text-left">Локация</th>
                 <th className="px-4 py-3 text-center">Статус</th>
                 <th className="px-4 py-3 text-center">Действия</th>
               </tr>
@@ -251,9 +240,9 @@ const InventoryPage = () => {
                   }`}
                 >
                   <td className="px-4 py-3">{item.name}</td>
-                  <td className="px-4 py-3 text-right">{item.quantity}</td>
-                  <td className="px-4 py-3 text-right">{item.price.toLocaleString()} ₸</td>
-                  <td className="px-4 py-3">{item.location}</td>
+                  <td className="px-4 py-3">{item.type}</td>
+                  <td className="px-4 py-3 text-right">{item.quantity} {item.unit}</td>
+                  <td className="px-4 py-3 text-right">{item.price.toLocaleString()} ₸/{item.unit}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-block px-2 py-1 rounded-full text-sm ${
                       item.status === 'in_stock' 
@@ -311,9 +300,12 @@ const InventoryPage = () => {
               item.status === 'out_of_stock' ? 'opacity-60' : ''
             }`}
           >
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-bold">{item.name}</h3>
-              <span className={`px-2 py-1 rounded-full text-xs ${
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="font-medium">{item.name}</h3>
+                <p className="text-sm text-gray-500">{item.type} • {item.price.toLocaleString()} ₸/{item.unit}</p>
+              </div>
+              <span className={`inline-block px-2 py-1 rounded-full text-sm ${
                 item.status === 'in_stock' 
                   ? 'bg-green-100 text-green-800' 
                   : item.status === 'low_stock'
@@ -328,7 +320,6 @@ const InventoryPage = () => {
             
             <div className="text-sm text-gray-600 mb-4">
               <p>Локация: {item.location}</p>
-              <p>Цена: {item.price.toLocaleString()} ₸</p>
             </div>
 
             {/* Улучшенный ввод количества без стрелок */}
@@ -342,7 +333,7 @@ const InventoryPage = () => {
                   handleUpdateInventory([{
                     ...item,
                     quantity: newQuantity,
-                    status: getStatus(newQuantity)
+                    status: getStatus(newQuantity, item.min_quantity)
                   }]);
                 }}
                 className="w-full p-4 text-2xl font-bold text-center border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -355,9 +346,9 @@ const InventoryPage = () => {
               </div>
             </div>
 
-            {item.quantity < 5 && item.quantity > 0 && (
+            {item.quantity < item.min_quantity && item.quantity > 0 && (
               <div className="mt-3 text-sm text-yellow-600 bg-yellow-50 p-2 rounded">
-                Мало товара (меньше 5 шт.)
+                Мало товара (меньше {item.min_quantity} шт.)
               </div>
             )}
           </div>

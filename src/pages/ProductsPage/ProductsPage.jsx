@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, ChevronDown, ArrowUpDown, Filter, MoreVertical } from 'lucide-react';
 import AddProductForm from './components/AddProductForm';
+import CreateSampleProducts from './components/CreateSampleProducts';
 import { supabase } from '../../lib/supabase';
 import { Button } from '@/components/ui/button';
 import styles from '@/styles/pages.module.css';
+import toast from 'react-hot-toast';
 
 function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -33,14 +35,10 @@ function ProductsPage() {
           product_compositions (
             id,
             quantity,
-            price_per_stem,
-            inventory:inventory_item_id (
+            inventory_item:inventory_item_id (
               id,
-              products (
-                id,
-                name,
-                price
-              )
+              name,
+              price
             )
           )
         `)
@@ -62,16 +60,17 @@ function ProductsPage() {
       const productsWithDetails = productsData.map(product => {
         const composition = product.product_compositions?.map(item => ({
           id: item.id,
-          name: item.inventory?.products?.name || 'Неизвестный цветок',
+          name: item.inventory_item?.name || 'Неизвестный цветок',
           quantity: parseInt(item.quantity) || 0,
-          price_per_stem: parseFloat(item.price_per_stem) || 0,
-          inventory_item_id: item.inventory?.id
+          price_per_stem: parseFloat(item.inventory_item?.price) || 0,
+          inventory_item_id: item.inventory_item?.id
         })) || [];
 
-        const basePrice = parseFloat(product.base_price) || 0;
-        const markupAmount = parseFloat(product.markup_amount) || 0;
-        const packagingCost = parseFloat(product.packaging_cost) || 2000;
-        const finalPrice = parseFloat(product.price) || 0;
+        // Вычисляем базовую стоимость как сумму стоимости всех цветов
+        const basePrice = composition.reduce((sum, item) => 
+          sum + (item.price_per_stem * item.quantity), 0);
+        
+        const finalPrice = basePrice * 1.3 + 2000; // 30% наценка + упаковка 2000 тг
 
         return {
           ...product,
@@ -79,8 +78,8 @@ function ProductsPage() {
           composition_details: composition,
           price_details: {
             basePrice,
-            markupAmount,
-            packagingCost,
+            markupAmount: basePrice * 0.3,
+            packagingCost: 2000,
             finalPrice
           }
         };
@@ -98,9 +97,52 @@ function ProductsPage() {
 
   // Обработчики действий
   const handleEditProduct = async (product) => {
-    setEditingProduct(product);
-    setShowAddForm(true);
-    setShowActionMenu(null);
+    console.log('Editing product:', product);
+    try {
+      // Загружаем полные данные о продукте
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select(`
+          *,
+          product_compositions (
+            id,
+            quantity,
+            inventory_item:inventory_item_id (
+              id,
+              name,
+              price,
+              unit
+            )
+          )
+        `)
+        .eq('id', product.id)
+        .single();
+
+      if (productError) throw productError;
+
+      console.log('Loaded product data:', productData);
+
+      // Форматируем состав для формы
+      const formattedProduct = {
+        ...productData,
+        composition_details: productData.product_compositions.map(item => ({
+          id: item.id,
+          inventory_item_id: item.inventory_item.id,
+          name: item.inventory_item.name,
+          price: item.inventory_item.price,
+          unit: item.inventory_item.unit,
+          quantity: item.quantity
+        }))
+      };
+
+      console.log('Formatted product:', formattedProduct);
+      setEditingProduct(formattedProduct);
+      setShowAddForm(true);
+      setShowActionMenu(null);
+    } catch (error) {
+      console.error('Error loading product details:', error);
+      toast.error('Ошибка при загрузке данных букета');
+    }
   };
 
   const handleDeleteProduct = async (productId) => {
@@ -137,12 +179,53 @@ function ProductsPage() {
   };
 
   // Обработчик для просмотра букета
-  const handleViewProduct = (product) => {
+  const handleViewProduct = async (product) => {
     console.log('Viewing product:', product);
-    setSelectedProduct(product);
-    setIsViewMode(true);
-    setShowAddForm(true);
-    setShowActionMenu(null);
+    try {
+      // Загружаем полные данные о продукте
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select(`
+          *,
+          product_compositions (
+            id,
+            quantity,
+            inventory_item:inventory_item_id (
+              id,
+              name,
+              price,
+              unit
+            )
+          )
+        `)
+        .eq('id', product.id)
+        .single();
+
+      if (productError) throw productError;
+
+      console.log('Loaded product data:', productData);
+
+      // Форматируем данные для формы
+      const formattedProduct = {
+        ...productData,
+        composition_details: productData.product_compositions.map(item => ({
+          id: item.id,
+          inventory_item_id: item.inventory_item.id,
+          name: item.inventory_item.name,
+          price: item.inventory_item.price,
+          unit: item.inventory_item.unit,
+          quantity: item.quantity
+        }))
+      };
+
+      console.log('Formatted product:', formattedProduct);
+      setSelectedProduct(formattedProduct);
+      setEditingProduct(formattedProduct);
+      setShowAddForm(true);
+    } catch (error) {
+      console.error('Error loading product details:', error);
+      toast.error('Ошибка при загрузке данных букета');
+    }
   };
 
   // Фильтрация продуктов
@@ -389,15 +472,6 @@ function ProductsPage() {
 
   // Обновляем рендер карточки продукта в DesktopView
   const ProductCard = ({ product }) => {
-    console.log('Rendering product:', product); 
-
-    const priceDetails = product.price_details || {
-      basePrice: parseFloat(product.price) || 0,
-      markupAmount: 0,
-      packagingCost: 0,
-      finalPrice: parseFloat(product.price) || 0
-    };
-
     return (
       <tr 
         key={product.id} 
@@ -405,12 +479,28 @@ function ProductsPage() {
         onClick={() => handleViewProduct(product)}
       >
         <td className="py-4">
-          <img src={product.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+          {product.image_url ? (
+            <img 
+              src={product.image_url} 
+              alt={product.name}
+              className="w-12 h-12 rounded-lg object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/placeholder-flower.svg';
+              }}
+            />
+          ) : (
+            <img 
+              src="/placeholder-flower.svg"
+              alt="Placeholder"
+              className="w-12 h-12 rounded-lg"
+            />
+          )}
         </td>
         <td className="py-4">
           <div>{product.name}</div>
           <div className="text-sm text-gray-500">
-            {product.total_stems || 0} цветов
+            {product.composition_details?.length || 0} позиций
           </div>
         </td>
         <td className="py-4">{product.category}</td>
@@ -422,46 +512,39 @@ function ProductsPage() {
           ))}
         </td>
         <td className="py-4 text-right">
-          <div className="font-medium">{priceDetails.finalPrice.toLocaleString()} ₸</div>
-          {product.category === 'Цветы' ? (
-            <div className="text-sm text-gray-500">
-              Цена за штуку
-            </div>
-          ) : (
-            <>
-              <div className="text-sm text-gray-500">
-                Цветы: {priceDetails.basePrice.toLocaleString()} ₸
+          <div className="font-medium">{parseFloat(product.price).toLocaleString()} ₸</div>
+          <div className="text-sm text-gray-500">
+            {product.composition_details?.map(item => (
+              <div key={item.id}>
+                {item.name}: {(item.price_per_stem * item.quantity).toLocaleString()} ₸
               </div>
-              <div className="text-sm text-gray-500">
-                Работа: {priceDetails.markupAmount.toLocaleString()} ₸
-              </div>
-              <div className="text-sm text-gray-500">
-                Упаковка: {priceDetails.packagingCost.toLocaleString()} ₸
-              </div>
-            </>
-          )}
+            ))}
+          </div>
         </td>
         <td className="py-4">
           <span className={`px-2 py-1 rounded-full text-xs ${
             product.status === 'active' 
               ? 'bg-green-100 text-green-800' 
-              : 'bg-gray-100 text-gray-800'
+              : 'bg-red-100 text-red-800'
           }`}>
-            {product.status === 'active' ? 'Активный' : 'Неактивный'}
+            {product.status === 'active' ? 'Активен' : 'Неактивен'}
           </span>
         </td>
-        <td className="py-4 text-right relative">
-          <Button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowActionMenu(showActionMenu === product.id ? null : product.id);
-            }}
-            variant="ghost"
-            size="icon"
-          >
-            <MoreVertical size={20} className="text-gray-400" />
-          </Button>
-          {showActionMenu === product.id && <ActionMenu product={product} />}
+        <td className="py-4 text-right">
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowActionMenu(showActionMenu === product.id ? null : product.id);
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <MoreVertical size={20} />
+            </button>
+            {showActionMenu === product.id && (
+              <ActionMenu product={product} />
+            )}
+          </div>
         </td>
       </tr>
     );
@@ -475,24 +558,23 @@ function ProductsPage() {
   ];
 
   return (
-    <div className={styles.page}>
+    <div className={styles.pageContainer}>
+      <CreateSampleProducts />
       <DesktopView products={filteredProducts} />
       <MobileView products={filteredProducts} />
       {showAddForm && (
-        <AddProductForm 
-          onClose={() => {
-            setShowAddForm(false);
-            setSelectedProduct(null);
-            setEditingProduct(null);
-            setIsViewMode(false);
-            loadProducts();
-          }}
-          editingProduct={editingProduct}
-          viewMode={isViewMode && !editingProduct}
-          selectedProduct={selectedProduct}
-          supabase={supabase}
-          categoryOptions={categoryOptions}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <AddProductForm
+              onClose={() => {
+                setShowAddForm(false);
+                setEditingProduct(null);
+              }}
+              editingProduct={editingProduct}
+              onProductUpdate={loadProducts}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

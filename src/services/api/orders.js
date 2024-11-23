@@ -1,4 +1,4 @@
-import { supabase } from '../../config/supabase';
+import { supabase } from '../../lib/supabase';
 
 export const ordersApi = {
   // Получение всех заказов
@@ -7,9 +7,9 @@ export const ordersApi = {
       .from('orders')
       .select(`
         *,
-        items:order_items(*)
+        store:store_id(*)
       `)
-      .order('delivery_time', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
@@ -21,7 +21,7 @@ export const ordersApi = {
       .from('orders')
       .select(`
         *,
-        items:order_items(*)
+        store:store_id(*)
       `)
       .eq('id', id)
       .single();
@@ -32,63 +32,39 @@ export const ordersApi = {
 
   // Создание заказа
   async createOrder(orderData) {
-    // Создаем заказ
-    const { data: order, error: orderError } = await supabase
+    const { data, error } = await supabase
       .from('orders')
       .insert([{
         number: orderData.number,
-        status: orderData.status,
+        status: orderData.status || 'Оплачен',
         client_phone: orderData.client_phone,
-        client_name: orderData.client_name,
         address: orderData.address,
         delivery_time: orderData.delivery_time,
         total_price: orderData.total_price,
+        items: orderData.items,
+        client_comment: orderData.client_comment,
         shop: orderData.shop,
-        client_comment: orderData.client_comment
+        florist: orderData.florist,
+        delivery_address: orderData.delivery_address,
+        delivery_date: orderData.delivery_date,
+        store_id: orderData.store_id,
+        florist_name: orderData.florist_name
       }])
       .select()
       .single();
 
-    if (orderError) throw orderError;
-
-    // Создаем товары для заказа
-    if (orderData.items && orderData.items.length > 0) {
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(
-          orderData.items.map(item => ({
-            order_id: order.id,
-            image: item.image,
-            description: item.description,
-            price: item.price,
-            quantity: item.quantity || 1
-          }))
-        );
-
-      if (itemsError) throw itemsError;
-    }
-
-    return order;
+    if (error) throw error;
+    return data;
   },
 
   // Обновление заказа
   async updateOrder(id, orderData) {
     const { data, error } = await supabase
       .from('orders')
-      .update({
-        status: orderData.status,
-        client_phone: orderData.client_phone,
-        client_name: orderData.client_name,
-        address: orderData.address,
-        delivery_time: orderData.delivery_time,
-        total_price: orderData.total_price,
-        shop: orderData.shop,
-        florist: orderData.florist,
-        client_comment: orderData.client_comment,
-        updated_at: new Date().toISOString()
-      })
+      .update(orderData)
       .eq('id', id)
-      .select();
+      .select()
+      .single();
 
     if (error) throw error;
     return data;
@@ -98,12 +74,10 @@ export const ordersApi = {
   async updateOrderStatus(id, status) {
     const { data, error } = await supabase
       .from('orders')
-      .update({
-        status: status,
-        updated_at: new Date().toISOString()
-      })
+      .update({ status })
       .eq('id', id)
-      .select();
+      .select()
+      .single();
 
     if (error) throw error;
     return data;
@@ -117,27 +91,17 @@ export const ordersApi = {
       .eq('id', id);
 
     if (error) throw error;
-    return true;
   },
 
   // Группировка заказов по дням
   groupOrdersByDate(orders) {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return orders.reduce((acc, order) => {
-      const deliveryDate = new Date(order.delivery_time);
-      
-      if (deliveryDate.toDateString() === today.toDateString()) {
-        acc.today.push(order);
-      } else if (deliveryDate.toDateString() === tomorrow.toDateString()) {
-        acc.tomorrow.push(order);
-      } else {
-        acc.later.push(order);
+    return orders.reduce((groups, order) => {
+      const date = new Date(order.delivery_date || order.created_at).toISOString().split('T')[0];
+      if (!groups[date]) {
+        groups[date] = [];
       }
-      
-      return acc;
-    }, { today: [], tomorrow: [], later: [] });
+      groups[date].push(order);
+      return groups;
+    }, {});
   }
-}; 
+};
