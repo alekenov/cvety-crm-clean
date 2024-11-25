@@ -5,6 +5,7 @@
   "description": "Database check scripts",
   "main": "check_db.js",
   "dependencies": {
+    "date-fns": "^4.1.0",
     "pg": "^8.11.3"
   },
   "devDependencies": {
