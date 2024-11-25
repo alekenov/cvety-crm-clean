@@ -202,7 +202,7 @@ const mockOrders = [
   },
   {
     number: '№1235',
-    totalPrice: '25,000 ₸',
+    totalPrice: '55,000 ₸',
     date: '2024-03-24',
     time: '15:00',
     status: 'Оплачен',
@@ -212,9 +212,13 @@ const mockOrders = [
     phone: '+7 (707) 234-56-78',
     hasClientReaction: false,
     hasPhoto: true,
+    comment: 'Хочу букет в бело-розовых тонах',
     items: [
-      { name: 'Орхидеи белые', quantity: 3, price: '7,000 ₸' },
-      { name: 'Упаковка стандарт', quantity: 1, price: '2,000 ₸' }
+      { name: 'Роза Red Naomi 60 см', quantity: 15, price: '2,000 ₸' },
+      { name: 'Гвоздика розовая 50 см', quantity: 7, price: '1,000 ₸' },
+      { name: 'Хризантема кустовая 50 см', quantity: 3, price: '1,500 ₸' },
+      { name: 'Эустома белая 50 см', quantity: 5, price: '1,800 ₸' },
+      { name: 'Статица сиреневая 45 см', quantity: 2, price: '1,200 ₸' }
     ]
   },
   {

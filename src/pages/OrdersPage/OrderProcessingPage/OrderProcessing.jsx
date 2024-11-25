@@ -36,24 +36,27 @@ const mockOrders = [
   {
     id: '1235',
     number: '№1235',
-    totalPrice: '12,500 ₸',
+    totalPrice: '55,000 ₸',
     date: '2024-03-24',
     time: '15:00',
-    status: ORDER_STATUS.NEW,
+    status: ORDER_STATUS.PAID,
     deliveryType: 'delivery',
     address: 'ул. Достык 123, кв. 45',
     comment: 'Хочу букет в бело-розовых тонах',
     card: 'С днем рождения!',
     details: {
-      total: 12500,
+      total: 55000,
       recipient: {
         name: 'Динара Касымова',
         phone: '+7 (777) 987-65-43',
       },
     },
     items: [
-      { id: 1, name: 'Белые розы', quantity: 7, price: '1,500 ₸' },
-      { id: 2, name: 'Розовые пионы', quantity: 3, price: '2,000 ₸' }
+      { id: 1, name: 'Роза Red Naomi 60 см', quantity: 15, price: '2,000 ₸', length: '60 см' },
+      { id: 2, name: 'Гвоздика розовая 50 см', quantity: 7, price: '1,000 ₸', length: '50 см' },
+      { id: 3, name: 'Хризантема кустовая 50 см', quantity: 3, price: '1,500 ₸', length: '50 см' },
+      { id: 4, name: 'Эустома белая 50 см', quantity: 5, price: '1,800 ₸', length: '50 см' },
+      { id: 5, name: 'Статица сиреневая 45 см', quantity: 2, price: '1,200 ₸', length: '45 см' }
     ],
     hasPhoto: false,
     hasClientReaction: false
