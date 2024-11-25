@@ -108,6 +108,31 @@ const mockOrders = [
     ],
     hasPhoto: true,
     hasClientReaction: false
+  },
+  {
+    id: '1240',
+    number: '№1240',
+    totalPrice: '28,000 ₸',
+    date: '2024-03-25',
+    time: '12:45',
+    status: ORDER_STATUS.DELIVERED,
+    deliveryType: 'delivery',
+    address: 'ул. Тимирязева 42, офис 506',
+    comment: 'Доставка в офис, позвонить за 15 минут',
+    card: 'От всего коллектива!',
+    details: {
+      total: 28000,
+      recipient: {
+        name: 'Ержан Касымов',
+        phone: '+7 (707) 789-01-23',
+      },
+    },
+    items: [
+      { id: 1, name: 'Гортензии синие', quantity: 3, price: '8,000 ₸' },
+      { id: 2, name: 'Упаковка премиум', quantity: 1, price: '4,000 ₸' }
+    ],
+    hasPhoto: true,
+    hasClientReaction: true
   }
 ];
 
