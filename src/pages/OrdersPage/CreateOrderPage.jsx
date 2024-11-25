@@ -2,9 +2,55 @@ import React, { useState } from 'react';
 import { Plus, Search, X, MessageCircle, FileText, Phone, Calendar, Clock, Send, MapPin, Home, ArrowLeft, ArrowRight, User, CreditCard, Truck, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { productsApi } from '../../services/api/productsApi';
-import { ordersApi } from '../../services/api/ordersApi';
-import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabaseQuery';
+
+// Mock catalog products
+const mockCatalogProducts = [
+  {
+    id: 1,
+    name: 'Букет "Весенний"',
+    description: '15 тюльпанов, зелень, упаковка',
+    price: 15000,
+    category: 'Букеты',
+    image: '/placeholder.jpg',
+    isActive: true
+  },
+  {
+    id: 2,
+    name: 'Розы красные',
+    description: '25 роз, премиум упаковка',
+    price: 25000,
+    category: 'Розы',
+    image: '/placeholder.jpg',
+    isActive: true
+  },
+  {
+    id: 3,
+    name: 'Букет "Нежность"',
+    description: 'Пионы, розы, зелень',
+    price: 20000,
+    category: 'Букеты',
+    image: '/placeholder.jpg',
+    isActive: true
+  },
+  {
+    id: 4,
+    name: 'Упаковка стандарт',
+    description: 'Крафт-бумага, лента',
+    price: 2000,
+    category: 'Упаковка',
+    image: '/placeholder.jpg',
+    isActive: true
+  },
+  {
+    id: 5,
+    name: 'Упаковка премиум',
+    description: 'Дизайнерская бумага, атласная лента',
+    price: 5000,
+    category: 'Упаковка',
+    image: '/placeholder.jpg',
+    isActive: true
+  }
+];
 
 const CreateOrderPage = () => {
   const navigate = useNavigate();
@@ -13,6 +59,8 @@ const CreateOrderPage = () => {
   const [showAddCustomItem, setShowAddCustomItem] = useState(false);
   const [showComment, setShowComment] = useState(false);
   const [orderItems, setOrderItems] = useState([]);
+  const [catalogProducts] = useState(mockCatalogProducts);
+  const [productsLoading] = useState(false);
 
   const [orderForm, setOrderForm] = useState({
     deliveryMethod: 'delivery',
@@ -41,42 +89,12 @@ const CreateOrderPage = () => {
     paymentMethod: 'kaspi',
   });
 
-  // Загрузка продуктов с помощью хука
-  const { 
-    data: catalogProducts = [], 
-    loading: productsLoading,
-    error: productsError 
-  } = useSupabaseQuery(
-    () => productsApi.getActiveProducts(),
-    {
-      onError: (error) => {
-        toast.error('Error loading products: ' + error.message);
-      }
-    }
-  );
-
-  // Мутация для создания заказа
-  const { 
-    mutate: createOrder,
-    loading: creatingOrder 
-  } = useSupabaseMutation(
-    async () => {
-      const orderData = {
-        ...prepareOrderData(),
-        items: orderItems
-      };
-      return ordersApi.createOrderWithItems(orderData);
-    },
-    {
-      onSuccess: () => {
-        toast.success('Order created successfully');
-        navigate('/orders');
-      },
-      onError: (error) => {
-        toast.error('Error creating order: ' + error.message);
-      }
-    }
-  );
+  // Mock create order function
+  const handleCreateOrder = async (orderData) => {
+    console.log('Creating order with data:', orderData);
+    toast.success('Заказ успешно создан');
+    navigate('/orders');
+  };
 
   const prepareOrderData = () => {
     const { deliveryMethod, recipient, customer, ...rest } = orderForm;
@@ -160,7 +178,7 @@ const CreateOrderPage = () => {
       return;
     }
 
-    await createOrder();
+    await handleCreateOrder(prepareOrderData());
   };
 
   const validateForm = () => {

@@ -1,16 +1,29 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { MessageCircle, Camera, Truck, AlertTriangle, MapPin, Phone, User, Store, Clock, ThumbsUp, ThumbsDown, RefreshCw, Check, ArrowRight, Plus, Calendar, X, Search } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import Input from "@/components/ui/Input/Input"
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Store, Truck, MessageCircle, Phone, MapPin, Clock, AlertTriangle, User, ChevronDown } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { logger } from '../../services/logging/loggingService';
+
+// UI Components
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// Services
+import { storageService } from '@/services/storage/storageService';
 
 const statusColors = {
   'Не оплачен': 'bg-red-500',
@@ -34,7 +47,7 @@ const nextStatus = {
   'Готов к самовывозу': 'Доставлен'
 }
 
-const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReaction, onClick }) => {
+const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReaction, onClick, onViewPhotos }) => {
   const getDateText = (dateString) => {
     const today = new Date();
     const orderDate = new Date(dateString);
@@ -75,14 +88,14 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
           <div className="space-y-1">
             <p className="flex items-center text-gray-600">
               <Phone size={16} className="mr-1" />
-              {order.client}
+              {order.phone}
               <Button
                 variant="ghost"
                 size="sm"
                 className="ml-2 p-0 h-6 w-6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.location.href = `tel:${order.client}`;
+                  window.location.href = `tel:${order.phone}`;
                 }}
               >
                 <Phone size={16} className="text-blue-500" />
@@ -94,7 +107,7 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
                 className="ml-1 p-0 h-6 w-6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(`https://wa.me/${order.client.replace(/[^0-9]/g, '')}`);
+                  window.open(`https://wa.me/${order.phone.replace(/[^0-9]/g, '')}`);
                 }}
               >
                 <MessageCircle size={16} className="text-green-500" />
@@ -103,38 +116,9 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
             </p>
             <p className="flex items-center text-gray-600">
               <MapPin size={16} className="mr-1" />
-              {order.deliveryType === 'pickup' 
-                ? `${order.shop} (Самовывоз)` 
-                : order.address}
-              {order.addressNeedsClarification && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <AlertTriangle size={16} className="ml-1 text-yellow-500" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Требуется уточнение адреса</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              {order.address}
             </p>
           </div>
-
-          {order.shop && order.deliveryType !== 'pickup' && (
-            <div className="bg-blue-50 p-2 rounded-lg">
-              <p className="flex items-center text-gray-700">
-                <Store size={16} className="mr-1" />
-                Магазин: {order.shop}
-              </p>
-              {order.florist && order.status !== 'Оплачен' && (
-                <p className="flex items-center text-gray-700 mt-1">
-                  <User size={16} className="mr-1" />
-                  Флорист: {order.florist}
-                </p>
-              )}
-            </div>
-          )}
 
           <div>
             <h4 className="font-medium mb-2">Состав заказа:</h4>
@@ -142,67 +126,13 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
               {order.items.map((item, index) => (
                 <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                   <div className="flex items-center">
-                    <img 
-                      src={item.image} 
-                      alt={item.description} 
-                      className="w-12 h-12 object-cover rounded-md mr-2"
-                    />
-                    <span className="text-sm">{item.description}</span>
+                    <span className="text-sm">{item.name}</span>
                   </div>
                   <span className="font-medium">{item.price}</span>
                 </div>
               ))}
             </div>
           </div>
-
-          {order.clientComment && (
-            <div className="bg-yellow-50 p-2 rounded-lg">
-              <h4 className="font-medium mb-1 flex items-center">
-                <MessageCircle size={16} className="mr-1 text-yellow-500" />
-                Комментарий клиента:
-              </h4>
-              <p className="text-sm">{order.clientComment}</p>
-            </div>
-          )}
-
-          {order.clientReaction && (
-            <div className={`p-2 rounded-lg ${
-              order.clientReaction === 'positive' ? 'bg-green-50' : 'bg-red-50'
-            }`}>
-              <h4 className="font-medium mb-1 flex items-center">
-                {order.clientReaction === 'positive' ? (
-                  <ThumbsUp size={16} className="mr-1 text-green-500" />
-                ) : (
-                  <ThumbsDown size={16} className="mr-1 text-red-500" />
-                )}
-                Реакция клиента:
-              </h4>
-              <p className="text-sm">{order.clientReactionComment}</p>
-              {order.clientReaction === 'negative' && !order.reassemblyRequested && (
-                <Button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRespondToClientReaction(order.number, 'reassemble');
-                  }}
-                  variant="primary"
-                  size="sm"
-                >
-                  <RefreshCw size={14} className="mr-1" />
-                  Пересобрать букет
-                </Button>
-              )}
-            </div>
-          )}
-
-          {order.deliveryProblem && (
-            <div className="bg-red-50 p-2 rounded-lg">
-              <h4 className="font-medium mb-1 flex items-center text-red-700">
-                <AlertTriangle size={16} className="mr-1" />
-                Проблема с доставкой:
-              </h4>
-              <p className="text-sm text-red-700">{order.deliveryProblem}</p>
-            </div>
-          )}
 
           <div className="flex flex-wrap justify-end gap-2">
             {order.status === 'Оплачен' && (
@@ -214,8 +144,22 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
                   onUploadPhoto(order.number);
                 }}
               >
-                <Camera size={16} className="mr-1" />
+                <div />
                 Загрузить фото
+              </Button>
+            )}
+            {order.hasPhoto && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewPhotos(order.number);
+                }}
+              >
+                <div className="w-4 h-4" />
+                Просмотр фото
               </Button>
             )}
             {nextStatus[order.status] && (
@@ -227,7 +171,7 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
                   onStatusChange(order.number, nextStatus[order.status]);
                 }}
               >
-                <ArrowRight size={16} className="mr-1" />
+                <div />
                 {nextStatus[order.status]}
               </Button>
             )}
@@ -238,6 +182,179 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
   );
 };
 
+const mockOrders = [
+  {
+    number: '№1234',
+    totalPrice: '15,000 ₸',
+    date: '2024-03-24',
+    time: '14:30',
+    status: 'Не оплачен',
+    deliveryType: 'delivery',
+    address: 'ул. Абая 150, кв. 25',
+    clientName: 'Айгерим Сатпаева',
+    phone: '+7 (777) 123-45-67',
+    hasClientReaction: true,
+    hasPhoto: false,
+    items: [
+      { name: 'Розы красные', quantity: 11, price: '1,000 ₸' },
+      { name: 'Упаковка премиум', quantity: 1, price: '4,000 ₸' }
+    ]
+  },
+  {
+    number: '№1235',
+    totalPrice: '25,000 ₸',
+    date: '2024-03-24',
+    time: '15:00',
+    status: 'Оплачен',
+    deliveryType: 'delivery',
+    address: 'пр. Достык 89, офис 401',
+    clientName: 'Болат Нурланов',
+    phone: '+7 (707) 234-56-78',
+    hasClientReaction: false,
+    hasPhoto: true,
+    items: [
+      { name: 'Орхидеи белые', quantity: 3, price: '7,000 ₸' },
+      { name: 'Упаковка стандарт', quantity: 1, price: '2,000 ₸' }
+    ]
+  },
+  {
+    number: '№1236',
+    totalPrice: '18,500 ₸',
+    date: '2024-03-24',
+    time: '16:15',
+    status: 'В работе',
+    deliveryType: 'pickup',
+    address: 'Магазин на Байтурсынова',
+    clientName: 'Динара Ахметова',
+    phone: '+7 (747) 345-67-89',
+    hasClientReaction: false,
+    hasPhoto: true,
+    items: [
+      { name: 'Тюльпаны микс', quantity: 15, price: '800 ₸' },
+      { name: 'Зелень декоративная', quantity: 2, price: '1,500 ₸' }
+    ]
+  },
+  {
+    number: '№1237',
+    totalPrice: '32,000 ₸',
+    date: '2024-03-24',
+    time: '17:30',
+    status: 'Собран',
+    deliveryType: 'delivery',
+    address: 'ул. Жандосова 58, кв. 89',
+    clientName: 'Асель Маратова',
+    phone: '+7 (708) 456-78-90',
+    hasClientReaction: false,
+    hasPhoto: true,
+    items: [
+      { name: 'Пионы розовые', quantity: 7, price: '4,000 ₸' },
+      { name: 'Упаковка люкс', quantity: 1, price: '5,000 ₸' }
+    ]
+  },
+  {
+    number: '№1238',
+    totalPrice: '45,000 ₸',
+    date: '2024-03-25',
+    time: '10:00',
+    status: 'Ожидает курьера',
+    deliveryType: 'delivery',
+    address: 'ул. Сатпаева 90/20, кв. 150',
+    clientName: 'Марат Сулейменов',
+    phone: '+7 (701) 567-89-01',
+    hasClientReaction: false,
+    hasPhoto: true,
+    items: [
+      { name: 'Розы премиум микс', quantity: 25, price: '1,500 ₸' },
+      { name: 'Упаковка премиум', quantity: 1, price: '7,500 ₸' }
+    ]
+  },
+  {
+    number: '№1239',
+    totalPrice: '22,000 ₸',
+    date: '2024-03-25',
+    time: '11:30',
+    status: 'В пути',
+    deliveryType: 'delivery',
+    address: 'пр. Аль-Фараби 77/8, кв. 203',
+    clientName: 'Алия Нурпеисова',
+    phone: '+7 (777) 678-90-12',
+    hasClientReaction: false,
+    hasPhoto: true,
+    items: [
+      { name: 'Лилии белые', quantity: 5, price: '3,500 ₸' },
+      { name: 'Упаковка стандарт', quantity: 1, price: '2,500 ₸' }
+    ]
+  },
+  {
+    number: '№1240',
+    totalPrice: '28,000 ₸',
+    date: '2024-03-25',
+    time: '12:45',
+    status: 'Доставлен',
+    deliveryType: 'delivery',
+    address: 'ул. Тимирязева 42, офис 506',
+    clientName: 'Ержан Касымов',
+    phone: '+7 (707) 789-01-23',
+    hasClientReaction: true,
+    hasPhoto: true,
+    items: [
+      { name: 'Гортензии синие', quantity: 3, price: '8,000 ₸' },
+      { name: 'Упаковка премиум', quantity: 1, price: '4,000 ₸' }
+    ]
+  },
+  {
+    number: '№1241',
+    totalPrice: '19,500 ₸',
+    date: '2024-03-25',
+    time: '14:00',
+    status: 'Проблема с доставкой',
+    deliveryType: 'delivery',
+    address: 'ул. Розыбакиева 247, кв. 89',
+    clientName: 'Гульнара Сериккызы',
+    phone: '+7 (747) 890-12-34',
+    hasClientReaction: true,
+    hasPhoto: true,
+    items: [
+      { name: 'Хризантемы кустовые', quantity: 7, price: '2,500 ₸' },
+      { name: 'Упаковка стандарт', quantity: 1, price: '2,000 ₸' }
+    ]
+  },
+  {
+    number: '№1242',
+    totalPrice: '35,000 ₸',
+    date: '2024-03-25',
+    time: '15:30',
+    status: 'Готов к самовывозу',
+    deliveryType: 'pickup',
+    address: 'Магазин на Байтурсынова',
+    clientName: 'Тимур Жумабаев',
+    phone: '+7 (708) 901-23-45',
+    hasClientReaction: false,
+    hasPhoto: true,
+    items: [
+      { name: 'Розы красные премиум', quantity: 21, price: '1,500 ₸' },
+      { name: 'Упаковка люкс', quantity: 1, price: '3,500 ₸' }
+    ]
+  },
+  {
+    number: '№1243',
+    totalPrice: '42,000 ₸',
+    date: '2024-03-26',
+    time: '09:00',
+    status: 'Не оплачен',
+    deliveryType: 'delivery',
+    address: 'пр. Назарбаева 301, кв. 42',
+    clientName: 'Сауле Бекенова',
+    phone: '+7 (777) 012-34-56',
+    hasClientReaction: false,
+    hasPhoto: false,
+    items: [
+      { name: 'Пионовидные розы', quantity: 15, price: '2,500 ₸' },
+      { name: 'Упаковка премиум', quantity: 1, price: '4,500 ₸' }
+    ]
+  }
+];
+
 export default function OrdersPage() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('all');
@@ -247,10 +364,8 @@ export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleOrderClick = (orderNumber) => {
-    // Remove all non-numeric characters and convert to string
     const cleanNumber = String(orderNumber).replace(/[^0-9]/g, '');
-    console.log('Original order number:', orderNumber);
-    console.log('Cleaned order number:', cleanNumber);
+    logger.log('OrdersPage', `Navigating to order details for order number: ${orderNumber}, clean ID: ${cleanNumber}`);
     navigate(`/orders/${cleanNumber}`);
   };
 
@@ -258,127 +373,112 @@ export default function OrdersPage() {
     navigate('/orders/create');
   };
 
-  const handleUploadPhoto = (orderNumber) => {
-    console.log(`Upload photo for order ${orderNumber}`);
+  const handleUploadPhoto = async (orderNumber) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        try {
+          // Create a path for the file: orders/[orderNumber]/photos/[filename]
+          const cleanNumber = orderNumber.replace(/[^0-9]/g, '');
+          const extension = file.name.split('.').pop();
+          const timestamp = new Date().getTime();
+          const path = `orders/${cleanNumber}/photos/${timestamp}.${extension}`;
+
+          // Show loading toast
+          toast.loading('Загрузка фото...');
+
+          // Upload the file
+          const result = await storageService.uploadFile(file, path);
+
+          if (result) {
+            toast.success('Фото успешно загружено');
+            // Here you can update the order's photos array in your database
+            console.log('Photo uploaded:', result.url);
+          } else {
+            toast.error('Ошибка при загрузке фото');
+          }
+        } catch (error) {
+          console.error('Error uploading photo:', error);
+          toast.error('Ошибка при загрузке фото');
+        }
+      }
+    };
+    input.click();
   };
 
   const handleRespondToClientReaction = (orderNumber, reaction) => {
-    console.log(`Respond to client reaction for order ${orderNumber}: ${reaction}`);
+    console.log(`Responding to client reaction for order ${orderNumber}: ${reaction}`);
   };
 
   const handleStatusChange = (orderNumber, newStatus) => {
-    console.log(`Change status of order ${orderNumber} to ${newStatus}`);
+    console.log(`Changing status of order ${orderNumber} to ${newStatus}`);
+  };
+
+  const handleViewPhotos = async (orderNumber) => {
+    try {
+      const cleanNumber = orderNumber.replace(/[^0-9]/g, '');
+      const path = `orders/${cleanNumber}/photos`;
+      
+      const photos = await storageService.listFiles(path);
+      
+      if (photos && photos.length > 0) {
+        // Here you could show photos in a modal or navigate to a photos view
+        console.log('Order photos:', photos);
+      } else {
+        toast.error('Нет фотографий для этого заказа');
+      }
+    } catch (error) {
+      console.error('Error loading photos:', error);
+      toast.error('Ошибка при загрузке фотографий');
+    }
   };
 
   const handleStatusFilterChange = (status) => {
     setStatusFilter(status);
+    console.log('Filtering by status:', status);
   };
 
   const handleDeliveryTypeFilterChange = (type) => {
-    setDeliveryTypeFilter(type === deliveryTypeFilter ? 'all' : type);
+    setDeliveryTypeFilter(type);
+    console.log('Filtering by delivery type:', type);
   };
 
-  const handleDateFilterChange = (filter) => {
-    setDateFilter(filter === dateFilter ? 'all' : filter);
-    if (filter !== 'custom') {
+  const handleDateFilterChange = (date) => {
+    setDateFilter(date);
+    if (date !== 'custom') {
       setCustomDate(null);
     }
+    console.log('Filtering by date:', date);
   };
 
-  const mockOrders = [
-    {
-      number: '№1234',
-      totalPrice: '15,000 ₸',
-      date: '2024-11-18',
-      time: '14:00',
-      status: 'В работе',
-      client: '+7 (777) 123-45-67',
-      address: 'ул. Абая, 1',
-      shop: 'Центральный',
-      florist: 'Анна',
-      deliveryType: 'delivery',
-      items: [
-        { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Весенний"', price: '10,000 ₸' },
-        { image: '/placeholder.svg?height=48&width=48', description: 'Открытка', price: '500 ₸' },
-      ],
-      clientComment: 'Пожалуйста, добавьте больше розовых цветов',
-    },
-    {
-      number: '№1235',
-      totalPrice: '8,000 ₸',
-      date: '2024-11-19',
-      time: '16:30',
-      status: 'Оплачен',
-      client: '+7 (777) 987-65-43',
-      address: 'пр. Достык, 5',
-      shop: 'Южный',
-      deliveryType: 'pickup',
-      items: [
-        { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Летний"', price: '8,000 ₸' },
-      ],
-    },
-    {
-      number: '№1236',
-      totalPrice: '20,000 ₸',
-      date: '2024-11-18',
-      time: '10:00',
-      status: 'Не оплачен',
-      client: '+7 (777) 111-22-33',
-      address: 'ул. Жандосова, 55',
-      shop: 'Западный',
-      deliveryType: 'delivery',
-      addressNeedsClarification: true,
-      items: [
-        { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Роскошь"', price: '18,000 ₸' },
-        { image: '/placeholder.svg?height=48&width=48', description: 'Ваза', price: '2,000 ₸' },
-      ],
-    },
-    {
-      number: '№1237',
-      totalPrice: '12,000 ₸',
-      date: '2024-11-20',
-      time: '11:30',
-      status: 'Готов к самовывозу',
-      client: '+7 (777) 444-55-66',
-      address: 'ул. Толе би, 59',
-      shop: 'Восточный',
-      deliveryType: 'pickup',
-      items: [
-        { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Нежность"', price: '12,000 ₸' },
-      ],
-    },
-    {
-      number: '№1238',
-      totalPrice: '25,000 ₸',
-      date: '2024-11-18',
-      time: '13:45',
-      status: 'В пути',
-      client: '+7 (777) 777-88-99',
-      address: 'мкр. Самал-2, д. 33',
-      shop: 'Центральный',
-      deliveryType: 'delivery',
-      items: [
-        { image: '/placeholder.svg?height=48&width=48', description: 'Букет "Экзотика"', price: '22,000 ₸' },
-        { image: '/placeholder.svg?height=48&width=48', description: 'Шоколад', price: '3,000 ₸' },
-      ],
-      deliveryProblem: 'Клиент не отвечает на звонки',
-    },
-  ];
-
   const filteredOrders = mockOrders.filter(order => {
-    if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-    if (deliveryTypeFilter !== 'all' && order.deliveryType !== deliveryTypeFilter) return false;
-    
-    const orderDate = new Date(order.date);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    const matchesDeliveryType = deliveryTypeFilter === 'all' || order.deliveryType === deliveryTypeFilter;
+    const matchesSearch = !searchQuery || 
+      order.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.phone.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (dateFilter === 'today' && orderDate.toDateString() !== today.toDateString()) return false;
-    if (dateFilter === 'tomorrow' && orderDate.toDateString() !== tomorrow.toDateString()) return false;
-    if (dateFilter === 'custom' && customDate && orderDate.toDateString() !== customDate.toDateString()) return false;
+    let matchesDate = true;
+    if (dateFilter !== 'all') {
+      const orderDate = new Date(order.date);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-    return true;
+      if (dateFilter === 'today') {
+        matchesDate = orderDate.toDateString() === today.toDateString();
+      } else if (dateFilter === 'tomorrow') {
+        matchesDate = orderDate.toDateString() === tomorrow.toDateString();
+      } else if (dateFilter === 'custom' && customDate) {
+        matchesDate = orderDate.toDateString() === new Date(customDate).toDateString();
+      }
+    }
+
+    return matchesStatus && matchesDeliveryType && matchesSearch && matchesDate;
   });
 
   return (
@@ -391,7 +491,7 @@ export default function OrdersPage() {
             variant="primary"
             size="md"
           >
-            <Plus size={20} className="mr-2" />
+            <div />
             Новый заказ
           </Button>
         </div>
@@ -401,16 +501,16 @@ export default function OrdersPage() {
             <div className="space-y-4">
               <div className="flex-1 min-w-[200px]">
                 <h3 className="text-sm font-medium mb-2">Статус заказа</h3>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Фильтр по статусу" />
+                <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Выберите статус" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Все статусы</SelectItem>
                     {Object.keys(statusColors).map(status => (
                       <SelectItem key={status} value={status}>
                         <div className="flex items-center">
-                          <div className={`w-2 h-2 rounded-full mr-2 ${statusColors[status]}`} />
+                          <span className={`w-2 h-2 rounded-full mr-2 ${statusColors[status]}`} />
                           {status}
                         </div>
                       </SelectItem>
@@ -472,38 +572,29 @@ export default function OrdersPage() {
                   >
                     Завтра
                   </Button>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={dateFilter === 'custom' ? 'primary' : 'outline'}
-                        size="sm"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {customDate ? format(customDate, 'PPP') : 'Выбрать дату'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={customDate}
-                        onSelect={(date) => {
-                          setCustomDate(date);
-                          setDateFilter('custom');
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <div>
+                    <Button
+                      variant={dateFilter === 'custom' ? 'primary' : 'outline'}
+                      size="sm"
+                    >
+                      <div />
+                      {customDate ? 'Выбранная дата' : 'Выбрать дату'}
+                    </Button>
+                  </div>
                 </div>
               </div>
               <div>
                 <h3 className="text-sm font-medium mb-2">Поиск</h3>
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Поиск по номеру, клиенту или адресу"
-                  icon={<Search size={16} />}
-                />
+                <div>
+                  <div />
+                  <input 
+                    type="text" 
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)} 
+                    placeholder="Поиск по номеру, клиенту или адресу" 
+                    className="w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -511,20 +602,14 @@ export default function OrdersPage() {
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredOrders
-            .filter(order => {
-              const searchLower = searchQuery.toLowerCase();
-              return !searchQuery ||
-                order.number.toLowerCase().includes(searchLower) ||
-                order.client.toLowerCase().includes(searchLower) ||
-                (order.address && order.address.toLowerCase().includes(searchLower));
-            })
             .map((order) => (
               <OrderCard
                 key={order.number}
                 order={order}
-                onStatusChange={(newStatus) => console.log(`Status changed to ${newStatus}`)}
-                onUploadPhoto={() => console.log('Upload photo clicked')}
-                onRespondToClientReaction={(response) => console.log(`Client reaction response: ${response}`)}
+                onStatusChange={handleStatusChange}
+                onUploadPhoto={handleUploadPhoto}
+                onRespondToClientReaction={handleRespondToClientReaction}
+                onViewPhotos={handleViewPhotos}
                 onClick={() => handleOrderClick(order.number)}
               />
             ))}

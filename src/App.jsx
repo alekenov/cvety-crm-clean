@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import { ToastProvider } from './components/ui/toast';
+import { LogViewer } from './components/debug/LogViewer';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           </main>
         </div>
       </div>
+      <LogViewer />
     </>
   );
 }

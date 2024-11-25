@@ -2,8 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.REACT_APP_SUPABASE_SERVICE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
@@ -18,23 +19,28 @@ const supabaseConfig = {
     schema: 'public',
   },
   global: {
-    headers: {
-      'x-application-name': 'cvety-crm'
-    }
+    headers: { 'x-my-custom-header': 'cvety-crm' }
+  },
+  storage: {
+    // Maximum file size in bytes (10MB)
+    maxFileSize: 10 * 1024 * 1024
   }
 };
 
-// Create Supabase client
+// Initialize regular Supabase client
 const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseConfig);
+
+// Initialize admin client with service role key
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, supabaseConfig);
 
 // Error handling utility
 const handleSupabaseError = (error) => {
   console.error('Supabase Error:', error);
-  throw new Error(error.message || 'An error occurred while accessing the database');
+  throw new Error(error.message || 'An error occurred with the database operation');
 };
 
 // Orders API
-export const ordersApi = {
+const ordersApi = {
   async getAll() {
     try {
       const { data, error } = await supabase
@@ -130,7 +136,7 @@ export const ordersApi = {
 };
 
 // Products API
-export const productsApi = {
+const productsApi = {
   async getAll() {
     try {
       const { data, error } = await supabase
@@ -208,7 +214,7 @@ export const productsApi = {
 };
 
 // Shops API
-export const shopsApi = {
+const shopsApi = {
   async getAll() {
     try {
       const { data, error } = await supabase
@@ -280,7 +286,7 @@ export const shopsApi = {
 };
 
 // Employees API
-export const employeesApi = {
+const employeesApi = {
   async getAll(shopId) {
     try {
       const query = supabase
@@ -352,7 +358,7 @@ export const employeesApi = {
 };
 
 // Inventory API
-export const inventoryApi = {
+const inventoryApi = {
   async getAll() {
     try {
       const { data, error } = await supabase
@@ -387,4 +393,13 @@ export const inventoryApi = {
   }
 };
 
-export { supabase };
+// Export all APIs and the Supabase clients
+export {
+  supabase,
+  supabaseAdmin,
+  ordersApi,
+  productsApi,
+  shopsApi,
+  employeesApi,
+  inventoryApi
+};

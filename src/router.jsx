@@ -1,7 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout/MainLayout';
 import OrdersPage from './pages/OrdersPage/OrdersPage';
-import OrderProcessing from './pages/OrdersPage/components/OrderProcessing';
+import OrderProcessing from './pages/OrdersPage/OrderProcessingPage/OrderProcessing';
 import CreateOrderPage from './pages/OrdersPage/CreateOrderPage';
 import InventoryPage from './pages/InventoryPage/InventoryPage';
 import DeliveryPage from './pages/DeliveryPage/DeliveryPage';
