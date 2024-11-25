@@ -37,15 +37,7 @@ const SelectContent = React.forwardRef(({ className, children, position = "poppe
       position={position}
       {...props}
     >
-      <SelectPrimitive.Viewport
-        className={cn(
-          "p-1",
-          position === "popper" &&
-            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
-        )}
-      >
-        {children}
-      </SelectPrimitive.Viewport>
+      {children}
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ))
@@ -74,6 +66,7 @@ const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => 
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
+
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
