@@ -1,146 +1,121 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, Search, ArrowDown, ArrowUp, Calendar, Filter, History, Box, Trash, FileText, User, ExternalLink, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
+import { inventoryHistoryService } from '../../../services/inventory/inventoryHistoryService';
+import { logger } from '../../../services/logging/loggingService';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import { Button } from '../../../components/ui/button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '../../../components/ui/select';
+import { toast } from 'react-hot-toast';
+
+const ITEMS_PER_PAGE = 10;
 
 const HistoryMode = ({ onBack }) => {
-  const [selectedOperation, setSelectedOperation] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
-  const [dateRange, setDateRange] = useState('today');
+  // Состояние
+  const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Фильтры
+  const [filters, setFilters] = useState({
+    operationType: null,
+    startDate: null,
+    endDate: null,
+    flowerName: '',
+    showFilters: false
+  });
 
-  // Тестовые данные истории операций
-  const [history] = useState([
-    {
-      id: 1,
-      type: 'in',
-      date: '2024-03-20 10:30',
-      comment: 'Приемка от поставщика',
-      operator: {
-        id: 1,
-        name: 'Анна',
-        role: 'Флорист'
-      },
-      items: [
-        { 
-          id: 1,
-          name: 'Freedom',
-          quantity: 500,
-          price: 400
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        setLoading(true);
+        logger.log('HistoryMode', 'Starting history fetch', { 
+          page: currentPage, 
+          pageSize: ITEMS_PER_PAGE,
+          filters 
+        });
+
+        const { data, total } = await inventoryHistoryService.getHistory({
+          page: currentPage,
+          pageSize: ITEMS_PER_PAGE,
+          operationType: filters.operationType,
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          flowerName: filters.flowerName || null
+        });
+
+        if (!data) {
+          throw new Error('No data received from service');
         }
-      ]
-    },
-    {
-      id: 2,
-      type: 'out',
-      date: '2024-03-20 15:45',
-      comment: 'Продажа (Букет "Нежность")',
-      operator: {
-        id: 2,
-        name: 'Мария',
-        role: 'Менеджер'
-      },
-      order: {
-        id: '1234',
-        name: 'Букет "Нежность"',
-        client: 'Айым',
-        status: 'Доставлен',
-        price: 25000,
-      },
-      items: [
-        { 
-          id: 1,
-          name: 'Freedom',
-          quantity: 25,
-          price: 576
-        },
-        {
-          id: 2,
-          name: 'Pink Mondial',
-          quantity: 15,
-          price: 590
-        },
-        {
-          id: 3,
-          name: 'Гипсофила',
-          quantity: 3,
-          price: 450
-        },
-        {
-          id: 4,
-          name: 'Эвкалипт',
-          quantity: 5,
-          price: 350
-        }
-      ]
-    },
-    {
-      id: 3,
-      type: 'writeoff',
-      date: '2024-03-20 18:20',
-      comment: 'Списание брака',
-      operator: {
-        id: 3,
-        name: 'Алия',
-        role: 'Старший флорист'
-      },
-      items: [
-        { 
-          id: 1,
-          name: 'Freedom',
-          quantity: 15,
-          price: 400,
-          reason: 'Поврежденные стебли'
-        }
-      ]
-    },
-    {
-      id: 4,
-      type: 'out',
-      date: '2024-03-21 11:15',
-      comment: 'Продажа (Букет "Весенний")',
-      operator: {
-        id: 2,
-        name: 'Мария',
-        role: 'Менеджер'
-      },
-      order: {
-        id: '1235',
-        name: 'Букет "Весенний"',
-        client: 'Динара',
-        status: 'В доставке',
-        price: 18000,
-      },
-      items: [
-        { 
-          id: 5,
-          name: 'Тюльпаны',
-          quantity: 19,
-          price: 450
-        },
-        {
-          id: 6,
-          name: 'Нарциссы',
-          quantity: 7,
-          price: 380
-        }
-      ]
-    }
-  ]);
+
+        setHistory(data);
+        setTotalPages(Math.ceil(total / ITEMS_PER_PAGE));
+        
+        logger.log('HistoryMode', 'Successfully fetched history', { 
+          itemsCount: data.length, 
+          totalPages: Math.ceil(total / ITEMS_PER_PAGE),
+          filters
+        });
+      } catch (error) {
+        logger.error('HistoryMode', 'Error fetching history', { 
+          error: error.message,
+          stack: error.stack,
+          name: error.name,
+          filters,
+          page: currentPage
+        });
+        toast.error(`Ошибка при загрузке истории: ${error.message}`);
+        setHistory([]);
+        setTotalPages(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, [currentPage, filters]);
+
+  // Обработчики фильтров
+  const handleFilterChange = (key, value) => {
+    const newFilters = { ...filters, [key]: value };
+    logger.log('Applying inventory history filters', { newFilters });
+    setFilters(newFilters);
+    setCurrentPage(1); // Сбрасываем на первую страницу при изменении фильтров
+  };
 
   // Вспомогательные функции
   const getOperationColor = (type) => {
     switch(type) {
-      case 'in': return 'text-green-600';
-      case 'out': return 'text-blue-600';
-      case 'writeoff': return 'text-red-600';
+      case 'RECEIPT': return 'text-green-600';
+      case 'ORDER_USE': return 'text-blue-600';
+      case 'WRITEOFF': return 'text-red-600';
+      case 'RETURN': return 'text-yellow-600';
+      case 'ADJUSTMENT': return 'text-purple-600';
       default: return 'text-gray-600';
     }
   };
 
   const getOperationIcon = (type) => {
     switch(type) {
-      case 'in': return <ArrowDown size={16} />;
-      case 'out': return <ArrowUp size={16} />;
-      case 'writeoff': return <Trash size={16} />;
+      case 'RECEIPT': return <ArrowDown size={16} />;
+      case 'ORDER_USE': return <ArrowUp size={16} />;
+      case 'WRITEOFF': return <Trash size={16} />;
+      case 'RETURN': return <ArrowDown size={16} />;
+      case 'ADJUSTMENT': return <Package size={16} />;
       default: return null;
+    }
+  };
+
+  const getOperationName = (type) => {
+    switch(type) {
+      case 'RECEIPT': return 'Приход';
+      case 'ORDER_USE': return 'Использование в заказе';
+      case 'WRITEOFF': return 'Списание';
+      case 'RETURN': return 'Возврат';
+      case 'ADJUSTMENT': return 'Корректировка';
+      default: return type;
     }
   };
 
@@ -153,31 +128,33 @@ const HistoryMode = ({ onBack }) => {
         <div className="flex justify-between items-start">
           <div className="flex-grow">
             {/* Тип операции */}
-            <div className={`flex items-center ${getOperationColor(operation.type)}`}>
-              {getOperationIcon(operation.type)}
+            <div className={`flex items-center ${getOperationColor(operation.operation_type)}`}>
+              {getOperationIcon(operation.operation_type)}
               <span className="ml-2 font-medium">
-                {operation.type === 'in' ? 'Приемка' : operation.type === 'out' ? 'Продажа' : 'Списание'}
+                {getOperationName(operation.operation_type)}
               </span>
             </div>
 
-            {/* Оператор */}
+            {/* Дата и время */}
             <div className="flex items-center mt-2 text-sm text-gray-600">
-              <User size={14} className="mr-1" />
-              <span>{operation.operator.name}</span>
-              <span className="mx-1">•</span>
-              <span className="text-gray-400">{operation.operator.role}</span>
+              <Calendar size={14} className="mr-1" />
+              <span>
+                {format(new Date(operation.operation_date), 'dd MMMM yyyy, HH:mm', { locale: ru })}
+              </span>
             </div>
 
-            {/* Время */}
-            <p className="text-xs text-gray-400 mt-1">
-              {new Date(operation.date).toLocaleString()}
-            </p>
+            {/* Комментарий */}
+            {operation.comment && (
+              <p className="text-sm text-gray-600 mt-1">
+                {operation.comment}
+              </p>
+            )}
 
             {/* Состав */}
             <div className="mt-3">
               {operation.items.length === 1 ? (
-                <div className="font-bold">
-                  {operation.type === 'in' ? '+' : '-'}{operation.items[0].quantity} шт × {operation.items[0].price} ₸
+                <div className="font-medium">
+                  {operation.items[0].flower_name} - {operation.items[0].quantity} шт × {operation.items[0].price} ₸
                 </div>
               ) : (
                 <div>
@@ -199,11 +176,13 @@ const HistoryMode = ({ onBack }) => {
                   </button>
                   
                   {showDetails && (
-                    <div className="mt-2 space-y-1 bg-gray-50 p-2 rounded-lg">
-                      {operation.items.map(item => (
-                        <div key={item.id} className="flex justify-between text-sm">
-                          <span>{item.name}</span>
+                    <div className="mt-2 space-y-2">
+                      {operation.items.map((item, index) => (
+                        <div key={index} className="flex justify-between text-sm">
                           <span className="text-gray-600">
+                            {item.flower_name} ({item.stem_length} см)
+                          </span>
+                          <span className="font-medium">
                             {item.quantity} шт × {item.price} ₸
                           </span>
                         </div>
@@ -213,172 +192,117 @@ const HistoryMode = ({ onBack }) => {
                 </div>
               )}
             </div>
-
-            {/* Информация о заказе */}
-            {operation.order && (
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-medium">{operation.order.name}</div>
-                    <div className="text-sm text-gray-600">
-                      Клиент: {operation.order.client}
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => alert(`Переход к заказу ${operation.order.id}`)}
-                    className="flex items-center px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-sm"
-                  >
-                    Заказ #{operation.order.id}
-                    <ExternalLink size={14} className="ml-1" />
-                  </button>
-                </div>
-                <div className="flex justify-between items-center mt-2">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    operation.order.status === 'Доставлен' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'
-                  }`}>
-                    {operation.order.status}
-                  </span>
-                  <span className="font-bold text-green-600">
-                    {operation.order.price.toLocaleString()} ₸
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
     );
   };
 
-  const isDesktop = window.innerWidth >= 1024;
-
-  // Десктопное представление операции
-  const DesktopOperationRow = ({ operation }) => (
-    <tr className="border-t">
-      <td className="p-4">
-        <div className={`flex items-center ${getOperationColor(operation.type)}`}>
-          {getOperationIcon(operation.type)}
-          <span className="ml-2">
-            {operation.type === 'in' ? 'Приемка' : 
-             operation.type === 'out' ? 'Продажа' : 'Списание'}
-          </span>
-        </div>
-      </td>
-      <td className="p-4">
-        <div className="flex items-center">
-          <User size={14} className="mr-1" />
-          <span>{operation.operator.name}</span>
-        </div>
-      </td>
-      <td className="p-4">{new Date(operation.date).toLocaleString()}</td>
-      <td className="p-4">
-        {operation.items.map(item => (
-          <div key={item.id} className="text-sm">
-            {item.name}: {item.quantity} шт
-          </div>
-        ))}
-      </td>
-      <td className="p-4">
-        {operation.order && (
-          <button 
-            onClick={() => alert(`Переход к заказу ${operation.order.id}`)}
-            className="flex items-center px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-sm"
-          >
-            #{operation.order.id}
-            <ExternalLink size={14} className="ml-1" />
-          </button>
-        )}
-      </td>
-    </tr>
-  );
-
   return (
-    <div className={isDesktop ? "p-6" : "max-w-md mx-auto p-4"}>
-      {/* Шапка */}
-      <div className="flex justify-between items-center mb-4">
+    <div className="h-full flex flex-col">
+      {/* Заголовок */}
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
-          <button onClick={onBack} className="mr-2">
-            <ArrowLeft size={24} className="text-gray-600" />
+          <button onClick={onBack} className="mr-4">
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-xl font-bold">История склада</h1>
+          <h2 className="text-xl font-bold">История операций</h2>
         </div>
       </div>
 
       {/* Фильтры */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedOperation('all')}
-            className={`px-3 py-1 rounded-full text-sm ${
-              selectedOperation === 'all' ? 'bg-gray-200' : 'bg-gray-100'
-            }`}
-          >
-            Все операции
-          </button>
-          <button
-            onClick={() => setSelectedOperation('in')}
-            className={`px-3 py-1 rounded-full text-sm ${
-              selectedOperation === 'in' ? 'bg-green-100 text-green-600' : 'bg-gray-100'
-            }`}
-          >
-            Приемка
-          </button>
-          <button
-            onClick={() => setSelectedOperation('out')}
-            className={`px-3 py-1 rounded-full text-sm ${
-              selectedOperation === 'out' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100'
-            }`}
-          >
-            Продажи
-          </button>
-          <button
-            onClick={() => setSelectedOperation('writeoff')}
-            className={`px-3 py-1 rounded-full text-sm ${
-              selectedOperation === 'writeoff' ? 'bg-red-100 text-red-600' : 'bg-gray-100'
-            }`}
-          >
-            Списания
-          </button>
-        </div>
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
+          className="flex items-center"
+        >
+          <Filter size={16} className="mr-2" />
+          {filters.showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
+        </Button>
+
+        {filters.showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <Select
+              value={filters.operationType || ''}
+              onChange={(e) => handleFilterChange('operationType', e.target.value || null)}
+            >
+              <option value="">Все операции</option>
+              <option value="RECEIPT">Приход</option>
+              <option value="ORDER_USE">Использование в заказе</option>
+              <option value="WRITEOFF">Списание</option>
+              <option value="RETURN">Возврат</option>
+              <option value="ADJUSTMENT">Корректировка</option>
+            </Select>
+
+            <Input
+              type="date"
+              value={filters.startDate || ''}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              placeholder="Начальная дата"
+            />
+
+            <Input
+              type="date"
+              value={filters.endDate || ''}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              placeholder="Конечная дата"
+            />
+
+            <Input
+              type="text"
+              value={filters.flowerName}
+              onChange={(e) => handleFilterChange('flowerName', e.target.value)}
+              placeholder="Поиск по названию цветка"
+              className="md:col-span-3"
+            />
+          </div>
+        )}
       </div>
 
-      {/* Контент */}
-      {isDesktop ? (
-        // Десктопная версия
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-4 text-left">Тип операции</th>
-                <th className="p-4 text-left">Оператор</th>
-                <th className="p-4 text-left">Дата</th>
-                <th className="p-4 text-left">Состав</th>
-                <th className="p-4 text-left">Заказ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history
-                .filter(operation => selectedOperation === 'all' || operation.type === selectedOperation)
-                .map(operation => (
-                  <DesktopOperationRow key={operation.id} operation={operation} />
-                ))
-              }
-            </tbody>
-          </table>
+      {/* Список операций */}
+      {loading ? (
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-gray-500">Загрузка...</div>
+        </div>
+      ) : history.length === 0 ? (
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-gray-500">История операций пуста</div>
         </div>
       ) : (
-        // Мобильная версия (существующий код)
-        <div className="space-y-2">
-          {history
-            .filter(operation => selectedOperation === 'all' || operation.type === selectedOperation)
-            .map(operation => (
+        <>
+          <div className="flex-grow overflow-auto">
+            {history.map((operation) => (
               <OperationCard key={operation.id} operation={operation} />
-            ))
-          }
-        </div>
+            ))}
+          </div>
+
+          {/* Пагинация */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-4 gap-2">
+              <Button
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+              >
+                Назад
+              </Button>
+              <span className="flex items-center px-4">
+                Страница {currentPage} из {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+              >
+                Вперед
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 };
 
-export default HistoryMode; 
+export default HistoryMode;

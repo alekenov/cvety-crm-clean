@@ -466,6 +466,10 @@
 ### Added
 - Добавлен компонент Toast для уведомлений
 - Добавлена утилита для работы с уведомлениями
+- Direct PostgreSQL database connection utilities
+- Database utility scripts for executing SQL commands
+- Test script for database connection verification
+- Updated setup-db.js to use direct PostgreSQL connection
 
 ### Changed
 - Улучшен интерфейс настроек магазина
@@ -485,6 +489,15 @@
 ### Removed
 - FinancePage.module.css
 - MobileNavigation.module.css
+- Устаревшие UI компоненты:
+  - components/ui/Button/Button
+  - components/ui/Badge/Badge
+  - components/ui/Card/Card
+  - components/ui/Calendar/Calendar
+  - components/ui/Popover/Popover
+  - components/ui/Select/Select
+- Дублирующиеся layout компоненты:
+  - components/layout/Sidebar.jsx
 
 ### Fixed
 - Исправлена ошибка импорта CSS модулей в ProductsPage
