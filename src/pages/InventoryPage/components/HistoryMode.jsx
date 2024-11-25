@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Search, ArrowDown, ArrowUp, Calendar, Filter, History, Box, Trash, FileText, User, ExternalLink, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
-import { inventoryHistoryService } from '../../../services/inventory/inventoryHistoryService';
-import { logger } from '../../../services/logging/loggingService';
+import { inventoryHistoryService } from '@/services/inventory/inventoryHistoryService';
+import { logger } from '@/services/logging/loggingService';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '../../../components/ui/select';
+import { Select } from '@/components/ui/select';
 import { toast } from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
