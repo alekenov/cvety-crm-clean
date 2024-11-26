@@ -3,6 +3,8 @@ import { Plus, Minus, X, ArrowLeft, Upload, Truck, Percent, Calendar, Flower, Se
 import { supabase } from '../../../lib/supabase';
 import toast from 'react-hot-toast';
 import FlowerSelector from './FlowerSelector';
+import BouquetCompositionEditor from '@/components/products/BouquetCompositionEditor';
+import MediaUpload from '@/components/MediaUpload';
 
 const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProductUpdate }) => {
   console.log('AddProductForm rendered with editingProduct:', editingProduct);
@@ -25,6 +27,7 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
   const [showFlowerSelector, setShowFlowerSelector] = useState(false);
   const [basePrice, setBasePrice] = useState(0);
   const [finalPrice, setFinalPrice] = useState(0);
+  const [mediaFiles, setMediaFiles] = useState([]);
 
   // Загрузка данных при редактировании
   useEffect(() => {
@@ -179,6 +182,34 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
           if (compositionError) throw compositionError;
         }
 
+        // Обработка медиафайлов
+        const mediaUploadPromises = mediaFiles.map(async (media, index) => {
+          const fileExt = media.file.name.split('.').pop();
+          const fileName = `${productId}_${Date.now()}_${index}.${fileExt}`;
+          const filePath = `product_media/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('product_media')
+            .upload(filePath, media.file);
+
+          if (uploadError) throw uploadError;
+
+          return {
+            product_id: productId,
+            file_path: filePath,
+            type: media.type,
+            order: index
+          };
+        });
+
+        const mediaData = await Promise.all(mediaUploadPromises);
+
+        const { error: mediaError } = await supabase
+          .from('product_media')
+          .insert(mediaData);
+
+        if (mediaError) throw mediaError;
+
         toast.success('Букет обновлен');
         onClose();
         onProductUpdate();
@@ -219,6 +250,34 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
 
           if (compositionError) throw compositionError;
         }
+
+        // Обработка медиафайлов
+        const mediaUploadPromises = mediaFiles.map(async (media, index) => {
+          const fileExt = media.file.name.split('.').pop();
+          const fileName = `${productId}_${Date.now()}_${index}.${fileExt}`;
+          const filePath = `product_media/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('product_media')
+            .upload(filePath, media.file);
+
+          if (uploadError) throw uploadError;
+
+          return {
+            product_id: productId,
+            file_path: filePath,
+            type: media.type,
+            order: index
+          };
+        });
+
+        const mediaData = await Promise.all(mediaUploadPromises);
+
+        const { error: mediaError } = await supabase
+          .from('product_media')
+          .insert(mediaData);
+
+        if (mediaError) throw mediaError;
 
         toast.success('Букет создан');
         onClose();
@@ -295,18 +354,21 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Левая колонка - основная информация */}
             <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Название букета
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Введите название букета"
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Название букета
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Введите название букета"
+                    required
+                  />
+                </div>
+                <MediaUpload onMediaChange={setMediaFiles} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
