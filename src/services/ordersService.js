@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from './supabaseClient';
 
 export const ordersService = {
   async fetchOrders() {
@@ -12,14 +12,30 @@ export const ordersService = {
   },
 
   async fetchOrderById(id) {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', id)
-      .single();
+    try {
+      console.log(`Fetching order with ID: ${id}`);
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.error('Error fetching order:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.warn(`No order found with ID: ${id}`);
+        throw new Error(`Заказ с ID ${id} не найден`);
+      }
+
+      console.log('Order fetched successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Detailed error in fetchOrderById:', error);
+      throw error;
+    }
   },
 
   groupOrdersByDate(orders) {
@@ -40,5 +56,15 @@ export const ordersService = {
       
       return acc;
     }, { today: [], tomorrow: [], later: [] });
-  }
+  },
+
+  async archiveDeliveredOrders() {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ is_archived: true })
+      .in('status', ['delivered', 'Доставлен']);
+
+    if (error) throw error;
+    return data;
+  },
 }; 

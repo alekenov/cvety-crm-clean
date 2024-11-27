@@ -1,4 +1,11 @@
 const logger = {
+  log: (context, message, data = null) => {
+    console.log(`[${context}] ${message}`, {
+      data,
+      timestamp: new Date().toISOString()
+    });
+  },
+
   error: (context, message, data = null, error = null) => {
     console.error(`[${context}] ${message}`, {
       data,

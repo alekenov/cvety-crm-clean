@@ -132,7 +132,6 @@ const CreateOrderPage = () => {
 
   useEffect(() => {
     logger.log('CreateOrderPage', 'Страница создания заказа загружена');
-    logger.setCurrentUrl(window.location.href);
   }, []);
 
   const handleSubmit = async (e) => {

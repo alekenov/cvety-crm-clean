@@ -193,7 +193,30 @@ export const ordersService = {
     }
 
     return data[0];
-  }
+  },
+
+  // Новый метод для архивации доставленных заказов
+  async archiveDeliveredOrders() {
+    try {
+      // Временно убираем обновление is_archived
+      logger.log('OrdersService', 'Попытка архивации доставленных заказов');
+      
+      // Просто логируем доставленные заказы
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .in('status', ['Доставлен', 'delivered']);
+
+      if (error) throw error;
+      
+      logger.log('OrdersService', `Найдено доставленных заказов: ${data?.length || 0}`);
+      
+      return data;
+    } catch (error) {
+      logger.error('OrdersService', 'Ошибка при архивации доставленных заказов', null, error);
+      throw error;
+    }
+  },
 };
 
 export { supabase, supabaseAdmin, supabaseConfig };

@@ -51,17 +51,31 @@ const nextStatus = {
 
 const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReaction, onClick, onViewPhotos }) => {
   const getDateText = (dateString) => {
-    const today = new Date();
-    const orderDate = new Date(dateString);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (!dateString) return 'Дата не указана';
+    
+    try {
+      const orderDate = new Date(dateString);
+      
+      // Проверка на корректность даты
+      if (isNaN(orderDate.getTime())) {
+        console.warn('Invalid date:', dateString);
+        return 'Некорректная дата';
+      }
+      
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-    if (orderDate.toDateString() === today.toDateString()) {
-      return 'Сегодня';
-    } else if (orderDate.toDateString() === tomorrow.toDateString()) {
-      return 'Завтра';
-    } else {
-      return orderDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      if (orderDate.toDateString() === today.toDateString()) {
+        return 'Сегодня';
+      } else if (orderDate.toDateString() === tomorrow.toDateString()) {
+        return 'Завтра';
+      } else {
+        return orderDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      }
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      return 'Ошибка даты';
     }
   }
 
@@ -69,6 +83,7 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
     <Card 
       className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200" 
       onClick={onClick}
+      data-order-id={order.id}  // Добавляем data-атрибут
     >
       <CardContent className="p-4">
         <div className="flex flex-wrap justify-between items-center mb-3">
@@ -370,6 +385,28 @@ const mockOrders = [
   }
 ];
 
+// Добавляем стили для анимации исчезновения
+const orderVanishStyles = `
+  @keyframes orderVanish {
+    0% { 
+      opacity: 1; 
+      transform: scale(1) rotate(0deg);
+    }
+    50% { 
+      opacity: 0.5; 
+      transform: scale(1.1) rotate(10deg);
+    }
+    100% { 
+      opacity: 0; 
+      transform: scale(0.1) rotate(360deg);
+    }
+  }
+
+  .order-vanish {
+    animation: orderVanish 5s ease-in-out forwards;
+  }
+`;
+
 export default function OrdersPage() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('all');
@@ -385,8 +422,17 @@ export default function OrdersPage() {
     const loadOrders = async () => {
       try {
         setIsLoading(true);
+        
+        // Получаем список доставленных заказов
+        const deliveredOrders = await ordersService.archiveDeliveredOrders();
+        const deliveredOrderNumbers = deliveredOrders.map(order => order.number);
+        
         const fetchedOrders = await ordersService.fetchOrders();
-        setOrders(fetchedOrders);
+        const activeOrders = fetchedOrders.filter(order => 
+          !deliveredOrderNumbers.includes(order.number)
+        );
+        
+        setOrders(activeOrders);
         setIsLoading(false);
       } catch (err) {
         console.error('Detailed Error:', err);
@@ -402,12 +448,26 @@ export default function OrdersPage() {
 
   const handleOrderClick = useCallback((orderNumber) => {
     try {
+      if (!orderNumber) {
+        throw new Error('Номер заказа не указан');
+      }
       logger.log('OrdersPage', `Переход на страницу заказа ${orderNumber}`);
+      
+      // Извлекаем только цифры из номера заказа
       const cleanNumber = String(orderNumber).replace(/[^0-9]/g, '');
+      
       logger.log('OrdersPage', `Navigating to order details for order number: ${orderNumber}, clean ID: ${cleanNumber}`);
+      
+      if (!cleanNumber) {
+        throw new Error('Некорректный номер заказа');
+      }
+      
+      // Используем прямую навигацию без проверки
       navigate(`/orders/${cleanNumber}`);
     } catch (error) {
+      console.error('Detailed error:', error);
       logger.error('OrdersPage', `Ошибка при переходе на страницу заказа ${orderNumber}`, null, error);
+      toast.error(`Не удалось перейти на страницу заказа: ${error.message}`);
     }
   }, [navigate]);
 
@@ -474,27 +534,43 @@ export default function OrdersPage() {
     }
   }, []);
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleStatusChange = useCallback(async (orderId, newStatus) => {
     try {
-      const updatedOrder = await ordersService.updateOrderStatus(orderId, newStatus);
+      // Обновляем статус заказа
+      await ordersService.updateOrderStatus(orderId, newStatus);
       
-      // Обновляем локальный список заказов
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
-      );
-
-      toast.success(`Статус заказа ${orderId} обновлен на ${newStatus}`);
+      // Если статус "Доставлен", применяем эффект исчезновения
+      if (newStatus === 'Доставлен') {
+        // Находим элемент заказа
+        const orderElement = document.querySelector(`[data-order-id="${orderId}"]`);
+        
+        if (orderElement) {
+          // Добавляем класс для анимации "распыления"
+          orderElement.classList.add('order-vanish');
+          
+          // Удаляем заказ через 5 секунд
+          setTimeout(() => {
+            setOrders(prevOrders => 
+              prevOrders.filter(order => order.id !== orderId)
+            );
+          }, 5000);
+        }
+      } else {
+        // Для других статусов просто обновляем список
+        setOrders(prevOrders => 
+          prevOrders.map(order => 
+            order.id === orderId ? { ...order, status: newStatus } : order
+          )
+        );
+      }
+      
+      // Показываем уведомление об успешном обновлении
+      toast.success(`Статус заказа изменен на "${newStatus}"`);
     } catch (error) {
-      console.error('Detailed Error:', error);
-      toast.error(`Не удалось обновить статус заказа: ${error.message}`);
-      logger.error('OrdersPage Status Change', 'Ошибка при изменении статуса заказа', { 
-        orderId, 
-        newStatus 
-      }, error);
+      console.error('Ошибка при смене статуса:', error);
+      toast.error('Не удалось обновить статус заказа');
     }
-  };
+  }, []);
 
   const handleViewPhotos = useCallback(async (orderNumber) => {
     try {
@@ -581,6 +657,7 @@ export default function OrdersPage() {
 
   return (
     <div className="bg-gray-100 min-h-screen p-4">
+      <style>{orderVanishStyles}</style>
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
