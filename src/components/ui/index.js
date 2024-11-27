@@ -1,24 +1,15 @@
 // Core Components
-export { Button } from './core/Button'
-export { Input, SearchInput } from './core/Input'
-export { Select, MultiSelect } from './core/Select'
+export { Button } from './button';
+export { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './card';
+export { Input } from './Input';
+export { Select } from './select';
 
 // Form Components
-export { Switch } from './forms/Switch'
+export { Switch } from './forms/Switch';
 
 // Overlay Components
-export { Modal, ConfirmModal } from './overlays/Modal'
-export { Tooltip } from './overlays/Tooltip'
+export { Modal, ConfirmModal } from './overlays/Modal';
+export { Tooltip } from './tooltip';
 
 // Typography
-export { Typography } from './Typography'
-
-// Card Components
-export { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent, 
-  CardFooter 
-} from './Card'
+export { Typography } from './Typography';

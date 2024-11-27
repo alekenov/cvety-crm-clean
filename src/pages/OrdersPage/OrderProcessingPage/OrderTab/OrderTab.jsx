@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Camera, Gift, Calendar, Clock, Phone, MessageCircle, AlertCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';

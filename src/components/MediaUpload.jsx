@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, Video, X } from 'lucide-react';
-import { Button, Card, Input } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
+import { Card, CardContent } from '@/components/ui/card';
 
 const MediaUpload = () => {
   const [media, setMedia] = useState([]);
@@ -53,7 +54,7 @@ const MediaUpload = () => {
         <Card.Title>Загрузка медиа</Card.Title>
       </Card.Header>
 
-      <Card.Content>
+      <CardContent>
         <div className="flex items-center space-x-4 mb-4">
           <Input 
             type="file" 
@@ -99,7 +100,7 @@ const MediaUpload = () => {
             </div>
           ))}
         </div>
-      </Card.Content>
+      </CardContent>
     </Card>
   );
 };

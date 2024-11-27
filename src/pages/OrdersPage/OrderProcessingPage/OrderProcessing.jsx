@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { Button } from "../../../components/ui/button";
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from "../../../components/ui/Input/Input";
 import { Textarea } from "../../../components/ui/Textarea/Textarea";
@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 import FlowerWriteOff from '../components/FlowerWriteOff';
 import DeliveryAddressInput from '../components/DeliveryAddressInput';
 import { ORDER_STATUS, getStatusLabel, getNextStatuses } from '../../../constants/orderStatuses';
-import Modal from '../../../components/Modal';
+import { Modal } from '@/components/ui/overlays/Modal';
 import { logger } from '../../../services/logging/loggingService';
 
 import OrderTab from './OrderTab/OrderTab';

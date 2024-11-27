@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Flower, Trash2 } from 'lucide-react';
-import { Button, Card } from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 const BouquetCompositionEditor = ({ onCompositionChange }) => {
   const [composition, setComposition] = useState([]);
@@ -29,7 +30,7 @@ const BouquetCompositionEditor = ({ onCompositionChange }) => {
         </div>
       )}
 
-      <Card.Content>
+      <CardContent>
         <div className="space-y-2">
           {composition.map((flower, index) => (
             <div 
@@ -50,7 +51,7 @@ const BouquetCompositionEditor = ({ onCompositionChange }) => {
             </div>
           ))}
         </div>
-      </Card.Content>
+      </CardContent>
     </Card>
   );
 };
