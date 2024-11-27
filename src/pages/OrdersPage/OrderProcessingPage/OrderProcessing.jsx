@@ -1,11 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Phone, MessageCircle, Camera, MapPin, ThumbsUp, ThumbsDown, Gift, AlertTriangle, X, Map, Minus, Plus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { 
+  ArrowLeft, Phone, MessageCircle, Camera, MapPin, 
+  ThumbsUp, ThumbsDown, Gift, AlertTriangle, X, Map, 
+  Minus, Plus, Clock, DollarSign, Send
+} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from "../../../components/ui/Input/Input";
+import { Textarea } from "../../../components/ui/Textarea/Textarea";
+import { toast } from 'react-hot-toast';
+
 import FlowerWriteOff from '../components/FlowerWriteOff';
 import DeliveryAddressInput from '../components/DeliveryAddressInput';
 import { ORDER_STATUS, getStatusLabel, getNextStatuses } from '../../../constants/orderStatuses';
 import Modal from '../../../components/Modal';
 import { logger } from '../../../services/logging/loggingService';
+
+import OrderTab from './OrderTab/OrderTab';
+import BouquetTab from './BouquetTab/BouquetTab';
+import DeliveryTab from './DeliveryTab/DeliveryTab';
 
 const mockOrders = [
   {
@@ -142,27 +158,52 @@ const mockOrders = [
 const OrderProcessing = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  
+  // Основные состояния
+  const [activeTab, setActiveTab] = useState("order");
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [orderStatus, setOrderStatus] = useState(ORDER_STATUS.NEW);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [photo, setPhoto] = useState(null);
-  const [deliveryInfo, setDeliveryInfo] = useState({
-    address: '',
-    apartment: '',
-    entrance: '',
-    comment: '',
-    cost: null,
-    distance: null
-  });
-  const [showCourierComment, setShowCourierComment] = useState(false);
-  const [customerRating, setCustomerRating] = useState(null);
-  const [courierInfo, setCourierInfo] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [refundAmount, setRefundAmount] = useState('');
-  const [problemDescription, setProblemDescription] = useState('');
+  
+  // Состояния для вкладки "ЗАКАЗ"
+  const [items, setItems] = useState([]);
+  const [totalCost, setTotalCost] = useState(0);
+  const [margin, setMargin] = useState(0);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  
+  // Состояния для вкладки "БУКЕТ"
+  const [photos, setPhotos] = useState([]);
+  const [bouquetComposition, setBouquetComposition] = useState([]);
+  const [actualCost, setActualCost] = useState(0);
+  const [clientFeedback, setClientFeedback] = useState(null);
+  
+  // Состояния для вкладки "ДОСТАВКА"
+  const [deliveryStatus, setDeliveryStatus] = useState('pending');
+  const [deliveryInfo, setDeliveryInfo] = useState({
+    address: '',
+    entrance: '',
+    floor: '',
+    apartment: '',
+    intercom: '',
+    comment: ''
+  });
+  const [courier, setCourier] = useState(null);
+  const [estimatedTime, setEstimatedTime] = useState(null);
+
+  // Обработчики событий
+  const handlePhotoUpload = () => {
+    // Реализация загрузки фото
+    toast.success('Фото отправлено клиенту');
+  };
+
+  const handleDeliveryConfirm = () => {
+    // Реализация подтверждения доставки
+    setDeliveryStatus('completed');
+    toast.success('Доставка подтверждена');
+  };
 
   useEffect(() => {
     const fetchOrderData = async () => {
@@ -219,437 +260,93 @@ const OrderProcessing = () => {
     return null;
   }
 
-  const handleAcceptOrder = () => setOrderStatus(ORDER_STATUS.ACCEPTED);
-  const handleRejectOrder = () => alert('Заказ отклонен');
-  
-  const handleFlowersSelected = () => {
-    setOrderStatus(ORDER_STATUS.FLOWERS_SELECTED);
-  };
-
-  const handleDeliveryComplete = () => {
-    setOrderStatus(ORDER_STATUS.DELIVERED);
-    alert('Заказ отмечен как доставленный');
-  };
-
-  const handleRequestPayment = () => {
-    if (paymentAmount) {
-      alert(`Запрос на доплату на сумму ${paymentAmount} ₸ отправлен`);
-      setShowPaymentModal(false);
-      setPaymentAmount('');
-    }
-  };
-
-  const handleProcessRefund = () => {
-    if (refundAmount) {
-      alert(`Запрос на возврат на сумму ${refundAmount} ₸ отправлен`);
-      setShowRefundModal(false);
-      setRefundAmount('');
-    }
-  };
-
-  const handleMapSelect = () => {
-    alert('Здесь будет открываться карта для выбора адреса');
-  };
-
-  const handleStatusChange = (newStatus) => {
-    setOrderStatus(newStatus);
-    setShowStatusModal(false);
-  };
-
-  const renderStatusModal = () => (
-    <Modal isOpen={showStatusModal} onClose={() => setShowStatusModal(false)}>
-      <div className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Изменить статус заказа</h3>
-        <div className="space-y-2">
-          {getNextStatuses(orderStatus).map((status) => (
-            <button
-              key={status}
-              onClick={() => {
-                handleStatusChange(status);
-                setShowStatusModal(false);
-              }}
-              className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              {getStatusLabel(status)}
-            </button>
-          ))}
-        </div>
-      </div>
-    </Modal>
-  );
-
-  const renderPaymentModal = () => (
-    <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)}>
-      <div className="p-6">
-        <h3 className="text-xl font-semibold mb-4">Запросить оплату</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Сумма
-            </label>
-            <input
-              type="number"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-              placeholder="Введите сумму"
-            />
-          </div>
-          <button
-            onClick={handleRequestPayment}
-            className="w-full bg-green-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-600 transition-colors"
-          >
-            Запросить оплату
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-
-  const renderRefundModal = () => (
-    <Modal isOpen={showRefundModal} onClose={() => setShowRefundModal(false)}>
-      <div className="p-6">
-        <h3 className="text-xl font-semibold mb-4">Оформить возврат</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Сумма возврата
-            </label>
-            <input
-              type="number"
-              value={refundAmount}
-              onChange={(e) => setRefundAmount(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-              placeholder="Введите сумму возврата"
-            />
-          </div>
-          <button
-            onClick={handleProcessRefund}
-            className="w-full bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition-colors"
-          >
-            Оформить возврат
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-
-  const renderProblemStatus = () => (
-    <div className="bg-red-100 p-4 rounded-lg mb-4">
-      <div className="flex justify-between items-start">
-        <div className="flex items-start">
-          <AlertTriangle className="text-red-500 mr-2 mt-1" size={20} />
-          <div>
-            <p className="font-semibold text-red-700">Проблема с заказом</p>
-            <p className="text-red-600">{problemDescription}</p>
-          </div>
-        </div>
-        <button onClick={() => {setOrderStatus(ORDER_STATUS.FLOWERS_SELECTED); setProblemDescription('');}}>
-          <X size={20} className="text-red-500" />
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderFlowerManagement = () => (
-    <div className="border-t pt-6">
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="text-lg font-semibold">Состав букета</h4>
-        <button 
-          onClick={() => setShowStatusModal(true)}
-          className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-        >
-          <span>Статус:</span>
-          <span className="font-semibold">
-            {getStatusLabel(orderStatus)}
-          </span>
-        </button>
-      </div>
-
-      <FlowerWriteOff 
-        onAddFlower={(flower) => {
-          console.log('Added flower:', flower);
-          // Handle adding flower to the order
-        }}
-        onWriteOff={(flowers) => {
-          console.log('Writing off flowers:', flowers);
-          // Handle writing off flowers
-          alert(`Списано ${flowers.length} позиций`);
-        }}
-      />
-    </div>
-  );
-
-  const renderProductInfo = () => (
-    <div className="space-y-6">
-      <div className="flex items-center">
-        <img 
-          src={`/api/placeholder/100/100`} 
-          alt={orderData.items[0].name} 
-          className="w-20 h-20 object-cover rounded-lg mr-4" 
-        />
-        <div>
-          <h3 className="font-semibold">{orderData.items[0].name}</h3>
-          <p className="text-green-600 font-bold">{orderData.totalPrice}</p>
-        </div>
-      </div>
-      {renderFlowerManagement()}
-    </div>
-  );
-
-  const renderCommentAndCard = () => (
-    <div className="space-y-4 mb-4">
-      {orderData.comment && (
-        <div className="bg-blue-50 rounded-lg p-4 shadow-sm">
-          <p className="text-sm text-gray-800">{orderData.comment}</p>
-        </div>
-      )}
-      {orderData.card && (
-        <div className="bg-pink-50 rounded-lg p-4 shadow-sm flex items-start">
-          <Gift size={20} className="text-pink-500 mr-2 flex-shrink-0 mt-1" />
-          <p className="text-sm text-gray-800 italic">"{orderData.card}"</p>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderPhotoBeforeDelivery = () => (
-    photo && (
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-start">
-          <img src={photo} alt="Собранный букет" className="w-24 h-32 object-cover rounded-lg mr-4" />
-          <div>
-            <h3 className="font-semibold mb-2">Фото собранного букета</h3>
-            {customerRating === null ? (
-              <p className="text-sm text-gray-600 mb-2">Ожидается оценка от заказчика</p>
-            ) : (
-              <p className={`text-sm ${customerRating ? 'text-green-600' : 'text-red-600'} mb-2`}>
-                Заказчику {customerRating ? 'понравился' : 'не понравился'} букет
-              </p>
-            )}
-            <div className="flex">
-              <button 
-                className={`mr-2 p-1 rounded ${customerRating === true ? 'bg-green-100' : ''}`}
-                onClick={() => setCustomerRating(true)}
-              >
-                <ThumbsUp size={20} className={customerRating === true ? 'text-green-500' : 'text-gray-400'} />
-              </button>
-              <button 
-                className={`p-1 rounded ${customerRating === false ? 'bg-red-100' : ''}`}
-                onClick={() => setCustomerRating(false)}
-              >
-                <ThumbsDown size={20} className={customerRating === false ? 'text-red-500' : 'text-gray-400'} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  );
-
-  const renderOrderDetails = () => (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="space-y-2">
-        <p><span className="font-semibold">Дата и время:</span> {orderData.date}</p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="font-medium">{orderData.details.recipient.name}</span>
-            <span className="text-gray-500">{orderData.details.recipient.phone}</span>
-          </div>
-          <Phone size={20} className="ml-2 text-green-500 cursor-pointer" />
-          <MessageCircle size={20} className="ml-2 text-green-500 cursor-pointer" />
-        </div>
-        {deliveryInfo.address && (
-          <>
-            <p><span className="font-semibold">Адрес:</span> {deliveryInfo.address}</p>
-            {(deliveryInfo.apartment || deliveryInfo.entrance) && (
-              <p>
-                {deliveryInfo.apartment && <span><span className="font-semibold">Кв:</span> {deliveryInfo.apartment}</span>}
-                {deliveryInfo.entrance && <span className="ml-2"><span className="font-semibold">Подъезд:</span> {deliveryInfo.entrance}</span>}
-              </p>
-            )}
-            {deliveryInfo.comment && <p><span className="font-semibold">Комментарий:</span> {deliveryInfo.comment}</p>}
-            {deliveryInfo.cost && (
-              <p>
-                <span className="font-semibold">Доставка:</span> {deliveryInfo.cost.toLocaleString()} ₸ ({deliveryInfo.distance} км)
-              </p>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderOrderItems = () => (
-    <div className="space-y-2">
-      {orderData.items.map((item) => (
-        <div key={item.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
-          <div className="flex items-center">
-            <span className="text-sm">{item.name} × {item.quantity}</span>
-          </div>
-          <span className="font-medium">{item.price}</span>
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderOrderActions = () => {
-    switch (orderStatus) {
-      case ORDER_STATUS.NEW:
-        return (
-          <div className="space-y-2">
-            <button 
-              className="w-full bg-green-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-600 transition-colors" 
-              onClick={handleAcceptOrder}
-            >
-              Принять заказ
-            </button>
-            <button 
-              className="w-full bg-red-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-red-600 transition-colors" 
-              onClick={handleRejectOrder}
-            >
-              Отказаться от заказа
-            </button>
-          </div>
-        );
-      case ORDER_STATUS.AWAITING_DELIVERY:
-      case ORDER_STATUS.YANDEX_COURIER:
-      case ORDER_STATUS.OWN_COURIER:
-      case ORDER_STATUS.DELIVERING:
-        return (
-          <div className="space-y-4">
-            {orderStatus === ORDER_STATUS.DELIVERY_PROBLEM && renderProblemStatus()}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center mb-2">
-                <input
-                  type="text"
-                  value={deliveryInfo.address}
-                  onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})}
-                  placeholder="Улица и номер дома"
-                  className="flex-grow p-2 border rounded-lg"
-                />
-                <button 
-                  onClick={handleMapSelect}
-                  className="ml-2 bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  <Map size={20} />
-                </button>
-              </div>
-              <div className="flex space-x-2 mb-2">
-                <input
-                  type="text"
-                  value={deliveryInfo.apartment}
-                  onChange={(e) => setDeliveryInfo({...deliveryInfo, apartment: e.target.value})}
-                  placeholder="Квартира"
-                  className="w-1/2 p-2 border rounded-lg"
-                />
-                <input
-                  type="text"
-                  value={deliveryInfo.entrance}
-                  onChange={(e) => setDeliveryInfo({...deliveryInfo, entrance: e.target.value})}
-                  placeholder="Подъезд"
-                  className="w-1/2 p-2 border rounded-lg"
-                />
-              </div>
-              <button 
-                className="text-blue-500 font-semibold hover:text-blue-600 transition-colors"
-                onClick={() => setShowCourierComment(!showCourierComment)}
-              >
-                {showCourierComment ? "Скрыть комментарий для курьера" : "Добавить комментарий для курьера"}
-              </button>
-              {showCourierComment && (
-                <textarea
-                  value={deliveryInfo.comment}
-                  onChange={(e) => setDeliveryInfo({...deliveryInfo, comment: e.target.value})}
-                  placeholder="Комментарий для курьера"
-                  className="w-full p-2 border rounded-lg mt-2"
-                  rows="3"
-                />
-              )}
-            </div>
-            {courierInfo && (
-              <div className="bg-blue-100 p-4 rounded-lg">
-                <p className="font-semibold">Курьер: {courierInfo.name}</p>
-                <p>Ожидаемое время прибытия: {courierInfo.arrivalTime}</p>
-              </div>
-            )}
-          </div>
-        );
+  const renderTab = () => {
+    switch (activeTab) {
+      case 'order':
+        return <OrderTab />;
+      case 'bouquet':
+        return <BouquetTab />;
+      case 'delivery':
+        return <DeliveryTab />;
       default:
-        return null;
+        return <OrderTab />;
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      <div className="flex items-center mb-6">
+    <div className="h-screen flex flex-col bg-gray-50">
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => navigate('/orders')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h2 className="text-xl font-bold">Заказ {orderData?.number}</h2>
+            <Badge variant={orderStatus === ORDER_STATUS.PAID ? "success" : "warning"}>
+              {getStatusLabel(orderStatus)}
+            </Badge>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="w-5 h-5 text-gray-500" />
+          <span>{orderData?.time}</span>
+        </div>
+      </div>
+      
+      <div className="flex mb-4 space-x-4 p-4">
         <button 
-          className="p-2 hover:bg-gray-100 rounded-lg"
-          onClick={() => {
-            logger.log('OrderProcessing', 'Navigating back to orders list');
-            navigate('/orders');
-          }}
+          className={`px-4 py-2 rounded ${activeTab === 'order' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          onClick={() => setActiveTab('order')}
         >
-          <ArrowLeft className="w-6 h-6" />
+          Заказ
         </button>
-        <h1 className="text-2xl font-bold flex-grow ml-4">Заказ {orderData.number}</h1>
-        <span className="bg-purple-100 text-purple-800 text-sm font-medium px-4 py-2 rounded-lg">
-          {getStatusLabel(orderStatus)}
-        </span>
+        <button 
+          className={`px-4 py-2 rounded ${activeTab === 'bouquet' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          onClick={() => setActiveTab('bouquet')}
+        >
+          Букет
+        </button>
+        <button 
+          className={`px-4 py-2 rounded ${activeTab === 'delivery' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          onClick={() => setActiveTab('delivery')}
+        >
+          Доставка
+        </button>
       </div>
+      
+      {renderTab()}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Order Info */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            {renderProductInfo()}
-            {renderCommentAndCard()}
+      {/* Нижняя панель с действиями */}
+      <div className="border-t bg-white p-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-sm text-gray-500">Итого</p>
+            <p className="text-xl font-bold">{orderData.totalPrice}</p>
           </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            {orderStatus !== ORDER_STATUS.NEW && renderPhotoBeforeDelivery()}
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            {renderOrderDetails()}
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            {renderOrderItems()}
+          <div className="flex gap-2">
+            {activeTab === 'order' && (
+              <>
+                <Button variant="outline" onClick={() => setShowRefundModal(true)}>
+                  Отклонить
+                </Button>
+                <Button onClick={() => setShowPaymentModal(true)}>
+                  Принять
+                </Button>
+              </>
+            )}
+            {activeTab === 'bouquet' && (
+              <Button onClick={handlePhotoUpload}>
+                Отправить фото
+              </Button>
+            )}
+            {activeTab === 'delivery' && (
+              <Button onClick={handleDeliveryConfirm}>
+                Подтвердить доставку
+              </Button>
+            )}
           </div>
         </div>
-
-        {/* Right Column - Actions */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            {renderOrderActions()}
-          </div>
-
-          {orderStatus !== ORDER_STATUS.NEW && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold mb-4">Дополнительные действия</h3>
-              <div className="flex flex-col space-y-3">
-                <button 
-                  className="w-full bg-blue-50 text-blue-600 py-3 px-4 rounded-lg font-semibold hover:bg-blue-100 transition-colors"
-                  onClick={() => setShowPaymentModal(true)}
-                >
-                  Запросить доплату
-                </button>
-                <button 
-                  className="w-full bg-red-50 text-red-600 py-3 px-4 rounded-lg font-semibold hover:bg-red-100 transition-colors"
-                  onClick={() => setShowRefundModal(true)}
-                >
-                  Возврат
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
-
-      {/* Modals */}
-      {showPaymentModal && renderPaymentModal()}
-      {showRefundModal && renderRefundModal()}
-      {showStatusModal && renderStatusModal()}
     </div>
   );
 };

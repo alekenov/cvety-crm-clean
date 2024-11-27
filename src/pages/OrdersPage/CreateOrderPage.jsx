@@ -1,4 +1,15 @@
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Plus, Search, X, MessageCircle, FileText, Phone, Calendar, Clock, Send, MapPin, Home, ArrowLeft, ArrowRight, User, CreditCard, Truck, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -226,20 +237,20 @@ const CreateOrderPage = () => {
       <div className="bg-white p-4 sm:p-6 rounded-md shadow-sm">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Товары и услуги</h2>
         <div className="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-2 sm:space-y-0 sm:space-x-2">
-          <button 
+          <Button 
             onClick={() => setShowProductSearch(true)}
             className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded-md text-sm font-medium flex items-center justify-center"
           >
             <Search size={16} className="mr-2" />
             Каталог
-          </button>
-          <button 
+          </Button>
+          <Button 
             onClick={() => setShowAddCustomItem(true)}
             className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded-md text-sm font-medium flex items-center justify-center"
           >
             <Plus size={16} className="mr-2" />
             Добавить
-          </button>
+          </Button>
         </div>
 
         <div className="space-y-2">
@@ -249,12 +260,12 @@ const CreateOrderPage = () => {
                 <div className="font-medium">{item.name}</div>
                 <div className="text-green-600">{item.price.toLocaleString()} ₸</div>
               </div>
-              <button 
+              <Button 
                 onClick={() => handleRemoveItem(item.id)}
                 className="text-red-500"
               >
                 <X size={20} />
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -279,7 +290,7 @@ const CreateOrderPage = () => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Способ получения</label>
           <div className="flex flex-col sm:flex-row justify-between p-1 bg-gray-100 rounded-md">
-            <button
+            <Button
               onClick={() => setOrderForm({...orderForm, deliveryMethod: 'delivery'})}
               className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center ${
                 orderForm.deliveryMethod === 'delivery' ? 'bg-blue-500 text-white' : 'text-gray-700'
@@ -287,8 +298,8 @@ const CreateOrderPage = () => {
             >
               <Truck size={16} className="mr-2" />
               Доставка
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setOrderForm({...orderForm, deliveryMethod: 'pickup'})}
               className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center ${
                 orderForm.deliveryMethod === 'pickup' ? 'bg-blue-500 text-white' : 'text-gray-700'
@@ -296,7 +307,7 @@ const CreateOrderPage = () => {
             >
               <Store size={16} className="mr-2" />
               Самовывоз
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -304,57 +315,62 @@ const CreateOrderPage = () => {
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Выберите магазин</label>
-              <select
+              <Select
                 value={orderForm.pickupStore}
                 onChange={(e) => setOrderForm({...orderForm, pickupStore: e.target.value})}
-                className="w-full p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Выберите магазин</option>
-                {stores.map(store => (
-                  <option key={store.id} value={store.id}>{store.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                  Выберите магазин
+                </SelectTrigger>
+                <SelectContent>
+                  {stores.map(store => (
+                    <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Время самовывоза</label>
               <div className="flex flex-col sm:flex-row justify-between p-1 bg-gray-100 rounded-md">
-                <button
+                <Button
                   onClick={() => setOrderForm({...orderForm, pickupType: 'asap'})}
                   className={`flex-1 py-2 px-4 rounded-md ${
                     orderForm.pickupType === 'asap' ? 'bg-blue-500 text-white' : 'text-gray-700'
                   } mb-2 sm:mb-0`}
                 >
                   Как можно скорее
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setOrderForm({...orderForm, pickupType: 'scheduled'})}
                   className={`flex-1 py-2 px-4 rounded-md ${
                     orderForm.pickupType === 'scheduled' ? 'bg-blue-500 text-white' : 'text-gray-700'
                   }`}
                 >
                   Выбрать время
-                </button>
+                </Button>
               </div>
               {orderForm.pickupType === 'scheduled' && (
                 <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
+                  <Input
                     type="date"
                     value={orderForm.pickupDate}
                     onChange={e => setOrderForm({...orderForm, pickupDate: e.target.value})}
                     className="p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                     min={new Date().toISOString().split('T')[0]}
                   />
-                  <select
+                  <Select
                     value={orderForm.pickupTime}
                     onChange={e => setOrderForm({...orderForm, pickupTime: e.target.value})}
-                    className="p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    {timeSlots.map(slot => (
-                      <option key={slot.value} value={slot.value}>
-                        {slot.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                      {orderForm.pickupTime}
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeSlots.map(slot => (
+                        <SelectItem key={slot.value} value={slot.value}>{slot.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
@@ -365,7 +381,7 @@ const CreateOrderPage = () => {
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Имя получателя</label>
-              <input
+              <Input
                 type="text"
                 value={orderForm.recipient.name}
                 onChange={e => setOrderForm({...orderForm, recipient: {...orderForm.recipient, name: e.target.value}})}
@@ -376,7 +392,7 @@ const CreateOrderPage = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Телефон получателя</label>
-              <input
+              <Input
                 type="tel"
                 value={orderForm.recipient.phone}
                 onChange={e => setOrderForm({...orderForm, recipient: {...orderForm.recipient, phone: e.target.value}})}
@@ -388,7 +404,7 @@ const CreateOrderPage = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Адрес доставки</label>
               <div className="flex items-center">
-                <input
+                <Input
                   type="text"
                   value={orderForm.recipient.address.street}
                   onChange={e => setOrderForm({
@@ -401,16 +417,16 @@ const CreateOrderPage = () => {
                   placeholder="Улица и номер дома"
                   className="flex-1 p-3 bg-gray-50 rounded-l-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <button
+                <Button
                   type="button"
                   onClick={() => alert('Открыть карту для выбора адреса')}
                   className="p-3 bg-blue-500 text-white rounded-r-md border border-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   <MapPin size={20} />
-                </button>
+                </Button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                <input
+                <Input
                   type="text"
                   value={orderForm.recipient.address.apartment}
                   onChange={e => setOrderForm({
@@ -423,7 +439,7 @@ const CreateOrderPage = () => {
                   placeholder="Квартира/Офис"
                   className="p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <input
+                <Input
                   type="text"
                   value={orderForm.recipient.address.floor}
                   onChange={e => setOrderForm({
@@ -442,13 +458,13 @@ const CreateOrderPage = () => {
         )}
       </div>
 
-      <button 
+      <Button 
         className="w-full bg-green-500 text-white p-4 rounded-md text-lg font-medium flex items-center justify-center"
         onClick={() => setCurrentStep(2)}
       >
         Далее
         <ArrowRight size={20} className="ml-2" />
-      </button>
+      </Button>
     </div>
   );
 
@@ -461,44 +477,46 @@ const CreateOrderPage = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Время доставки</label>
             <div className="flex flex-col sm:flex-row justify-between p-1 bg-gray-100 rounded-md">
-              <button
+              <Button
                 onClick={() => setOrderForm({...orderForm, deliveryType: 'asap'})}
                 className={`flex-1 py-2 px-4 rounded-md ${
                   orderForm.deliveryType === 'asap' ? 'bg-blue-500 text-white' : 'text-gray-700'
                 } mb-2 sm:mb-0`}
               >
                 Как можно скорее
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setOrderForm({...orderForm, deliveryType: 'scheduled'})}
                 className={`flex-1 py-2 px-4 rounded-md ${
                   orderForm.deliveryType === 'scheduled' ? 'bg-blue-500 text-white' : 'text-gray-700'
                 }`}
               >
                 Выбрать время
-              </button>
+              </Button>
             </div>
 
             {orderForm.deliveryType === 'scheduled' && (
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <input
+                <Input
                   type="date"
                   value={orderForm.deliveryDate}
                   onChange={e => setOrderForm({...orderForm, deliveryDate: e.target.value})}
                   className="p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                   min={new Date().toISOString().split('T')[0]}
                 />
-                <select
+                <Select
                   value={orderForm.deliveryTime}
                   onChange={e => setOrderForm({...orderForm, deliveryTime: e.target.value})}
-                  className="p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {timeSlots.map(slot => (
-                    <option key={slot.value} value={slot.value}>
-                      {slot.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                    {orderForm.deliveryTime}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map(slot => (
+                      <SelectItem key={slot.value} value={slot.value}>{slot.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
@@ -514,13 +532,13 @@ const CreateOrderPage = () => {
           />
         </div>
 
-        <button
+        <Button
           onClick={() => setShowComment(!showComment)}
           className="text-blue-500 flex items-center"
         >
           <FileText size={16} className="mr-1" />
           {showComment ? 'Скрыть комментарий' : 'Добавить комментарий'}
-        </button>
+        </Button>
 
         {showComment && (
           <div>
@@ -537,7 +555,7 @@ const CreateOrderPage = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Данные заказчика</h2>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Телефон заказчика</label>
-            <input
+            <Input
               type="tel"
               value={orderForm.customer.phone}
               onChange={e => setOrderForm({...orderForm, customer: {...orderForm.customer, phone: e.target.value}})}
@@ -551,7 +569,7 @@ const CreateOrderPage = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Способ оплаты</h2>
           <div className="space-y-2">
             <label className="flex items-center space-x-3">
-              <input
+              <Input
                 type="radio"
                 checked={orderForm.paymentMethod === 'kaspi'}
                 onChange={() => setOrderForm({...orderForm, paymentMethod: 'kaspi'})}
@@ -560,7 +578,7 @@ const CreateOrderPage = () => {
               <span>Каспи</span>
             </label>
             <label className="flex items-center space-x-3">
-              <input
+              <Input
                 type="radio"
                 checked={orderForm.paymentMethod === 'card'}
                 onChange={() => setOrderForm({...orderForm, paymentMethod: 'card'})}
@@ -573,20 +591,20 @@ const CreateOrderPage = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-        <button 
+        <Button 
           className="w-full sm:w-1/2 bg-gray-200 text-gray-800 p-4 rounded-md text-lg font-medium flex items-center justify-center"
           onClick={() => setCurrentStep(1)}
         >
           <ArrowLeft size={20} className="mr-2" />
           Назад
-        </button>
-        <button 
+        </Button>
+        <Button 
           className="w-full sm:w-1/2 bg-green-500 text-white p-4 rounded-md text-lg font-medium flex items-center justify-center"
           onClick={handleSubmit}
         >
           <Send size={20} className="mr-2" />
           Создать заказ
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -603,25 +621,25 @@ const CreateOrderPage = () => {
           <div className="bg-white rounded-md p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg">Выбор товара</h3>
-              <button onClick={() => setShowProductSearch(false)}>
+              <Button onClick={() => setShowProductSearch(false)}>
                 <X size={24} />
-              </button>
+              </Button>
             </div>
-            <input
+            <Input
               type="text"
               placeholder="Поиск товара..."
               className="w-full p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 mb-4"
             />
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {catalogProducts.map(product => (
-                <button
+                <Button
                   key={product.id}
                   className="w-full text-left p-3 hover:bg-gray-50 rounded-md transition duration-150"
                   onClick={() => handleAddProduct(product)}
                 >
                   <div className="font-medium">{product.name}</div>
                   <div className="text-green-600">{product.price.toLocaleString()} ₸</div>
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -633,31 +651,31 @@ const CreateOrderPage = () => {
           <div className="bg-white rounded-md p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg">Добавить товар/услугу</h3>
-              <button onClick={() => setShowAddCustomItem(false)}>
+              <Button onClick={() => setShowAddCustomItem(false)}>
                 <X size={24} />
-              </button>
+              </Button>
             </div>
             <form onSubmit={handleAddCustomItem} className="space-y-4">
-              <input
+              <Input
                 name="itemName"
                 type="text"
                 placeholder="Название"
                 className="w-full p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
-              <input
+              <Input
                 name="itemPrice"
                 type="number"
                 placeholder="Цена"
                 className="w-full p-3 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
-              <button 
+              <Button 
                 type="submit" 
                 className="w-full bg-green-500 text-white p-3 rounded-md font-medium"
               >
                 Добавить
-              </button>
+              </Button>
             </form>
           </div>
         </div>
