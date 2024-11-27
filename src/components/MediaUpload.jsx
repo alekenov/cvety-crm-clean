@@ -1,26 +1,67 @@
-import React, { useState } from 'react';
+import React, { 
+  useState, 
+  useEffect, 
+  useCallback 
+} from 'react';
+import { logger } from '../services/logging/loggingService';
 import { Camera, Video, X } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { Card, CardContent } from '@/components/ui/card';
 
-const MediaUpload = () => {
+const MediaUpload = ({ onUpload, maxFiles = 5, accept = 'image/*' }) => {
   const [media, setMedia] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    addFiles(files);
-  };
+  const handleFileChange = useCallback(async (e) => {
+    try {
+      logger.log('MediaUpload', 'Выбор файлов для загрузки');
+      const files = Array.from(e.target.files);
 
-  const addFiles = (files) => {
-    const newMedia = files.map(file => ({
-      id: Date.now() + Math.random(),
-      type: file.type.startsWith('video/') ? 'video' : 'image',
-      url: URL.createObjectURL(file),
-      file
-    }));
-    setMedia([...media, ...newMedia]);
-  };
+      if (files.length + media.length > maxFiles) {
+        logger.warn('MediaUpload', 'Превышено максимальное количество файлов', { 
+          selectedCount: files.length, 
+          currentCount: media.length, 
+          maxFiles 
+        });
+        // toast.error(`Максимальное количество файлов: ${maxFiles}`);
+        return;
+      }
+
+      const validFiles = files.filter(file => {
+        const isValidType = file.type.startsWith(accept.split(',')[0].trim());
+        const isValidSize = file.size <= 10 * 1024 * 1024; // 10 МБ
+
+        if (!isValidType) {
+          logger.warn('MediaUpload', 'Неподдерживаемый тип файла', { fileType: file.type });
+        }
+
+        if (!isValidSize) {
+          logger.warn('MediaUpload', 'Файл слишком большой', { fileSize: file.size });
+        }
+
+        return isValidType && isValidSize;
+      });
+
+      const newMedia = validFiles.map(file => ({
+        id: Date.now() + Math.random(),
+        type: file.type.startsWith('video/') ? 'video' : 'image',
+        url: URL.createObjectURL(file),
+        file
+      }));
+      setMedia([...media, ...newMedia]);
+      
+      logger.log('MediaUpload', 'Файлы успешно выбраны', { 
+        fileCount: validFiles.length 
+      });
+
+      if (onUpload) {
+        onUpload(newMedia);
+      }
+    } catch (error) {
+      logger.error('MediaUpload', 'Ошибка при выборе файлов', null, error);
+      // toast.error('Ошибка при выборе файлов');
+    }
+  }, [media, maxFiles, onUpload]);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -36,12 +77,21 @@ const MediaUpload = () => {
     e.preventDefault();
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
-    addFiles(files);
+    handleFileChange({ target: { files } });
   };
 
-  const removeMedia = (id) => {
-    setMedia(media.filter(item => item.id !== id));
-  };
+  const removeMedia = useCallback((id) => {
+    try {
+      logger.log('MediaUpload', 'Удаление файла', { fileName: media.find(item => item.id === id).file.name });
+      setMedia(media.filter(item => item.id !== id));
+
+      if (onUpload) {
+        onUpload(media.filter(item => item.id !== id));
+      }
+    } catch (error) {
+      logger.error('MediaUpload', 'Ошибка при удалении файла', { fileName: media.find(item => item.id === id).file.name }, error);
+    }
+  }, [media, onUpload]);
 
   return (
     <Card 

@@ -42,42 +42,37 @@ export const ordersApi = {
 
   // Создание заказа
   async createOrder(orderData) {
-    // Начинаем транзакцию для создания заказа и его позиций
+    // Sanitize and validate order data
+    const sanitizedOrderData = {
+      number: orderData.number || `ORDER-${Date.now()}`,
+      status: orderData.status || 'new',
+      client_phone: orderData.client_phone || '',
+      address: orderData.address || null,
+      delivery_time: orderData.delivery_time || null,
+      total_price: orderData.total_price || 0,
+      items: JSON.stringify(orderData.items || []), // Convert to JSON string
+      client_comment: orderData.client_comment || null,
+      shop: orderData.shop || null,
+      florist: orderData.florist || null,
+      delivery_address: orderData.delivery_address || null,
+      delivery_date: orderData.delivery_date || null,
+      store_id: orderData.store_id || null,
+      florist_name: orderData.florist_name || null
+    };
+
+    // Log the sanitized data for debugging
+    console.log('Sanitized Order Data:', sanitizedOrderData);
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert([{
-        client_name: orderData.client_name,
-        client_phone: orderData.client_phone,
-        delivery_address: orderData.delivery_address,
-        delivery_time: orderData.delivery_time,
-        total_amount: orderData.total_amount,
-        payment_status: orderData.payment_status || 'pending',
-        payment_method: orderData.payment_method,
-        employee_id: orderData.employee_id,
-        shop_id: orderData.shop_id,
-        notes: orderData.notes,
-        status: orderData.status || 'new'
-      }])
+      .insert([sanitizedOrderData])
       .select()
       .single();
 
-    if (orderError) throw orderError;
-
-    // Создаем позиции заказа
-    const orderItems = orderData.items.map(item => ({
-      order_id: order.id,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      price: item.price,
-      total: item.total,
-      notes: item.notes
-    }));
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
-
-    if (itemsError) throw itemsError;
+    if (orderError) {
+      console.error('Supabase Order Creation Error:', orderError);
+      throw orderError;
+    }
 
     return order;
   },

@@ -58,4 +58,9 @@ const ordersSlice = createSlice({
   },
 });
 
-export default ordersSlice.reducer; 
+// Selectors
+export const selectOrders = (state) => state.orders.items;
+export const selectOrderStatus = (state) => state.orders.status;
+export const selectOrderError = (state) => state.orders.error;
+
+export default ordersSlice.reducer;

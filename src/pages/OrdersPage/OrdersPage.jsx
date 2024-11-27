@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Store, Truck, MessageCircle, Phone, MapPin, Clock, AlertTriangle, User, ChevronDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { logger } from '../../services/logging/loggingService';
+import logger from '../../utils/logger';
+import { ordersService } from '../../services/supabaseClient';
+import { Clock, Phone, MapPin, MessageCircle, Truck, Store } from 'lucide-react';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -141,7 +143,16 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onUploadPhoto(order.number);
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      onUploadPhoto(order.id, file);
+                    }
+                  };
+                  input.click();
                 }}
               >
                 <div />
@@ -168,7 +179,7 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onStatusChange(order.number, nextStatus[order.status]);
+                  onStatusChange(order.id, nextStatus[order.status]);
                 }}
               >
                 <div />
@@ -366,63 +377,128 @@ export default function OrdersPage() {
   const [dateFilter, setDateFilter] = useState('all');
   const [customDate, setCustomDate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleOrderClick = (orderNumber) => {
-    const cleanNumber = String(orderNumber).replace(/[^0-9]/g, '');
-    logger.log('OrdersPage', `Navigating to order details for order number: ${orderNumber}, clean ID: ${cleanNumber}`);
-    navigate(`/orders/${cleanNumber}`);
-  };
-
-  const handleNewOrder = () => {
-    navigate('/orders/create');
-  };
-
-  const handleUploadPhoto = async (orderNumber) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        try {
-          // Create a path for the file: orders/[orderNumber]/photos/[filename]
-          const cleanNumber = orderNumber.replace(/[^0-9]/g, '');
-          const extension = file.name.split('.').pop();
-          const timestamp = new Date().getTime();
-          const path = `orders/${cleanNumber}/photos/${timestamp}.${extension}`;
-
-          // Show loading toast
-          toast.loading('Загрузка фото...');
-
-          // Upload the file
-          const result = await storageService.uploadFile(file, path);
-
-          if (result) {
-            toast.success('Фото успешно загружено');
-            // Here you can update the order's photos array in your database
-            console.log('Photo uploaded:', result.url);
-          } else {
-            toast.error('Ошибка при загрузке фото');
-          }
-        } catch (error) {
-          console.error('Error uploading photo:', error);
-          toast.error('Ошибка при загрузке фото');
-        }
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        setIsLoading(true);
+        const fetchedOrders = await ordersService.fetchOrders();
+        setOrders(fetchedOrders);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Detailed Error:', err);
+        setError(err);
+        setIsLoading(false);
+        toast.error(`Не удалось загрузить заказы: ${err.message || 'Неизвестная ошибка'}`);
+        logger.error('OrdersPage', 'Ошибка при загрузке заказов', null, err);
       }
     };
-    input.click();
-  };
 
-  const handleRespondToClientReaction = (orderNumber, reaction) => {
-    console.log(`Responding to client reaction for order ${orderNumber}: ${reaction}`);
-  };
+    loadOrders();
+  }, []);
 
-  const handleStatusChange = (orderNumber, newStatus) => {
-    console.log(`Changing status of order ${orderNumber} to ${newStatus}`);
-  };
-
-  const handleViewPhotos = async (orderNumber) => {
+  const handleOrderClick = useCallback((orderNumber) => {
     try {
+      logger.log('OrdersPage', `Переход на страницу заказа ${orderNumber}`);
+      const cleanNumber = String(orderNumber).replace(/[^0-9]/g, '');
+      logger.log('OrdersPage', `Navigating to order details for order number: ${orderNumber}, clean ID: ${cleanNumber}`);
+      navigate(`/orders/${cleanNumber}`);
+    } catch (error) {
+      logger.error('OrdersPage', `Ошибка при переходе на страницу заказа ${orderNumber}`, null, error);
+    }
+  }, [navigate]);
+
+  const handleNewOrder = useCallback(() => {
+    try {
+      logger.log('OrdersPage', 'Создание нового заказа');
+      navigate('/orders/create');
+    } catch (error) {
+      logger.error('OrdersPage', 'Ошибка при создании нового заказа', null, error);
+    }
+  }, [navigate]);
+
+  const handleUploadPhoto = useCallback(async (orderId, photoFile) => {
+    try {
+      // Генерируем уникальное имя файла
+      const fileExt = photoFile.name.split('.').pop();
+      const fileName = `${orderId}_${Date.now()}.${fileExt}`;
+      const filePath = `orders/${fileName}`;
+
+      // Загрузка файла в Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('order_photos')
+        .upload(filePath, photoFile);
+
+      if (uploadError) throw uploadError;
+
+      // Получаем публичный URL
+      const { data: { publicUrl }, error: urlError } = supabase.storage
+        .from('order_photos')
+        .getPublicUrl(filePath);
+
+      if (urlError) throw urlError;
+
+      // Обновляем запись заказа с URL фото
+      const updatedOrder = await ordersService.uploadOrderPhoto(orderId, publicUrl);
+
+      // Обновляем локальное состояние
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { 
+                ...order, 
+                photos: [...(order.photos || []), publicUrl]
+              } 
+            : order
+        )
+      );
+
+      toast.success('Фото успешно загружено');
+      logger.log('OrdersPage', `Загружено фото для заказа ${orderId}`);
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast.error('Не удалось загрузить фото');
+      logger.error('OrdersPage', 'Ошибка при загрузке фото', null, error);
+    }
+  }, []);
+
+  const handleRespondToClientReaction = useCallback((orderNumber, reaction) => {
+    try {
+      logger.log('OrdersPage', `Ответ на реакцию клиента для заказа ${orderNumber}`);
+      console.log(`Responding to client reaction for order ${orderNumber}: ${reaction}`);
+    } catch (error) {
+      logger.error('OrdersPage', `Ошибка при ответе на реакцию клиента для заказа ${orderNumber}`, null, error);
+    }
+  }, []);
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      const updatedOrder = await ordersService.updateOrderStatus(orderId, newStatus);
+      
+      // Обновляем локальный список заказов
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+
+      toast.success(`Статус заказа ${orderId} обновлен на ${newStatus}`);
+    } catch (error) {
+      console.error('Detailed Error:', error);
+      toast.error(`Не удалось обновить статус заказа: ${error.message}`);
+      logger.error('OrdersPage Status Change', 'Ошибка при изменении статуса заказа', { 
+        orderId, 
+        newStatus 
+      }, error);
+    }
+  };
+
+  const handleViewPhotos = useCallback(async (orderNumber) => {
+    try {
+      logger.log('OrdersPage', `Просмотр фото для заказа ${orderNumber}`);
       const cleanNumber = orderNumber.replace(/[^0-9]/g, '');
       const path = `orders/${cleanNumber}/photos`;
       
@@ -430,40 +506,58 @@ export default function OrdersPage() {
       
       if (photos && photos.length > 0) {
         // Here you could show photos in a modal or navigate to a photos view
+        logger.log('OrdersPage', `Фото для заказа ${orderNumber} успешно загружены`);
         console.log('Order photos:', photos);
       } else {
         toast.error('Нет фотографий для этого заказа');
+        logger.error('OrdersPage', `Ошибка при загрузке фото для заказа ${orderNumber}`);
       }
     } catch (error) {
       console.error('Error loading photos:', error);
       toast.error('Ошибка при загрузке фотографий');
+      logger.error('OrdersPage', `Ошибка при загрузке фото для заказа ${orderNumber}`, null, error);
     }
-  };
+  }, []);
 
-  const handleStatusFilterChange = (status) => {
-    setStatusFilter(status);
-    console.log('Filtering by status:', status);
-  };
-
-  const handleDeliveryTypeFilterChange = (type) => {
-    setDeliveryTypeFilter(type);
-    console.log('Filtering by delivery type:', type);
-  };
-
-  const handleDateFilterChange = (date) => {
-    setDateFilter(date);
-    if (date !== 'custom') {
-      setCustomDate(null);
+  const handleStatusFilterChange = useCallback((status) => {
+    try {
+      logger.log('OrdersPage', `Изменение фильтра статуса на ${status}`);
+      setStatusFilter(status);
+      console.log('Filtering by status:', status);
+    } catch (error) {
+      logger.error('OrdersPage', `Ошибка при изменении фильтра статуса`, null, error);
     }
-    console.log('Filtering by date:', date);
-  };
+  }, []);
 
-  const filteredOrders = mockOrders.filter(order => {
+  const handleDeliveryTypeFilterChange = useCallback((type) => {
+    try {
+      logger.log('OrdersPage', `Изменение фильтра типа доставки на ${type}`);
+      setDeliveryTypeFilter(type);
+      console.log('Filtering by delivery type:', type);
+    } catch (error) {
+      logger.error('OrdersPage', `Ошибка при изменении фильтра типа доставки`, null, error);
+    }
+  }, []);
+
+  const handleDateFilterChange = useCallback((date) => {
+    try {
+      logger.log('OrdersPage', `Изменение фильтра даты на ${date}`);
+      setDateFilter(date);
+      if (date !== 'custom') {
+        setCustomDate(null);
+      }
+      console.log('Filtering by date:', date);
+    } catch (error) {
+      logger.error('OrdersPage', `Ошибка при изменении фильтра даты`, null, error);
+    }
+  }, []);
+
+  const filteredOrders = orders.filter(order => {
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesDeliveryType = deliveryTypeFilter === 'all' || order.deliveryType === deliveryTypeFilter;
+    const matchesDeliveryType = deliveryTypeFilter === 'all' || order.deliveryMethod === deliveryTypeFilter;
     const matchesSearch = !searchQuery || 
       order.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.clientComment.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.phone.toLowerCase().includes(searchQuery.toLowerCase());
 
     let matchesDate = true;

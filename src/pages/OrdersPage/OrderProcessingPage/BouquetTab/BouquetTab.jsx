@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { logger } from '../../../../services/logging/loggingService';
 import { Camera, Plus, Minus, X, AlertCircle, MessageCircle, Check, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,6 +40,100 @@ export default function BouquetTab() {
     ]
   };
 
+  useEffect(() => {
+    logger.log('BouquetTab', 'Инициализация вкладки букета', {
+      orderId: order.id,
+      initialComposition: composition
+    });
+  }, [order.id]);
+
+  const handlePhotoUpload = useCallback((itemId, event) => {
+    try {
+      logger.log('BouquetTab', 'Загрузка фото букета', {
+        orderId: order.id,
+        itemId
+      });
+
+      const file = event.target.files?.[0];
+      if (file) {
+        setPhotos(prev => ({
+          ...prev,
+          [itemId]: URL.createObjectURL(file)
+        }));
+      }
+    } catch (error) {
+      logger.error('BouquetTab', 'Ошибка при загрузке фото', {
+        orderId: order.id,
+        itemId
+      }, error);
+    }
+  }, [order.id]);
+
+  const updateCount = useCallback((flowerId, change) => {
+    try {
+      logger.log('BouquetTab', 'Обновление количества цветов', {
+        orderId: order.id,
+        flowerId,
+        change
+      });
+
+      setComposition(prev => prev.map(flower => {
+        if (flower.id === flowerId) {
+          const newCount = Math.max(0, flower.count + change);
+          return { ...flower, count: newCount };
+        }
+        return flower;
+      }).filter(flower => flower.count > 0));
+    } catch (error) {
+      logger.error('BouquetTab', 'Ошибка при обновлении количества цветов', {
+        orderId: order.id,
+        flowerId,
+        change
+      }, error);
+    }
+  }, [order.id]);
+
+  const addFlower = useCallback((flower) => {
+    try {
+      logger.log('BouquetTab', 'Добавление цветка в букет', {
+        orderId: order.id,
+        flowerName: flower.name
+      });
+
+      const existing = composition.find(f => f.id === flower.id);
+      if (existing) {
+        updateCount(flower.id, 1);
+      } else {
+        setComposition([...composition, { ...flower, count: 1 }]);
+      }
+      setShowFlowerPicker(false);
+    } catch (error) {
+      logger.error('BouquetTab', 'Ошибка при добавлении цветка', {
+        orderId: order.id,
+        flowerName: flower.name
+      }, error);
+    }
+  }, [order.id, composition]);
+
+  const calculateTotals = useCallback((item) => {
+    try {
+      logger.log('BouquetTab', 'Расчет стоимости букета', {
+        orderId: order.id,
+        itemId: item.id
+      });
+
+      const materialCost = composition.reduce((sum, flower) => 
+        sum + (flower.count * flower.price), 0);
+      const margin = ((item.price - materialCost) / item.price * 100).toFixed(0);
+      return { materialCost, margin };
+    } catch (error) {
+      logger.error('BouquetTab', 'Ошибка при расчете стоимости букета', {
+        orderId: order.id,
+        itemId: item.id
+      }, error);
+    }
+  }, [order.id, composition]);
+
   // Список доступных цветов для добавления
   const flowers = [
     { id: 101, name: 'Роза красная', price: 450 },
@@ -47,43 +142,6 @@ export default function BouquetTab() {
     { id: 104, name: 'Гипсофила', price: 800 },
     { id: 105, name: 'Эустома', price: 550 }
   ];
-
-  const handlePhotoUpload = (itemId, event) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setPhotos(prev => ({
-        ...prev,
-        [itemId]: URL.createObjectURL(file)
-      }));
-    }
-  };
-
-  const updateCount = (flowerId, change) => {
-    setComposition(prev => prev.map(flower => {
-      if (flower.id === flowerId) {
-        const newCount = Math.max(0, flower.count + change);
-        return { ...flower, count: newCount };
-      }
-      return flower;
-    }).filter(flower => flower.count > 0));
-  };
-
-  const addFlower = (flower) => {
-    const existing = composition.find(f => f.id === flower.id);
-    if (existing) {
-      updateCount(flower.id, 1);
-    } else {
-      setComposition([...composition, { ...flower, count: 1 }]);
-    }
-    setShowFlowerPicker(false);
-  };
-
-  const calculateTotals = (item) => {
-    const materialCost = composition.reduce((sum, flower) => 
-      sum + (flower.count * flower.price), 0);
-    const margin = ((item.price - materialCost) / item.price * 100).toFixed(0);
-    return { materialCost, margin };
-  };
 
   return (
     <div className="flex flex-col h-full bg-gray-50">

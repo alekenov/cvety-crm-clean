@@ -1,4 +1,10 @@
-import React, { useState } from 'react';
+import React, { 
+  useState, 
+  useEffect, 
+  useCallback,
+  useRef
+} from 'react';
+import { logger } from '../../services/logging/loggingService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/Input';
@@ -13,6 +19,8 @@ import {
 import { Plus, Search, X, MessageCircle, FileText, Phone, Calendar, Clock, Send, MapPin, Home, ArrowLeft, ArrowRight, User, CreditCard, Truck, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { useDispatch, useSelector } from 'react-redux';
+import { ordersService } from '../../services/supabaseClient';
 
 // Mock catalog products
 const mockCatalogProducts = [
@@ -63,6 +71,28 @@ const mockCatalogProducts = [
   }
 ];
 
+// Список магазинов для самовывоза
+const pickupStores = [
+  { 
+    id: 'store1', 
+    name: 'Цветочный Рай (ул. Абая, 100)', 
+    address: 'ул. Абая, 100',
+    workingHours: 'Пн-Пт: 10:00-20:00, Сб-Вс: 11:00-19:00'
+  },
+  { 
+    id: 'store2', 
+    name: 'Бутик Цветов (пр. Назарбаева, 50)', 
+    address: 'пр. Назарбаева, 50',
+    workingHours: 'Пн-Вс: 9:00-21:00'
+  },
+  { 
+    id: 'store3', 
+    name: 'Флористический Салон (ул. Гагарина, 25)', 
+    address: 'ул. Гагарина, 25',
+    workingHours: 'Пн-Пт: 11:00-19:00, Сб: 10:00-18:00, Вс: Выходной'
+  }
+];
+
 const CreateOrderPage = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -100,28 +130,89 @@ const CreateOrderPage = () => {
     paymentMethod: 'kaspi',
   });
 
-  // Mock create order function
-  const handleCreateOrder = async (orderData) => {
-    console.log('Creating order with data:', orderData);
-    toast.success('Заказ успешно создан');
-    navigate('/orders');
+  useEffect(() => {
+    logger.log('CreateOrderPage', 'Страница создания заказа загружена');
+    logger.setCurrentUrl(window.location.href);
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Валидация данных
+      if (!validateForm()) {
+        return;
+      }
+
+      // Подготовка данных для отправки
+      const preparedOrderData = prepareOrderData();
+
+      // Создание заказа через Supabase
+      const createdOrder = await ordersService.createOrder(preparedOrderData);
+
+      // Логирование и уведомление
+      logger.log('CreateOrderPage', `Создан новый заказ ${createdOrder.number}`);
+      toast.success(`Заказ ${createdOrder.number} успешно создан`);
+
+      // Очистка формы и переход
+      setOrderItems([]);
+      setOrderForm({
+        deliveryMethod: 'delivery',
+        pickupStore: '',
+        pickupType: 'asap',
+        pickupDate: '',
+        pickupTime: '12:00',
+        recipient: {
+          name: '',
+          phone: '',
+          address: {
+            street: '',
+            building: '',
+            apartment: '',
+            floor: '',
+          },
+        },
+        customer: {
+          phone: '',
+        },
+        cardMessage: '',
+        internalComment: '',
+        deliveryDate: '',
+        deliveryTime: '12:00',
+        deliveryType: 'asap',
+        paymentMethod: 'kaspi',
+      });
+      navigate(`/orders/${createdOrder.number}`);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast.error('Не удалось создать заказ');
+      logger.error('CreateOrderPage', 'Ошибка при создании заказа', null, error);
+    }
   };
 
   const prepareOrderData = () => {
     const { deliveryMethod, recipient, customer, ...rest } = orderForm;
     
     return {
+      id: Date.now(), // Generate a unique order ID
+      number: `ORDER-${Date.now()}`, // Generate a unique order number
       status: 'new',
-      delivery_method: deliveryMethod,
-      client_name: recipient.name,
       client_phone: customer.phone || recipient.phone,
-      address: deliveryMethod === 'delivery' ? formatAddress(recipient.address) : '',
-      shop: deliveryMethod === 'pickup' ? orderForm.pickupStore : '',
+      address: deliveryMethod === 'delivery' ? formatAddress(recipient.address) : null,
       delivery_time: formatDeliveryTime(),
-      total_price: calculateTotalPrice(),
+      total_price: calculateTotalPrice() + (deliveryMethod === 'delivery' ? 1500 : 0),
+      items: orderItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price
+      })),
       client_comment: orderForm.cardMessage,
-      internal_comment: orderForm.internalComment,
-      ...rest
+      shop: deliveryMethod === 'pickup' ? orderForm.pickupStore : null,
+      florist: null, // You might want to add logic to select a florist
+      delivery_address: deliveryMethod === 'delivery' ? formatAddress(recipient.address) : null,
+      delivery_date: deliveryMethod === 'delivery' ? orderForm.deliveryDate : orderForm.pickupDate,
+      store_id: deliveryMethod === 'pickup' ? orderForm.pickupStore : null,
+      florist_name: null, // You might want to add logic to select a florist name
+      created_at: new Date().toISOString(),
     };
   };
 
@@ -152,66 +243,133 @@ const CreateOrderPage = () => {
     return orderItems.reduce((sum, item) => sum + (item.price || 0), 0);
   };
 
-  const handleAddProduct = (product) => {
-    setOrderItems(prev => [...prev, { ...product, type: 'product' }]);
-    setShowProductSearch(false);
-  };
-
-  const handleAddCustomItem = (e) => {
-    e.preventDefault();
-    const name = e.target.itemName.value;
-    const price = Number(e.target.itemPrice.value);
-    
-    setOrderItems(prev => [...prev, { 
-      id: Date.now(),
-      name,
-      price,
-      type: 'custom'
-    }]);
-    
-    setShowAddCustomItem(false);
-    e.target.reset();
-  };
-
-  const handleRemoveItem = (itemId) => {
-    setOrderItems(prev => prev.filter(item => item.id !== itemId));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (orderItems.length === 0) {
-      toast.error('Please add at least one item to the order');
-      return;
+  const handleAddProduct = useCallback((product) => {
+    try {
+      logger.log('CreateOrderPage', 'Добавление продукта в заказ', { product });
+      setOrderItems(prev => [...prev, { ...product, type: 'product' }]);
+      setShowProductSearch(false);
+    } catch (error) {
+      logger.error('CreateOrderPage', 'Ошибка при добавлении продукта', { product }, error);
     }
+  }, []);
 
-    if (!validateForm()) {
-      return;
+  const handleAddCustomItem = useCallback((e) => {
+    try {
+      logger.log('CreateOrderPage', 'Добавление пользовательского товара в заказ');
+      e.preventDefault();
+      const name = e.target.itemName.value;
+      const price = Number(e.target.itemPrice.value);
+      
+      setOrderItems(prev => [...prev, { 
+        id: Date.now(),
+        name,
+        price,
+        type: 'custom'
+      }]);
+      
+      setShowAddCustomItem(false);
+      e.target.reset();
+    } catch (error) {
+      logger.error('CreateOrderPage', 'Ошибка при добавлении пользовательского товара', null, error);
     }
+  }, []);
 
-    await handleCreateOrder(prepareOrderData());
-  };
+  const handleRemoveItem = useCallback((itemId) => {
+    try {
+      logger.log('CreateOrderPage', 'Удаление товара из заказа', { itemId });
+      setOrderItems(prev => prev.filter(item => item.id !== itemId));
+    } catch (error) {
+      logger.error('CreateOrderPage', 'Ошибка при удалении товара', { itemId }, error);
+    }
+  }, []);
 
   const validateForm = () => {
-    const { deliveryMethod, recipient, customer } = orderForm;
+    const { deliveryMethod, recipient, customer, pickupStore } = orderForm;
+    const validationErrors = [];
 
+    console.log('Validate Form Data:', { 
+      deliveryMethod, 
+      recipient: JSON.stringify(recipient, null, 2), 
+      customer: JSON.stringify(customer, null, 2),
+      pickupStore 
+    });
+
+    // Проверка телефона
     if (!customer.phone && !recipient.phone) {
-      toast.error('Please provide either customer or recipient phone');
-      return false;
+      validationErrors.push('Не указан телефонный номер');
+      logger.warn('CreateOrderPage', 'Ошибка валидации', { 
+        details: 'Отсутствует телефонный номер',
+        customerPhone: customer.phone,
+        recipientPhone: recipient.phone
+      });
     }
 
-    if (!recipient.name) {
-      toast.error('Please provide recipient name');
-      return false;
-    }
-
+    // Проверка способа доставки
     if (deliveryMethod === 'delivery') {
-      if (!recipient.address.street || !recipient.address.building) {
-        toast.error('Please provide delivery address');
-        return false;
+      // Проверка адреса при доставке
+      const addressErrors = [];
+      
+      // Более гибкая проверка адреса
+      const { address } = recipient;
+      if (!address || Object.keys(address).length === 0) {
+        addressErrors.push('полный адрес');
+        logger.warn('CreateOrderPage', 'Ошибка адреса', { 
+          details: 'Адрес не заполнен',
+          address: address
+        });
+      } else {
+        // Проверяем каждое поле более детально
+        if (!address.street || address.street.trim() === '') {
+          addressErrors.push('улица');
+          logger.warn('CreateOrderPage', 'Ошибка адреса', { 
+            details: 'Не указана улица',
+            street: address.street 
+          });
+        }
+        // Смягчаем проверку номера дома
+        const hasBuildingIdentifier = 
+          (address.building && address.building.trim() !== '') ||
+          (address.apartment && address.apartment.trim() !== '') ||
+          (address.entrance && address.entrance.trim() !== '');
+
+        if (!hasBuildingIdentifier) {
+          addressErrors.push('идентификатор здания');
+          logger.warn('CreateOrderPage', 'Ошибка адреса', { 
+            details: 'Не указан номер дома, подъезд или квартира',
+            building: address.building,
+            apartment: address.apartment,
+            entrance: address.entrance
+          });
+        }
       }
-    } else if (!orderForm.pickupStore) {
-      toast.error('Please select pickup store');
+
+      if (addressErrors.length > 0) {
+        validationErrors.push(`Не полный адрес доставки: отсутствуют ${addressErrors.join(', ')}`);
+      }
+    } else if (deliveryMethod === 'pickup') {
+      // Проверка точки самовывоза
+      if (!pickupStore) {
+        validationErrors.push('Не выбрана точка самовывоза');
+        logger.warn('CreateOrderPage', 'Ошибка самовывоза', { 
+          details: 'Точка самовывоза не выбрана',
+          pickupStore 
+        });
+      }
+    }
+
+    // Проверка товаров
+    if (orderItems.length === 0) {
+      validationErrors.push('Корзина пуста');
+      logger.warn('CreateOrderPage', 'Ошибка корзины', { 
+        details: 'В заказе отсутствуют товары',
+        orderItemsCount: orderItems.length 
+      });
+    }
+
+    // Если есть ошибки - показываем их
+    if (validationErrors.length > 0) {
+      const errorMessage = validationErrors.join('. ');
+      toast.error(errorMessage);
       return false;
     }
 
@@ -223,11 +381,6 @@ const CreateOrderPage = () => {
     { label: '12:00 - 15:00', value: '12:00' },
     { label: '15:00 - 18:00', value: '15:00' },
     { label: '18:00 - 21:00', value: '18:00' },
-  ];
-
-  const stores = [
-    { id: 1, name: "Магазин на Абая" },
-    { id: 2, name: "Магазин на Достык" },
   ];
 
   const renderStep1 = () => (
@@ -323,7 +476,7 @@ const CreateOrderPage = () => {
                   Выберите магазин
                 </SelectTrigger>
                 <SelectContent>
-                  {stores.map(store => (
+                  {pickupStores.map(store => (
                     <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
                   ))}
                 </SelectContent>

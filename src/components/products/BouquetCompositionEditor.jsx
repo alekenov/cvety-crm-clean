@@ -1,22 +1,77 @@
-import React, { useState } from 'react';
+import React, { 
+  useState, 
+  useEffect, 
+  useCallback 
+} from 'react';
 import { Flower, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { logger } from '../../services/logging/loggingService';
 
-const BouquetCompositionEditor = ({ onCompositionChange }) => {
-  const [composition, setComposition] = useState([]);
+const BouquetCompositionEditor = ({ 
+  initialComposition = [], 
+  onCompositionChange, 
+  maxItems = 10 
+}) => {
+  const [composition, setComposition] = useState(initialComposition);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [availableProducts, setAvailableProducts] = useState([]);
 
-  const handleAddFlower = (flower) => {
-    const newComposition = [...composition, flower];
-    setComposition(newComposition);
-    onCompositionChange(newComposition);
-  };
+  React.useEffect(() => {
+    logger.log('BouquetCompositionEditor', 'Компонент редактора букета инициализирован', {
+      initialCompositionCount: initialComposition.length,
+      maxItems
+    });
+  }, []);
 
-  const handleRemoveFlower = (index) => {
-    const newComposition = composition.filter((_, i) => i !== index);
-    setComposition(newComposition);
-    onCompositionChange(newComposition);
-  };
+  const handleAddFlower = useCallback(async (flower) => {
+    try {
+      if (composition.length >= maxItems) {
+        logger.warn('BouquetCompositionEditor', 'Превышено максимальное количество товаров', { 
+          currentCount: composition.length, 
+          maxItems 
+        });
+        // toast.error(`Максимальное количество товаров: ${maxItems}`);
+        return;
+      }
+
+      const newComposition = [...composition, flower];
+      setComposition(newComposition);
+      
+      logger.log('BouquetCompositionEditor', 'Товар добавлен в композицию', { 
+        productName: flower.name 
+      });
+
+      if (onCompositionChange) {
+        onCompositionChange(newComposition);
+      }
+    } catch (error) {
+      logger.error('BouquetCompositionEditor', 'Ошибка при добавлении товара', { 
+        productName: flower.name 
+      }, error);
+      // toast.error('Не удалось добавить товар');
+    }
+  }, [composition, maxItems, onCompositionChange]);
+
+  const handleRemoveFlower = useCallback((index) => {
+    try {
+      const removedFlower = composition.find((_, i) => i === index);
+      
+      const newComposition = composition.filter((_, i) => i !== index);
+      setComposition(newComposition);
+
+      logger.log('BouquetCompositionEditor', 'Товар удален из композиции', { 
+        productName: removedFlower?.name 
+      });
+
+      if (onCompositionChange) {
+        onCompositionChange(newComposition);
+      }
+    } catch (error) {
+      logger.error('BouquetCompositionEditor', 'Ошибка при удалении товара', {}, error);
+      // toast.error('Не удалось удалить товар');
+    }
+  }, [composition, onCompositionChange]);
 
   return (
     <Card>

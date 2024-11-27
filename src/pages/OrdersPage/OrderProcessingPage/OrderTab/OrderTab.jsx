@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { logger } from '../../../../services/logging/loggingService';
 import { ArrowLeft, Camera, Gift, Calendar, Clock, Phone, MessageCircle, AlertCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,6 +50,30 @@ export default function OrderProcessing() {
     totalAmount: 15500,
     paymentStatus: 'Оплачен онлайн'
   };
+
+  useEffect(() => {
+    logger.log('OrderProcessing', 'Инициализация страницы заказа', {
+      orderId: order.id,
+      currentStatus: orderStatus
+    });
+  }, [order.id, orderStatus]);
+
+  const handleStatusChange = useCallback((newStatus) => {
+    try {
+      logger.log('OrderProcessing', 'Изменение статуса заказа', {
+        orderId: order.id,
+        oldStatus: orderStatus,
+        newStatus
+      });
+
+      setOrderStatus(newStatus);
+    } catch (error) {
+      logger.error('OrderProcessing', 'Ошибка при изменении статуса заказа', {
+        orderId: order.id,
+        newStatus
+      }, error);
+    }
+  }, [order.id, orderStatus]);
 
   return (
     <div className="max-w-md mx-auto bg-gray-100 min-h-screen flex flex-col">
