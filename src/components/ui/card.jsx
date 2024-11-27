@@ -1,60 +1,116 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { colors } from "./tokens/colors"
+import { shadows } from "./tokens/shadows"
 
-const Card = React.forwardRef(({ className, ...props }, ref) => (
-  <div
+export const Card = React.forwardRef(({
+  className,
+  variant = 'default',
+  elevation = 'sm',
+  hover = false,
+  children,
+  ...props
+}, ref) => {
+  const variants = {
+    default: `bg-neutral-50 border border-neutral-200`,
+    outlined: `border border-blue-300 bg-white`,
+    elevated: `bg-white shadow-md`,
+    ghost: 'bg-transparent border-none'
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'rounded-xl p-4 transition-all duration-300',
+        variants[variant],
+        shadows.light[elevation],
+        hover && `hover:shadow-lg hover:scale-[1.02]`,
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+})
+
+Card.displayName = 'Card'
+
+// Sub-components
+export const CardHeader = React.forwardRef(({ className, children, ...props }, ref) => (
+  <div 
     ref={ref}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      'flex items-center justify-between mb-4 border-b pb-2', 
+      `border-neutral-200`,
       className
-    )}
+    )} 
     {...props}
-  />
-))
-Card.displayName = "Card"
-
-const CardHeader = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
-    {...props}
-  />
+  >
+    {children}
+  </div>
 ))
 CardHeader.displayName = "CardHeader"
 
-const CardTitle = React.forwardRef(({ className, ...props }, ref) => (
-  <h3
+export const CardTitle = React.forwardRef(({ className, children, ...props }, ref) => (
+  <h3 
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      'text-lg font-semibold', 
+      `text-neutral-900`,
       className
-    )}
+    )} 
     {...props}
-  />
+  >
+    {children}
+  </h3>
 ))
 CardTitle.displayName = "CardTitle"
 
-const CardDescription = React.forwardRef(({ className, ...props }, ref) => (
+export const CardDescription = React.forwardRef(({ className, children, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm text-neutral-500", className)}
     {...props}
-  />
+  >
+    {children}
+  </p>
 ))
 CardDescription.displayName = "CardDescription"
 
-const CardContent = React.forwardRef(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+export const CardContent = React.forwardRef(({ className, children, ...props }, ref) => (
+  <div 
+    ref={ref}
+    className={cn(
+      'py-2', 
+      className
+    )} 
+    {...props}
+  >
+    {children}
+  </div>
 ))
 CardContent.displayName = "CardContent"
 
-const CardFooter = React.forwardRef(({ className, ...props }, ref) => (
-  <div
+export const CardFooter = React.forwardRef(({ className, children, ...props }, ref) => (
+  <div 
     ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
+    className={cn(
+      'flex items-center justify-end mt-4 pt-2', 
+      `border-t border-neutral-200`,
+      className
+    )} 
     {...props}
-  />
+  >
+    {children}
+  </div>
 ))
 CardFooter.displayName = "CardFooter"
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+// Добавляем под-компоненты к основному компоненту
+Card.Header = CardHeader
+Card.Title = CardTitle
+Card.Description = CardDescription
+Card.Content = CardContent
+Card.Footer = CardFooter

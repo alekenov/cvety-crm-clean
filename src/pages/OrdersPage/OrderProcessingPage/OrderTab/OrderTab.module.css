@@ -1,0 +1,11 @@
+.orderTab {
+  @apply p-4 bg-white rounded-lg shadow-md;
+}
+
+.orderList {
+  @apply mt-4 grid gap-4;
+}
+
+.orderActions {
+  @apply mt-4 flex space-x-4;
+}

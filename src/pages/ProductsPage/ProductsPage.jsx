@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Plus, ChevronDown, ArrowUpDown, Filter, MoreVertical } from 'lucide-react';
 import AddProductForm from './components/AddProductForm';
-import CreateSampleProducts from './components/CreateSampleProducts';
 import { supabase } from '../../lib/supabase';
 import { Button } from '@/components/ui/button';
 import styles from '@/styles/pages.module.css';
@@ -21,118 +21,44 @@ function ProductsPage() {
   const [isViewMode, setIsViewMode] = useState(false);
 
   // Загрузка продуктов
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
   const loadProducts = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const { data: productsData, error: productsError } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          product_compositions (
-            id,
-            quantity,
-            inventory_item:inventory_item_id (
-              id,
-              name,
-              price
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });  
+        .select('*');
 
-      if (productsError) {
-        console.error('Error fetching products:', productsError);
-        throw productsError;
-      }
-
-      if (!productsData) {
-        console.log('No products data received');
-        setProducts([]);
-        return;
-      }
-
-      console.log('Received products:', productsData);
-
-      const productsWithDetails = productsData.map(product => {
-        const composition = product.product_compositions?.map(item => ({
-          id: item.id,
-          name: item.inventory_item?.name || 'Неизвестный цветок',
-          quantity: parseInt(item.quantity) || 0,
-          price_per_stem: parseFloat(item.inventory_item?.price) || 0,
-          inventory_item_id: item.inventory_item?.id
-        })) || [];
-
-        // Вычисляем базовую стоимость как сумму стоимости всех цветов
-        const basePrice = composition.reduce((sum, item) => 
-          sum + (item.price_per_stem * item.quantity), 0);
-        
-        const finalPrice = basePrice * 1.3 + 2000; // 30% наценка + упаковка 2000 тг
-
-        return {
-          ...product,
-          total_stems: composition.reduce((sum, item) => sum + item.quantity, 0),
-          composition_details: composition,
-          price_details: {
-            basePrice,
-            markupAmount: basePrice * 0.3,
-            packagingCost: 2000,
-            finalPrice
-          }
-        };
-      });
-
-      console.log('Processed products:', productsWithDetails);
-      setProducts(productsWithDetails);
+      if (error) throw error;
+      setProducts(data);
     } catch (error) {
       console.error('Error loading products:', error);
-      setProducts([]); 
+      toast.error('Ошибка при загрузке продуктов');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
   // Обработчики действий
   const handleEditProduct = async (product) => {
     console.log('Editing product:', product);
     try {
       // Загружаем полные данные о продукте
-      const { data: productData, error: productError } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          product_compositions (
-            id,
-            quantity,
-            inventory_item:inventory_item_id (
-              id,
-              name,
-              price,
-              unit
-            )
-          )
-        `)
+        .select('*')
         .eq('id', product.id)
         .single();
 
-      if (productError) throw productError;
+      if (error) throw error;
 
-      console.log('Loaded product data:', productData);
-
-      // Форматируем состав для формы
       const formattedProduct = {
-        ...productData,
-        composition_details: productData.product_compositions.map(item => ({
-          id: item.id,
-          inventory_item_id: item.inventory_item.id,
-          name: item.inventory_item.name,
-          price: item.inventory_item.price,
-          unit: item.inventory_item.unit,
-          quantity: item.quantity
-        }))
+        ...data,
+        composition: data.composition ? JSON.parse(data.composition) : [],
+        price: data.price ? Number(data.price) : 0,
       };
 
       console.log('Formatted product:', formattedProduct);
@@ -145,21 +71,21 @@ function ProductsPage() {
     }
   };
 
-  const handleDeleteProduct = async (productId) => {
-    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
+  const handleDeleteProduct = async (product) => {
+    if (window.confirm('Вы уверены, что хотите удалить этот продукт?')) {
       try {
         const { error } = await supabase
           .from('products')
           .delete()
-          .eq('id', productId);
+          .eq('id', product.id);
 
         if (error) throw error;
         await loadProducts();
       } catch (error) {
         console.error('Error deleting product:', error);
       }
+      setShowActionMenu(null);
     }
-    setShowActionMenu(null);
   };
 
   const handleToggleStatus = async (product) => {
@@ -182,51 +108,60 @@ function ProductsPage() {
   const handleViewProduct = async (product) => {
     console.log('Viewing product:', product);
     try {
-      // Загружаем полные данные о продукте
-      const { data: productData, error: productError } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          product_compositions (
-            id,
-            quantity,
-            inventory_item:inventory_item_id (
-              id,
-              name,
-              price,
-              unit
-            )
-          )
-        `)
+        .select('*')
         .eq('id', product.id)
         .single();
 
-      if (productError) throw productError;
+      if (error) throw error;
 
-      console.log('Loaded product data:', productData);
-
-      // Форматируем данные для формы
       const formattedProduct = {
-        ...productData,
-        composition_details: productData.product_compositions.map(item => ({
-          id: item.id,
-          inventory_item_id: item.inventory_item.id,
-          name: item.inventory_item.name,
-          price: item.inventory_item.price,
-          unit: item.inventory_item.unit,
-          quantity: item.quantity
-        }))
+        ...data,
+        composition: data.composition ? JSON.parse(data.composition) : [],
+        price: data.price ? Number(data.price) : 0,
       };
 
       console.log('Formatted product:', formattedProduct);
       setSelectedProduct(formattedProduct);
       setEditingProduct(formattedProduct);
       setShowAddForm(true);
+      setIsViewMode(true);
     } catch (error) {
       console.error('Error loading product details:', error);
       toast.error('Ошибка при загрузке данных букета');
     }
   };
+
+  // Компонент меню действий
+  const ActionMenu = ({ product }) => (
+    <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10">
+      <Button
+        onClick={() => handleViewProduct(product)}
+        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+      >
+        Просмотр
+      </Button>
+      <Button
+        onClick={() => handleEditProduct(product)}
+        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+      >
+        Редактировать
+      </Button>
+      <Button
+        onClick={() => handleToggleStatus(product)}
+        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+      >
+        {product.status === 'active' ? 'Деактивировать' : 'Активировать'}
+      </Button>
+      <Button
+        onClick={() => handleDeleteProduct(product)}
+        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600"
+      >
+        Удалить
+      </Button>
+    </div>
+  );
 
   // Фильтрация продуктов
   const filteredProducts = products.filter(product => {
@@ -236,93 +171,10 @@ function ProductsPage() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Компонент меню действий
-  const ActionMenu = ({ product }) => (
-    <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10">
-      <Button
-        onClick={() => handleViewProduct(product)}
-        variant="ghost"
-        size="md"
-        className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
-      >
-        Просмотреть
-      </Button>
-      <Button
-        onClick={() => handleEditProduct(product)}
-        variant="ghost"
-        size="md"
-        className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
-      >
-        Редактировать
-      </Button>
-      <Button
-        onClick={() => handleToggleStatus(product)}
-        variant="ghost"
-        size="md"
-        className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm"
-      >
-        {product.status === 'active' ? 'Скрыть' : 'Показать'}
-      </Button>
-      <Button
-        onClick={() => handleDeleteProduct(product.id)}
-        variant="ghost"
-        size="md"
-        className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm text-red-500"
-      >
-        Удалить
-      </Button>
-    </div>
-  );
-
   // Обновляем DesktopView
-  const DesktopView = ({ products }) => (
+  const DesktopView = ({ products, onEditProduct, onDeleteProduct, onToggleStatus }) => (
     <div className="hidden sm:block">
       <div className={styles.pageSection}>
-        {/* Фильтры и поиск */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Поиск букетов..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border rounded-lg"
-            />
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <select 
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="border rounded-lg px-3 py-2"
-            >
-              <option value="all">Все категории</option>
-              <option value="Букеты">Букеты</option>
-              <option value="Композиции">Композиции</option>
-            </select>
-
-            <select 
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="border rounded-lg px-3 py-2"
-            >
-              <option value="all">Все статусы</option>
-              <option value="active">Активные</option>
-              <option value="inactive">Неактивные</option>
-            </select>
-
-            <Button 
-              onClick={() => setShowAddForm(true)}
-              variant="primary"
-              size="md"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Добавить букет
-            </Button>
-          </div>
-        </div>
-
         {/* Таблица */}
         <table className="w-full">
           <thead>
@@ -338,7 +190,80 @@ function ProductsPage() {
           </thead>
           <tbody>
             {products.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <tr 
+                key={product.id} 
+                className="border-b last:border-b-0 hover:bg-gray-50 cursor-pointer"
+                onClick={() => handleViewProduct(product)}
+              >
+                <td className="py-4">
+                  {product.image_url ? (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.name}
+                      className="w-12 h-12 rounded-lg object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/placeholder-flower.svg';
+                      }}
+                    />
+                  ) : (
+                    <img 
+                      src="/placeholder-flower.svg"
+                      alt="Placeholder"
+                      className="w-12 h-12 rounded-lg"
+                    />
+                  )}
+                </td>
+                <td className="py-4">
+                  <div>{product.name}</div>
+                  <div className="text-sm text-gray-500">
+                    {product.composition_details?.length || 0} позиций
+                  </div>
+                </td>
+                <td className="py-4">{product.category}</td>
+                <td className="py-4 text-right">
+                  {product.composition_details?.map(item => (
+                    <div key={item.id} className="text-sm">
+                      {item.name}: {item.quantity} шт
+                    </div>
+                  ))}
+                </td>
+                <td className="py-4 text-right">
+                  <div className="font-medium">{parseFloat(product.price).toLocaleString()} ₸</div>
+                  <div className="text-sm text-gray-500">
+                    {product.composition_details?.map(item => (
+                      <div key={item.id}>
+                        {item.name}: {(item.price_per_stem * item.quantity).toLocaleString()} ₸
+                      </div>
+                    ))}
+                  </div>
+                </td>
+                <td className="py-4">
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    product.status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {product.status === 'active' ? 'Активен' : 'Неактивен'}
+                  </span>
+                </td>
+                <td className="py-4 text-right">
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowActionMenu(showActionMenu === product.id ? null : product.id);
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <MoreVertical size={20} />
+                    </button>
+                    {showActionMenu === product.id && (
+                      <ActionMenu product={product} />
+                    )}
+                  </div>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -347,7 +272,7 @@ function ProductsPage() {
   );
 
   // Обновляем MobileView
-  const MobileView = ({ products }) => (
+  const MobileView = ({ products, onEditProduct, onDeleteProduct, onToggleStatus }) => (
     <div className="sm:hidden">
       {/* Заголовок и поиск */}
       <div className={styles.pageHeader}>
@@ -455,7 +380,7 @@ function ProductsPage() {
                   {product.status === 'active' ? 'Скрыть' : 'Показать'}
                 </Button>
                 <Button
-                  onClick={() => handleDeleteProduct(product.id)}
+                  onClick={() => handleDeleteProduct(product)}
                   variant="ghost"
                   size="md"
                   className="w-full py-2 text-left hover:bg-gray-50 text-sm text-red-500"
@@ -470,112 +395,103 @@ function ProductsPage() {
     </div>
   );
 
-  // Обновляем рендер карточки продукта в DesktopView
-  const ProductCard = ({ product }) => {
-    return (
-      <tr 
-        key={product.id} 
-        className="border-b last:border-b-0 hover:bg-gray-50 cursor-pointer"
-        onClick={() => handleViewProduct(product)}
-      >
-        <td className="py-4">
-          {product.image_url ? (
-            <img 
-              src={product.image_url} 
-              alt={product.name}
-              className="w-12 h-12 rounded-lg object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = '/placeholder-flower.svg';
-              }}
-            />
-          ) : (
-            <img 
-              src="/placeholder-flower.svg"
-              alt="Placeholder"
-              className="w-12 h-12 rounded-lg"
-            />
-          )}
-        </td>
-        <td className="py-4">
-          <div>{product.name}</div>
-          <div className="text-sm text-gray-500">
-            {product.composition_details?.length || 0} позиций
-          </div>
-        </td>
-        <td className="py-4">{product.category}</td>
-        <td className="py-4 text-right">
-          {product.composition_details?.map(item => (
-            <div key={item.id} className="text-sm">
-              {item.name}: {item.quantity} шт
-            </div>
-          ))}
-        </td>
-        <td className="py-4 text-right">
-          <div className="font-medium">{parseFloat(product.price).toLocaleString()} ₸</div>
-          <div className="text-sm text-gray-500">
-            {product.composition_details?.map(item => (
-              <div key={item.id}>
-                {item.name}: {(item.price_per_stem * item.quantity).toLocaleString()} ₸
-              </div>
-            ))}
-          </div>
-        </td>
-        <td className="py-4">
-          <span className={`px-2 py-1 rounded-full text-xs ${
-            product.status === 'active' 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-red-100 text-red-800'
-          }`}>
-            {product.status === 'active' ? 'Активен' : 'Неактивен'}
-          </span>
-        </td>
-        <td className="py-4 text-right">
-          <div className="relative">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowActionMenu(showActionMenu === product.id ? null : product.id);
-              }}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <MoreVertical size={20} />
-            </button>
-            {showActionMenu === product.id && (
-              <ActionMenu product={product} />
-            )}
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
-  // Обновляем опции фильтра категорий
-  const categoryOptions = [
-    { value: 'all', label: 'Все категории' },
-    { value: 'Букеты', label: 'Букеты' },
-    { value: 'Композиции', label: 'Композиции' }
-  ];
-
   return (
     <div className={styles.pageContainer}>
-      <CreateSampleProducts />
-      <DesktopView products={filteredProducts} />
-      <MobileView products={filteredProducts} />
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <AddProductForm
-              onClose={() => {
-                setShowAddForm(false);
-                setEditingProduct(null);
-              }}
-              editingProduct={editingProduct}
-              onProductUpdate={loadProducts}
-            />
-          </div>
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Товары</h1>
+          <Button 
+            onClick={() => setShowAddForm(true)}
+            variant="primary"
+            size="md"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Добавить букет
+          </Button>
         </div>
-      )}
+
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="relative flex-1">
+              <input 
+                type="text" 
+                placeholder="Поиск товаров..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="mr-2" size={16} />
+              Фильтры
+            </Button>
+          </div>
+
+          {showFilters && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Категория</label>
+                <select 
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="all">Все категории</option>
+                  <option value="Букеты">Букеты</option>
+                  <option value="Композиции">Композиции</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Статус</label>
+                <select 
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="all">Все статусы</option>
+                  <option value="active">Активные</option>
+                  <option value="inactive">Неактивные</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DesktopView 
+          products={filteredProducts} 
+          onEditProduct={handleEditProduct}
+          onDeleteProduct={handleDeleteProduct}
+          onToggleStatus={handleToggleStatus}
+        />
+        <MobileView 
+          products={filteredProducts} 
+          onEditProduct={handleEditProduct}
+          onDeleteProduct={handleDeleteProduct}
+          onToggleStatus={handleToggleStatus}
+        />
+
+        {showAddForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <AddProductForm
+                onClose={() => {
+                  setShowAddForm(false);
+                  setEditingProduct(null);
+                  setIsViewMode(false);
+                }}
+                editingProduct={editingProduct}
+                onProductUpdate={loadProducts}
+                isViewMode={isViewMode}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

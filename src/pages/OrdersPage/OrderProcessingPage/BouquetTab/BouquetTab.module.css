@@ -1,0 +1,11 @@
+.bouquetTab {
+  @apply p-4 bg-white rounded-lg shadow-md;
+}
+
+.bouquetList {
+  @apply mt-4 grid gap-4;
+}
+
+.bouquetActions {
+  @apply mt-4 flex space-x-4;
+}

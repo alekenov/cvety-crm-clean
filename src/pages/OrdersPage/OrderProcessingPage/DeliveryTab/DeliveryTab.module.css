@@ -1,0 +1,11 @@
+.deliveryTab {
+  @apply p-4 bg-white rounded-lg shadow-md;
+}
+
+.deliveryList {
+  @apply mt-4 grid gap-4;
+}
+
+.deliveryActions {
+  @apply mt-4 flex space-x-4;
+}
