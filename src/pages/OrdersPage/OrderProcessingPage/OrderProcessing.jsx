@@ -18,6 +18,8 @@ import DeliveryAddressInput from '../components/DeliveryAddressInput';
 import { ORDER_STATUS, getStatusLabel, getNextStatuses } from '../../../constants/orderStatuses';
 import { Modal } from '@/components/ui/overlays/Modal';
 import { logger } from '../../../services/logging/loggingService';
+import { ordersService } from '../../../services/ordersService';
+import { supabase } from '../../../services/supabaseClient';
 
 import OrderTab from './OrderTab/OrderTab';
 import BouquetTab from './BouquetTab/BouquetTab';
@@ -158,195 +160,245 @@ const mockOrders = [
 const OrderProcessing = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  
+
   // Основные состояния
-  const [activeTab, setActiveTab] = useState("order");
-  const [orderData, setOrderData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [orderStatus, setOrderStatus] = useState(ORDER_STATUS.NEW);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Состояния для вкладок и навигации
+  const [activeTab, setActiveTab] = useState('order');
+  const [orderStatus, setOrderStatus] = useState(null);
+
+  // Состояния для модальных окон
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
-  
-  // Состояния для вкладки "ЗАКАЗ"
+  const [writeOffModalOpen, setWriteOffModalOpen] = useState(false);
+
+  // Состояния для заказа
   const [items, setItems] = useState([]);
   const [totalCost, setTotalCost] = useState(0);
   const [margin, setMargin] = useState(0);
+
+  // Состояния для сообщений
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  
-  // Состояния для вкладки "БУКЕТ"
+
+  // Состояния для букета
   const [photos, setPhotos] = useState([]);
   const [bouquetComposition, setBouquetComposition] = useState([]);
   const [actualCost, setActualCost] = useState(0);
   const [clientFeedback, setClientFeedback] = useState(null);
-  
-  // Состояния для вкладки "ДОСТАВКА"
+  const [selectedBouquet, setSelectedBouquet] = useState(null);
+
+  // Состояния для доставки
   const [deliveryStatus, setDeliveryStatus] = useState('pending');
   const [deliveryInfo, setDeliveryInfo] = useState({
     address: '',
     entrance: '',
     floor: '',
     apartment: '',
-    intercom: '',
     comment: ''
   });
   const [courier, setCourier] = useState(null);
   const [estimatedTime, setEstimatedTime] = useState(null);
 
-  // Обработчики событий
-  const handlePhotoUpload = () => {
-    // Реализация загрузки фото
-    toast.success('Фото отправлено клиенту');
-  };
+  // Состояния для списания
+  const [selectedWriteOffItem, setSelectedWriteOffItem] = useState(null);
+  const [writeOffQuantity, setWriteOffQuantity] = useState(1);
+  const [writeOffReason, setWriteOffReason] = useState('');
 
-  const handleDeliveryConfirm = () => {
-    // Реализация подтверждения доставки
-    setDeliveryStatus('completed');
-    toast.success('Доставка подтверждена');
-  };
+  // Дополнительные состояния
+  const [isDeliveryAddressModalOpen, setIsDeliveryAddressModalOpen] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState(null);
+
+  // Проверка наличия ID заказа
+  const isValidOrderId = id && id !== 'new';
 
   useEffect(() => {
-    const fetchOrderData = async () => {
-      if (!id) {
-        logger.warn('OrderProcessing', 'No order ID provided');
+    console.log('OrderProcessing Component Mounted');
+    console.log('Order ID:', id);
+  }, [id]);
+
+  useEffect(() => {
+    console.log('Supabase headers:', supabase.headers);
+    console.log('Supabase config:', supabase.config);
+
+    const fetchOrder = async () => {
+      if (!isValidOrderId) {
+        setLoading(false);
         return;
       }
 
-      setLoading(true);
-      logger.log('OrderProcessing', `Searching for order with ID: ${id}`);
-
       try {
-        // Ищем заказ по номеру в mockOrders
-        const mockOrder = mockOrders.find(order => {
-          const orderNumber = order.number.replace(/[^0-9]/g, '');
-          logger.debug('OrderProcessing', `Comparing order numbers: ${orderNumber} === ${id}`);
-          return orderNumber === id;
-        });
+        console.log(`Attempting to fetch order with ID: ${id}`);
         
-        if (mockOrder) {
-          logger.log('OrderProcessing', 'Found order', { 
-            orderNumber: mockOrder.number,
-            status: mockOrder.status,
-            recipient: mockOrder.details.recipient.name
-          });
-          setOrderData(mockOrder);
-          setOrderStatus(mockOrder.status || ORDER_STATUS.NEW);
-        } else {
-          logger.error('OrderProcessing', `Order not found for ID: ${id}`);
-          navigate('/orders');
+        // Проверяем и преобразуем ID перед запросом
+        const sanitizedId = id.trim();
+        
+        // Если ID выглядит как номер заказа (не UUID), ищем по номеру
+        const fetchedOrder = await (sanitizedId.match(/^\d+$/) 
+          ? fetchOrderByNumber(sanitizedId) 
+          : ordersService.fetchOrderById(sanitizedId));
+        
+        console.log('Fetched order details:', fetchedOrder);
+        
+        if (!fetchedOrder) {
+          console.warn(`No order found for ID: ${id}`);
+          throw new Error('Заказ не найден');
         }
-      } catch (error) {
-        logger.error('OrderProcessing', 'Error fetching order', { error: error.message });
+        
+        setOrder(fetchedOrder);
+        setOrderStatus(fetchedOrder.status || ORDER_STATUS.NEW);
+        
+        // Инициализируем состояния на основе полученного заказа
+        setItems(fetchedOrder.items || []);
+        setTotalCost(fetchedOrder.total_price || 0);
+        setDeliveryInfo({
+          address: fetchedOrder.delivery_address || fetchedOrder.address || '',
+          entrance: '',
+          floor: '',
+          apartment: '',
+          comment: fetchedOrder.client_comment || ''
+        });
+
+        // Дополнительные состояния
+        setDeliveryAddress(fetchedOrder.delivery_address || fetchedOrder.address || '');
+        setCourier(fetchedOrder.florist_name || null);
+        setEstimatedTime(fetchedOrder.delivery_time || null);
+
+      } catch (err) {
+        console.error('Detailed error in order fetching:', err);
+        setError(err.message);
+        toast.error(err.message);
         navigate('/orders');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOrderData();
-  }, [id, navigate]);
+    // Функция для поиска заказа по номеру
+    const fetchOrderByNumber = async (orderNumber) => {
+      try {
+        console.log(`🔍 Attempting to fetch order by number: ${orderNumber}`);
+        console.log('🚀 Supabase configuration:', {
+          url: supabase.supabaseUrl,
+          headers: JSON.stringify(supabase.headers),
+        });
+        
+        // Используем RPC-функцию для расширенного поиска
+        const { data: extendedData, error: extendedError } = await supabase.rpc('search_orders_by_number', { 
+          search_term: orderNumber 
+        });
 
-  // Показываем загрузку только когда реально что-то загружаем
+        console.log('🔬 RPC Search Results:', {
+          data: extendedData,
+          error: extendedError
+        });
+
+        if (extendedData && extendedData.length > 0) {
+          console.log('✅ Order found with extended search:', extendedData[0]);
+          return extendedData[0];
+        }
+
+        if (extendedError) {
+          console.warn('❌ Extended search error:', extendedError);
+        }
+
+        // Если заказ не найден
+        throw new Error(`Не удалось найти заказ с номером ${orderNumber}`);
+      } catch (error) {
+        console.error('🚨 Final error in fetchOrderByNumber:', error);
+        throw new Error(`Не удалось найти заказ с номером ${orderNumber}`);
+      }
+    };
+
+    fetchOrder();
+  }, [id, navigate, isValidOrderId]);
+
+  // Обработчики событий
+  const handlePhotoUpload = () => {
+    toast.success('Фото отправлено клиенту');
+  };
+
+  // Условный рендеринг
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-4">
-        <div className="text-lg">Загрузка заказа...</div>
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div>
       </div>
     );
   }
 
-  // Не показываем ничего, пока нет данных
-  if (!orderData) {
-    return null;
+  if (error || !order) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <AlertTriangle className="text-red-500 w-16 h-16 mb-4" />
+        <p className="text-red-500 text-xl">{error || 'Заказ не найден'}</p>
+        <Button onClick={() => navigate('/orders')} className="mt-4">
+          Вернуться к заказам
+        </Button>
+      </div>
+    );
   }
 
-  const renderTab = () => {
-    switch (activeTab) {
-      case 'order':
-        return <OrderTab />;
-      case 'bouquet':
-        return <BouquetTab />;
-      case 'delivery':
-        return <DeliveryTab />;
-      default:
-        return <OrderTab />;
-    }
-  };
-
+  // Основной рендеринг
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-4">
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => navigate('/orders')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h2 className="text-xl font-bold">Заказ {orderData?.number}</h2>
+            <h2 className="text-xl font-bold">Заказ {order.number}</h2>
             <Badge variant={orderStatus === ORDER_STATUS.PAID ? "success" : "warning"}>
               {getStatusLabel(orderStatus)}
             </Badge>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Clock className="w-5 h-5 text-gray-500" />
-          <span>{orderData?.time}</span>
+        
+        <div className="flex items-center space-x-2">
+          <Tabs defaultValue="order" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="order">Заказ</TabsTrigger>
+              <TabsTrigger value="bouquet">Букет</TabsTrigger>
+              <TabsTrigger value="delivery">Доставка</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
-      
-      <div className="flex mb-4 space-x-4 p-4">
-        <button 
-          className={`px-4 py-2 rounded ${activeTab === 'order' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setActiveTab('order')}
-        >
-          Заказ
-        </button>
-        <button 
-          className={`px-4 py-2 rounded ${activeTab === 'bouquet' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setActiveTab('bouquet')}
-        >
-          Букет
-        </button>
-        <button 
-          className={`px-4 py-2 rounded ${activeTab === 'delivery' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setActiveTab('delivery')}
-        >
-          Доставка
-        </button>
-      </div>
-      
-      {renderTab()}
 
-      {/* Нижняя панель с действиями */}
-      <div className="border-t bg-white p-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-sm text-gray-500">Итого</p>
-            <p className="text-xl font-bold">{orderData.totalPrice}</p>
-          </div>
-          <div className="flex gap-2">
-            {activeTab === 'order' && (
-              <>
-                <Button variant="outline" onClick={() => setShowRefundModal(true)}>
-                  Отклонить
-                </Button>
-                <Button onClick={() => setShowPaymentModal(true)}>
-                  Принять
-                </Button>
-              </>
-            )}
-            {activeTab === 'bouquet' && (
-              <Button onClick={handlePhotoUpload}>
-                Отправить фото
-              </Button>
-            )}
-            {activeTab === 'delivery' && (
-              <Button onClick={handleDeliveryConfirm}>
-                Подтвердить доставку
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsContent value="order">
+          <OrderTab 
+            order={order} 
+            items={items} 
+            totalCost={totalCost} 
+            orderStatus={orderStatus}
+          />
+        </TabsContent>
+        <TabsContent value="bouquet">
+          <BouquetTab 
+            order={order}
+            bouquetComposition={bouquetComposition}
+            setBouquetComposition={setBouquetComposition}
+            photos={photos}
+            setPhotos={setPhotos}
+          />
+        </TabsContent>
+        <TabsContent value="delivery">
+          <DeliveryTab 
+            order={order}
+            deliveryInfo={deliveryInfo}
+            setDeliveryInfo={setDeliveryInfo}
+            courier={courier}
+            estimatedTime={estimatedTime}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
