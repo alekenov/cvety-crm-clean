@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { H2, H3, Body, Caption } from '@/components/ui/Typography';
 
 export default function OrderProcessing() {
   const [activeTab, setActiveTab] = useState('info');
@@ -45,7 +46,7 @@ export default function OrderProcessing() {
       timeSlot: '12:00 - 15:00',
       type: 'Срочная доставка'
     },
-    message: 'Добрый день! Большая просьба собрать букет из нежно-розовых оттенков 💗',
+    message: 'Добрый день! Большая просьба собрать букет из нежно-розовых оттенков ',
     cardText: 'Aika, с днем рождения! Misha',
     totalAmount: 15500,
     paymentStatus: 'Оплачен онлайн'
@@ -82,8 +83,8 @@ export default function OrderProcessing() {
         <div className="flex items-center">
           <ArrowLeft className="mr-2" />
           <div className="flex-1">
-            <h1 className="font-bold">Заказ №{order.id}</h1>
-            <div className="text-sm text-gray-500">Новый заказ • {order.paymentStatus}</div>
+            <H2 className="font-bold">Заказ №{order.id}</H2>
+            <Body size="sm" className="text-gray-500">Новый заказ • {order.paymentStatus}</Body>
           </div>
         </div>
 
@@ -114,55 +115,55 @@ export default function OrderProcessing() {
           <div className="bg-orange-50 p-3 rounded-lg flex items-center">
             <Clock className="text-orange-500 mr-2" size={20} />
             <div>
-              <div className="font-medium">{order.delivery.type}</div>
-              <div className="text-sm">
+              <Body className="font-medium">{order.delivery.type}</Body>
+              <Body size="sm">
                 {order.delivery.date} • {order.delivery.timeSlot}
-              </div>
+              </Body>
             </div>
           </div>
 
           {/* Товары */}
           <div className="bg-white rounded-lg p-4">
-            <h2 className="font-medium mb-3">Состав заказа:</h2>
+            <H3 className="font-medium mb-3">Состав заказа:</H3>
             {order.items.map((item, index) => (
               <div key={item.id} className={`flex items-start ${index > 0 ? 'mt-4 pt-4 border-t' : ''}`}>
                 {item.image && (
                   <img src={item.image} alt="" className="w-20 h-20 rounded-lg object-cover" />
                 )}
                 <div className="ml-3 flex-1">
-                  <div className="font-medium">{item.name}</div>
+                  <Body className="font-medium">{item.name}</Body>
                   {item.description && (
-                    <div className="text-sm text-gray-500">{item.description}</div>
+                    <Body size="sm" className="text-gray-500">{item.description}</Body>
                   )}
-                  <div className="text-green-600 font-bold mt-1">
+                  <Body className="text-green-600 font-bold mt-1">
                     {item.price.toLocaleString()} ₸
-                  </div>
+                  </Body>
                 </div>
               </div>
             ))}
             <div className="mt-4 pt-4 border-t flex justify-between">
-              <span className="font-medium">Итого:</span>
-              <span className="font-bold">{order.totalAmount.toLocaleString()} ₸</span>
+              <Body className="font-medium">Итого:</Body>
+              <Body className="font-bold">{order.totalAmount.toLocaleString()} ₸</Body>
             </div>
           </div>
 
           {/* Заказчик */}
           <div className="bg-white rounded-lg p-4">
-            <h2 className="font-medium mb-3">Заказчик:</h2>
+            <H3 className="font-medium mb-3">Заказчик:</H3>
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium flex items-center">
-                  {order.customer.name}
+                  <Body>{order.customer.name}</Body>
                   {order.customer.isRegular && (
-                    <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                    <Caption className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
                       Постоянный клиент
-                    </span>
+                    </Caption>
                   )}
                 </div>
-                <div className="text-sm text-gray-500">{order.customer.phone}</div>
-                <div className="text-sm text-gray-500 mt-1">
+                <Body size="sm" className="text-gray-500">{order.customer.phone}</Body>
+                <Body size="sm" className="text-gray-500 mt-1">
                   {order.customer.previousOrders} заказов ранее
-                </div>
+                </Body>
               </div>
               <div className="flex space-x-2">
                 <button className="p-2 bg-green-100 text-green-600 rounded-lg">
@@ -177,11 +178,11 @@ export default function OrderProcessing() {
 
           {/* Получатель */}
           <div className="bg-white rounded-lg p-4">
-            <h2 className="font-medium mb-3">Получатель:</h2>
+            <H3 className="font-medium mb-3">Получатель:</H3>
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium">{order.recipient.name}</div>
-                <div className="text-sm text-gray-500">{order.recipient.phone}</div>
+                <Body className="font-medium">{order.recipient.name}</Body>
+                <Body size="sm" className="text-gray-500">{order.recipient.phone}</Body>
               </div>
               <div className="flex space-x-2">
                 <button className="p-2 bg-green-100 text-green-600 rounded-lg">
@@ -197,7 +198,7 @@ export default function OrderProcessing() {
           {/* Комментарий и открытка */}
           {order.message && (
             <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-sm">{order.message}</div>
+              <Body size="sm">{order.message}</Body>
             </div>
           )}
           
@@ -205,8 +206,8 @@ export default function OrderProcessing() {
             <div className="bg-pink-50 p-4 rounded-lg flex items-start">
               <Gift className="text-pink-500 mr-2 flex-shrink-0" size={18} />
               <div>
-                <div className="text-sm font-medium mb-1">Текст открытки:</div>
-                <div className="text-sm italic">"{order.cardText}"</div>
+                <Body size="sm" className="font-medium mb-1">Текст открытки:</Body>
+                <Body size="sm" className="italic">"{order.cardText}"</Body>
               </div>
             </div>
           )}

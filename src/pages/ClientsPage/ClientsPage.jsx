@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, X } from 'lucide-react';
 import ClientForm from './components/ClientForm';
+import { Heading, Text, Label } from '@/components/ui/Typography/Typography';
 
 function ClientsPage() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ function ClientsPage() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState('');
+  const [selectedClient, setSelectedClient] = useState(null);
 
   // Mock clients data
   const [clients, setClients] = useState([
@@ -91,163 +93,11 @@ function ClientsPage() {
     return matchesSearch && matchesTags;
   });
 
-  // Desktop view client row
-  const ClientRow = ({ client }) => (
-    <tr 
-      className="hover:bg-gray-50 cursor-pointer"
-      onClick={() => navigate(`/clients/${client.id}`)}
-    >
-      <td className="px-6 py-4">
-        <div>
-          <div className="font-medium text-gray-900">{client.name}</div>
-          <div className="text-sm text-gray-500">{client.phone}</div>
-        </div>
-      </td>
-      <td className="px-6 py-4">
-        <div className="flex flex-wrap gap-2">
-          {client.tags.map((tag, index) => (
-            <span
-              key={index}
-              className="group inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRemoveTag(client.id, tag);
-              }}
-            >
-              {tag}
-              <X className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100" />
-            </span>
-          ))}
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowTagInput(client.id);
-            }}
-            variant="ghost"
-            size="sm"
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            Add Tag
-          </Button>
-          {showTagInput === client.id && (
-            <div 
-              className="absolute bg-white shadow-lg rounded-lg p-2 z-10"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  className="border rounded px-2 py-1 text-sm"
-                  placeholder="New tag"
-                  autoFocus
-                />
-                <Button
-                  onClick={() => handleAddTag(client.id)}
-                  variant="primary"
-                  size="sm"
-                >
-                  Add
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </td>
-      <td className="px-6 py-4 text-right">{client.totalOrders}</td>
-      <td className="px-6 py-4 text-right font-medium text-green-600">
-        {client.totalSpent.toLocaleString()} ₸
-      </td>
-      <td className="px-6 py-4 text-right text-sm text-gray-500">
-        {new Date(client.lastOrder).toLocaleDateString()}
-      </td>
-    </tr>
-  );
-
-  // Mobile view client card
-  const ClientCard = ({ client }) => (
-    <div 
-      className="bg-white p-4 rounded-lg shadow-sm"
-      onClick={() => navigate(`/clients/${client.id}`)}
-    >
-      <div className="flex justify-between items-start mb-2">
-        <div>
-          <h3 className="font-medium">{client.name}</h3>
-          <p className="text-sm text-gray-500">{client.phone}</p>
-        </div>
-        <span className="text-sm font-medium text-green-600">
-          {client.totalSpent.toLocaleString()} ₸
-        </span>
-      </div>
-      
-      <div className="flex flex-wrap gap-2 mt-2">
-        {client.tags.map((tag, index) => (
-          <span
-            key={index}
-            className="group inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRemoveTag(client.id, tag);
-            }}
-          >
-            {tag}
-            <X className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100" />
-          </span>
-        ))}
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowTagInput(client.id);
-          }}
-          variant="ghost"
-          size="sm"
-        >
-          <Plus className="w-3 h-3 mr-1" />
-          Add Tag
-        </Button>
-        {showTagInput === client.id && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowTagInput(false);
-            }}
-          >
-            <div 
-              className="bg-white p-4 rounded-lg w-80"
-              onClick={e => e.stopPropagation()}
-            >
-              <h3 className="font-medium mb-4">Add New Tag</h3>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  className="flex-1 border rounded-lg px-3 py-2"
-                  placeholder="Enter tag name"
-                  autoFocus
-                />
-                <Button
-                  onClick={() => handleAddTag(client.id)}
-                  variant="primary"
-                  size="md"
-                >
-                  Add
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <div className="p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Clients</h1>
+        <Heading as="h1" className="text-2xl font-bold">Clients</Heading>
         <div className="flex items-center gap-4">
           <Button
             onClick={() => setShowSearch(!showSearch)}
@@ -262,7 +112,7 @@ function ClientsPage() {
             size="md"
           >
             <Plus className="w-5 h-5 mr-2" />
-            Add Client
+            <Text>Add Client</Text>
           </Button>
         </div>
       </div>
@@ -293,7 +143,7 @@ function ClientsPage() {
                 variant={selectedTags.includes(tag) ? "secondary" : "outline"}
                 size="sm"
               >
-                {tag}
+                <Text>{tag}</Text>
                 {selectedTags.includes(tag) && (
                   <X className="w-4 h-4 ml-1" />
                 )}
@@ -308,26 +158,60 @@ function ClientsPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Client
+              <th scope="col" className="px-6 py-3 text-left">
+                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Client</Text>
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tags
+              <th scope="col" className="px-6 py-3 text-left">
+                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Tags</Text>
               </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Orders
+              <th scope="col" className="px-6 py-3 text-right">
+                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Orders</Text>
               </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Spent
+              <th scope="col" className="px-6 py-3 text-right">
+                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Total Spent</Text>
               </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Last Order
+              <th scope="col" className="px-6 py-3 text-right">
+                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Last Order</Text>
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {filteredClients.map(client => (
-              <ClientRow key={client.id} client={client} />
+              <tr 
+                key={client.id}
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => navigate(`/clients/${client.id}`)}
+              >
+                <td className="px-6 py-4">
+                  <div>
+                    <Text className="font-medium text-gray-900">{client.name}</Text>
+                    <Text size="sm" className="text-gray-500">{client.phone}</Text>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-wrap gap-2">
+                    {client.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
+                      >
+                        <Text size="sm">{tag}</Text>
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <Text>{client.totalOrders}</Text>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <Text className="font-medium text-green-600">{client.totalSpent.toLocaleString()} ₸</Text>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <Text size="sm" className="text-gray-500">
+                    {new Date(client.lastOrder).toLocaleDateString()}
+                  </Text>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -336,7 +220,32 @@ function ClientsPage() {
       {/* Mobile View */}
       <div className="md:hidden space-y-4">
         {filteredClients.map(client => (
-          <ClientCard key={client.id} client={client} />
+          <div 
+            key={client.id}
+            className="bg-white p-4 rounded-lg shadow-sm"
+            onClick={() => navigate(`/clients/${client.id}`)}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <Heading as="h3" className="font-medium">{client.name}</Heading>
+                <Text size="sm" className="text-gray-500">{client.phone}</Text>
+              </div>
+              <Text size="sm" className="font-medium text-green-600">
+                {client.totalSpent.toLocaleString()} ₸
+              </Text>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mt-2">
+              {client.tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
+                >
+                  <Text size="sm">{tag}</Text>
+                </span>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -344,8 +253,9 @@ function ClientsPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Add New Client</h2>
+            <Heading as="h2" className="text-xl font-bold mb-4">Add New Client</Heading>
             <ClientForm
+              client={selectedClient}
               onSave={(data) => {
                 console.log('Save client:', data);
                 setShowForm(false);

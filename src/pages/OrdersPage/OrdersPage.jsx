@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 import { ordersService } from '../../services/supabaseClient';
 import { Clock, Phone, MapPin, MessageCircle, Truck, Store } from 'lucide-react';
+import { Heading, Text, Label } from '@/components/ui/Typography/Typography';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -87,23 +88,23 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
     >
       <CardContent className="p-4">
         <div className="flex flex-wrap justify-between items-center mb-3">
-          <span className="font-bold text-lg">{order.number}</span>
+          <Text variant="h2" className="font-bold text-lg">{order.number}</Text>
           <Badge className={`${statusColors[order.status]} text-white`}>
             {order.status}
           </Badge>
-          <span className="font-semibold text-green-600 w-full sm:w-auto mt-2 sm:mt-0">{order.totalPrice}</span>
+          <Text variant="body" className="font-semibold text-green-600 w-full sm:w-auto mt-2 sm:mt-0">{order.totalPrice}</Text>
         </div>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 flex items-center">
+            <Text variant="body" className="text-gray-600 flex items-center">
               <Clock size={16} className="mr-1" />
               {getDateText(order.date)}, {order.time}
-            </span>
+            </Text>
           </div>
 
           <div className="space-y-1">
-            <p className="flex items-center text-gray-600">
+            <Text variant="body" className="flex items-center text-gray-600">
               <Phone size={16} className="mr-1" />
               {order.phone}
               <Button
@@ -130,22 +131,22 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
                 <MessageCircle size={16} className="text-green-500" />
                 <span className="sr-only">WhatsApp client</span>
               </Button>
-            </p>
-            <p className="flex items-center text-gray-600">
+            </Text>
+            <Text variant="body" className="flex items-center text-gray-600">
               <MapPin size={16} className="mr-1" />
               {order.address}
-            </p>
+            </Text>
           </div>
 
           <div>
-            <h4 className="font-medium mb-2">Состав заказа:</h4>
+            <Text variant="h3" className="font-medium mb-2">Состав заказа:</Text>
             <div className="space-y-2">
               {order.items.map((item, index) => (
                 <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                   <div className="flex items-center">
-                    <span className="text-sm">{item.name}</span>
+                    <Text variant="body">{item.name}</Text>
                   </div>
-                  <span className="font-medium">{item.price}</span>
+                  <Text variant="body" className="font-medium">{item.price}</Text>
                 </div>
               ))}
             </div>
@@ -660,14 +661,13 @@ export default function OrdersPage() {
       <style>{orderVanishStyles}</style>
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
+          <Heading as="h1" className="text-3xl font-bold text-gray-900">Заказы</Heading>
           <Button 
             onClick={handleNewOrder} 
             variant="primary"
             size="md"
           >
-            <div />
-            Новый заказ
+            <Text>Новый заказ</Text>
           </Button>
         </div>
 
@@ -675,18 +675,20 @@ export default function OrdersPage() {
           <CardContent className="p-4">
             <div className="space-y-4">
               <div className="flex-1 min-w-[200px]">
-                <h3 className="text-sm font-medium mb-2">Статус заказа</h3>
+                <Label className="block mb-2">Статус заказа</Label>
                 <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Выберите статус" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Все статусы</SelectItem>
+                    <SelectItem value="all">
+                      <Text>Все статусы</Text>
+                    </SelectItem>
                     {Object.keys(statusColors).map(status => (
                       <SelectItem key={status} value={status}>
                         <div className="flex items-center">
                           <span className={`w-2 h-2 rounded-full mr-2 ${statusColors[status]}`} />
-                          {status}
+                          <Text>{status}</Text>
                         </div>
                       </SelectItem>
                     ))}
@@ -695,14 +697,14 @@ export default function OrdersPage() {
               </div>
 
               <div>
-                <h3 className="text-sm font-medium mb-2">Тип доставки</h3>
+                <Label className="text-sm font-medium mb-2">Тип доставки</Label>
                 <div className="flex gap-2">
                   <Button
                     variant={deliveryTypeFilter === 'all' ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => handleDeliveryTypeFilterChange('all')}
                   >
-                    Все типы доставки
+                    <Text>Все типы доставки</Text>
                   </Button>
                   <Button
                     variant={deliveryTypeFilter === 'delivery' ? 'primary' : 'outline'}
@@ -710,7 +712,7 @@ export default function OrdersPage() {
                     onClick={() => handleDeliveryTypeFilterChange('delivery')}
                   >
                     <Truck size={16} className="mr-1" />
-                    Доставка
+                    <Text>Доставка</Text>
                   </Button>
                   <Button
                     variant={deliveryTypeFilter === 'pickup' ? 'primary' : 'outline'}
@@ -718,48 +720,47 @@ export default function OrdersPage() {
                     onClick={() => handleDeliveryTypeFilterChange('pickup')}
                   >
                     <Store size={16} className="mr-1" />
-                    Самовывоз
+                    <Text>Самовывоз</Text>
                   </Button>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-medium mb-2">Дата заказа</h3>
+                <Label className="text-sm font-medium mb-2">Дата заказа</Label>
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant={dateFilter === 'all' ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => handleDateFilterChange('all')}
                   >
-                    Все даты
+                    <Text>Все даты</Text>
                   </Button>
                   <Button
                     variant={dateFilter === 'today' ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => handleDateFilterChange('today')}
                   >
-                    Сегодня
+                    <Text>Сегодня</Text>
                   </Button>
                   <Button
                     variant={dateFilter === 'tomorrow' ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => handleDateFilterChange('tomorrow')}
                   >
-                    Завтра
+                    <Text>Завтра</Text>
                   </Button>
                   <div>
                     <Button
                       variant={dateFilter === 'custom' ? 'primary' : 'outline'}
                       size="sm"
                     >
-                      <div />
-                      {customDate ? 'Выбранная дата' : 'Выбрать дату'}
+                      <Text>{customDate ? 'Выбранная дата' : 'Выбрать дату'}</Text>
                     </Button>
                   </div>
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-medium mb-2">Поиск</h3>
+                <Label className="text-sm font-medium mb-2">Поиск</Label>
                 <div>
                   <div />
                   <input 

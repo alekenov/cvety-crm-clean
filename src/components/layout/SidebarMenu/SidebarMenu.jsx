@@ -9,7 +9,8 @@ import {
   Users,
   ShoppingCart,
   BarChart2,
-  Truck
+  Truck,
+  Palette
 } from 'lucide-react';
 
 function SidebarMenu() {
@@ -26,6 +27,10 @@ function SidebarMenu() {
     { id: 'delivery', path: '/delivery', icon: Truck, label: 'Доставка' },
     { id: 'analytics', path: '/analytics', icon: BarChart2, label: 'Аналитика' },
     { id: 'settings', path: '/settings', icon: Settings, label: 'Настройки' },
+  ];
+
+  const designSystem = [
+    { id: 'typography', path: '/design/typography', icon: Palette, label: 'Типографика' },
   ];
 
   function getLinkClass(isActive) {
@@ -54,13 +59,24 @@ function SidebarMenu() {
           ))}
         </div>
 
-        <div className="mb-4 px-6">
-          <div className="text-sm font-medium text-gray-500 mb-2">Сервисы</div>
-          <div className="border-t"></div>
+        <div className="mb-8">
+          {serviceMenu.map((item) => (
+            <NavLink
+              key={item.id}
+              to={item.path}
+              className={({ isActive }) => getLinkClass(isActive)}
+            >
+              <item.icon size={20} className="mr-3" />
+              {item.label}
+            </NavLink>
+          ))}
         </div>
 
-        <div>
-          {serviceMenu.map((item) => (
+        <div className="pt-4 border-t">
+          <div className="px-6 mb-2 text-xs font-medium text-gray-400 uppercase">
+            Дизайн система
+          </div>
+          {designSystem.map((item) => (
             <NavLink
               key={item.id}
               to={item.path}
@@ -83,4 +99,4 @@ function SidebarMenu() {
   );
 }
 
-export default SidebarMenu; 
+export default SidebarMenu;

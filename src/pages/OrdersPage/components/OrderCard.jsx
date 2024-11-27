@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Heading, Text, Label, Caption } from '@/components/ui/Typography/Typography';
 
 const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReaction, onClick }) => {
   const getDateText = (dateString) => {
@@ -47,50 +48,53 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
     <Card className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200" onClick={onClick}>
       <CardContent className="p-4">
         <div className="flex flex-wrap justify-between items-center mb-3">
-          <span className="font-bold text-lg">{order.number}</span>
+          <Heading as="h3" className="font-bold">{order.number}</Heading>
           <Badge className={`${statusColors[order.status]} text-white`}>
-            {order.status}
+            <Caption className="text-white">{order.status}</Caption>
           </Badge>
-          <span className="font-semibold text-green-600 w-full sm:w-auto mt-2 sm:mt-0">{order.totalPrice}</span>
+          <Heading as="h4" className="font-semibold text-green-600 w-full sm:w-auto mt-2 sm:mt-0">{order.totalPrice}</Heading>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600 flex items-center">
-              <Clock size={16} className="mr-1" />
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Clock size={16} />
+            <Text className="text-gray-600">
               {getDateText(order.date)}, {order.time}
-            </span>
+            </Text>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Phone size={16} />
+            <Text className="text-gray-600">
+              {order.client}
+            </Text>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-2 p-0 h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = `tel:${order.client}`;
+              }}
+            >
+              <Phone size={16} className="text-blue-500" />
+              <span className="sr-only">Call client</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-1 p-0 h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`https://wa.me/${order.client.replace(/[^0-9]/g, '')}`);
+              }}
+            >
+              <MessageCircle size={16} className="text-green-500" />
+              <span className="sr-only">WhatsApp client</span>
+            </Button>
           </div>
 
           <div className="space-y-1">
-            <p className="flex items-center text-gray-600">
-              <Phone size={16} className="mr-1" />
-              {order.client}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-2 p-0 h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `tel:${order.client}`;
-                }}
-              >
-                <Phone size={16} className="text-blue-500" />
-                <span className="sr-only">Call client</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-1 p-0 h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(`https://wa.me/${order.client.replace(/[^0-9]/g, '')}`);
-                }}
-              >
-                <MessageCircle size={16} className="text-green-500" />
-                <span className="sr-only">WhatsApp client</span>
-              </Button>
-            </p>
             <p className="flex items-center text-gray-600">
               <MapPin size={16} className="mr-1" />
               {order.deliveryType === 'pickup' 
@@ -127,7 +131,7 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
           )}
 
           <div>
-            <h4 className="font-medium mb-2">Состав заказа:</h4>
+            <Heading as="h4" className="font-medium mb-2">Состав заказа:</Heading>
             <div className="space-y-2">
               {order.items.map((item, index) => (
                 <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
@@ -137,9 +141,13 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
                       alt={item.description} 
                       className="w-12 h-12 object-cover rounded-md mr-2"
                     />
-                    <span className="text-sm">{item.description}</span>
+                    <Text>
+                      {item.description}
+                    </Text>
                   </div>
-                  <span className="font-medium">{item.price}</span>
+                  <Text className="font-medium">
+                    {item.price}
+                  </Text>
                 </div>
               ))}
             </div>
@@ -147,11 +155,13 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
 
           {order.clientComment && (
             <div className="bg-yellow-50 p-2 rounded-lg">
-              <h4 className="font-medium mb-1 flex items-center">
+              <Heading as="h4" className="font-medium mb-1 flex items-center">
                 <MessageCircle size={16} className="mr-1 text-yellow-500" />
                 Комментарий клиента:
-              </h4>
-              <p className="text-sm">{order.clientComment}</p>
+              </Heading>
+              <Text>
+                {order.clientComment}
+              </Text>
             </div>
           )}
 
@@ -159,15 +169,17 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
             <div className={`p-2 rounded-lg ${
               order.clientReaction === 'positive' ? 'bg-green-50' : 'bg-red-50'
             }`}>
-              <h4 className="font-medium mb-1 flex items-center">
+              <Heading as="h4" className="font-medium mb-1 flex items-center">
                 {order.clientReaction === 'positive' ? (
                   <ThumbsUp size={16} className="mr-1 text-green-500" />
                 ) : (
                   <ThumbsDown size={16} className="mr-1 text-red-500" />
                 )}
                 Реакция клиента:
-              </h4>
-              <p className="text-sm">{order.clientReactionComment}</p>
+              </Heading>
+              <Text>
+                {order.clientReactionComment}
+              </Text>
               {order.clientReaction === 'negative' && !order.reassemblyRequested && (
                 <Button 
                   onClick={(e) => {
@@ -186,11 +198,13 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
 
           {order.deliveryProblem && (
             <div className="bg-red-50 p-2 rounded-lg">
-              <h4 className="font-medium mb-1 flex items-center text-red-700">
+              <Heading as="h4" className="font-medium mb-1 flex items-center text-red-700">
                 <AlertTriangle size={16} className="mr-1" />
                 Проблема с доставкой:
-              </h4>
-              <p className="text-sm text-red-700">{order.deliveryProblem}</p>
+              </Heading>
+              <Text className="text-red-700">
+                {order.deliveryProblem}
+              </Text>
             </div>
           )}
 

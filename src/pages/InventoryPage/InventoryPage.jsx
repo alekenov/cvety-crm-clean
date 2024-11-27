@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
+import { H1, H3, Body, Caption } from '@/components/ui/Typography';
 import RevisionMode from './components/RevisionMode';
 import HistoryMode from './components/HistoryMode';
 import toast from 'react-hot-toast';
@@ -170,8 +171,8 @@ const InventoryPage = () => {
         <div className="bg-white rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Всего позиций</p>
-              <p className="text-2xl font-bold">{stats.totalItems}</p>
+              <Body size="sm" className="text-gray-500">Всего позиций</Body>
+              <Body size="xl" className="font-bold">{stats.totalItems}</Body>
             </div>
             <Box className="text-blue-500" size={24} />
           </div>
@@ -179,8 +180,8 @@ const InventoryPage = () => {
         <div className="bg-white rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Стоимость склада</p>
-              <p className="text-2xl font-bold text-green-500">{stats.totalValue.toLocaleString()} ₸</p>
+              <Body size="sm" className="text-gray-500">Стоимость склада</Body>
+              <Body size="xl" className="font-bold text-green-500">{stats.totalValue.toLocaleString()} ₸</Body>
             </div>
             <Wallet className="text-green-500" size={24} />
           </div>
@@ -188,8 +189,8 @@ const InventoryPage = () => {
         <div className="bg-white rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Последняя ревизия</p>
-              <p className="text-2xl font-bold">{new Date(stats.lastRevisionDate).toLocaleDateString()}</p>
+              <Body size="sm" className="text-gray-500">Последняя ревизия</Body>
+              <Body size="xl" className="font-bold">{new Date(stats.lastRevisionDate).toLocaleDateString()}</Body>
             </div>
             <Calendar className="text-purple-500" size={24} />
           </div>
@@ -302,10 +303,10 @@ const InventoryPage = () => {
           >
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h3 className="font-medium">{item.name}</h3>
-                <p className="text-sm text-gray-500">{item.type} • {item.price.toLocaleString()} ₸/{item.unit}</p>
+                <H3 className="font-medium">{item.name}</H3>
+                <Body size="sm" className="text-gray-500">{item.type} • {item.price.toLocaleString()} ₸/{item.unit}</Body>
               </div>
-              <span className={`inline-block px-2 py-1 rounded-full text-sm ${
+              <Caption className={`inline-block px-2 py-1 rounded-full ${
                 item.status === 'in_stock' 
                   ? 'bg-green-100 text-green-800' 
                   : item.status === 'low_stock'
@@ -315,16 +316,16 @@ const InventoryPage = () => {
                 {item.status === 'in_stock' ? 'В наличии' :
                  item.status === 'low_stock' ? 'Заканчивается' :
                  'Нет в наличии'}
-              </span>
+              </Caption>
             </div>
             
             <div className="text-sm text-gray-600 mb-4">
-              <p>Локация: {item.location}</p>
+              <Body size="sm">Локация: {item.location}</Body>
             </div>
 
             {/* Улучшенный ввод количества без стрелок */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <label className="text-sm text-gray-600 block mb-2">оличество:</label>
+              <Body size="sm" className="text-gray-600 block mb-2">Количество:</Body>
               <input
                 type="number"
                 value={item.quantity}
@@ -341,15 +342,15 @@ const InventoryPage = () => {
                 inputMode="numeric"
                 pattern="[0-9]*"
               />
-              <div className="text-center mt-2 text-sm text-gray-500">
+              <Body size="sm" className="text-center mt-2 text-gray-500">
                 штук
-              </div>
+              </Body>
             </div>
 
             {item.quantity < item.min_quantity && item.quantity > 0 && (
-              <div className="mt-3 text-sm text-yellow-600 bg-yellow-50 p-2 rounded">
+              <Body size="sm" className="mt-3 text-yellow-600 bg-yellow-50 p-2 rounded">
                 Мало товара (меньше {item.min_quantity} шт.)
-              </div>
+              </Body>
             )}
           </div>
         ))}
@@ -393,7 +394,7 @@ const InventoryPage = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <Package className="text-blue-500" size={24} />
-              <h1 className="text-xl font-bold">Склад</h1>
+              <H1 className="text-xl font-bold">Склад</H1>
             </div>
             <div className="flex space-x-2">
               <Button
@@ -436,18 +437,18 @@ const InventoryPage = () => {
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="text-sm text-gray-500">Всего позиций</div>
-                <div className="text-lg font-bold">{sortedInventory.length}</div>
+                <Body size="sm" className="text-gray-500">Всего позиций</Body>
+                <Body size="lg" className="font-bold">{sortedInventory.length}</Body>
               </div>
               <div className="text-center">
-                <div className="text-sm text-gray-500">Стоимость склада</div>
-                <div className="text-lg font-bold text-green-500">
+                <Body size="sm" className="text-gray-500">Стоимость склада</Body>
+                <Body size="lg" className="font-bold text-green-500">
                   {sortedInventory.reduce((sum, item) => sum + (item.quantity * item.price), 0).toLocaleString()} ₸
-                </div>
+                </Body>
               </div>
               <div className="text-center">
-                <div className="text-sm text-gray-500">Последняя ревизия</div>
-                <div className="text-lg font-bold">{new Date('2024-03-21').toLocaleDateString()}</div>
+                <Body size="sm" className="text-gray-500">Последняя ревизия</Body>
+                <Body size="lg" className="font-bold">{new Date('2024-03-21').toLocaleDateString()}</Body>
               </div>
             </div>
           </div>
@@ -459,7 +460,7 @@ const InventoryPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg w-full max-w-md">
             <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="font-semibold">Новый товар</h3>
+              <H3 className="font-semibold">Новый товар</H3>
               <Button
                 variant="ghost"
                 size="sm"
