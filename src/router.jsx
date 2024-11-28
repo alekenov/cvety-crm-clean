@@ -18,6 +18,7 @@ import ProductDetails from './pages/WholesalePage/ProductDetails';
 import CheckoutPage from './pages/WholesalePage/CheckoutPage';
 import OrderConfirmationPage from './pages/WholesalePage/OrderConfirmationPage';
 import TypographyPage from './pages/DesignSystem/TypographyPage';
+import DesignSystem from './pages/DesignSystem/DesignSystem';
 
 // Компонент для 404 страницы
 function NotFound() {
@@ -143,6 +144,10 @@ export const router = createBrowserRouter(
         {
           path: 'design/typography',
           element: <TypographyPage />,
+        },
+        {
+          path: 'components',
+          element: <DesignSystem />,
         },
         {
           path: '*',

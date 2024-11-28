@@ -10,7 +10,8 @@ import {
   ShoppingCart,
   BarChart2,
   Truck,
-  Palette
+  Palette,
+  Box
 } from 'lucide-react';
 
 function SidebarMenu() {
@@ -31,6 +32,7 @@ function SidebarMenu() {
 
   const designSystem = [
     { id: 'typography', path: '/design/typography', icon: Palette, label: 'Типографика' },
+    { id: 'components', path: '/components', icon: Box, label: 'Компоненты' },
   ];
 
   function getLinkClass(isActive) {
