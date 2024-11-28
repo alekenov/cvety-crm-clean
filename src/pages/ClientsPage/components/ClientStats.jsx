@@ -1,6 +1,10 @@
 import React from 'react';
 
 function ClientStats({ client }) {
+  const averageOrder = client.totalOrders > 0 
+    ? Math.round(client.totalSpent / client.totalOrders) 
+    : 0;
+
   const stats = [
     {
       label: 'Total Orders',
@@ -12,7 +16,7 @@ function ClientStats({ client }) {
     },
     {
       label: 'Average Order',
-      value: `${client.averageOrder.toLocaleString()} ₸`
+      value: `${averageOrder.toLocaleString()} ₸`
     }
   ];
 

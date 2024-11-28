@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, X } from 'lucide-react';
 import ClientForm from './components/ClientForm';
 import { Heading, Text, Label } from '@/components/ui/Typography/Typography';
+import { clientsService } from '@/services/clientsService';
 
 function ClientsPage() {
   const navigate = useNavigate();
@@ -14,37 +15,32 @@ function ClientsPage() {
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Mock clients data
-  const [clients, setClients] = useState([
-    {
-      id: 1,
-      name: "Anna Smith",
-      phone: "+7 (777) 123-45-67",
-      totalOrders: 5,
-      totalSpent: 125000,
-      lastOrder: "2024-01-15",
-      tags: ['Regular', 'Prefers roses']
-    },
-    {
-      id: 2,
-      name: "John Doe",
-      phone: "+7 (777) 234-56-78",
-      totalOrders: 3,
-      totalSpent: 75000,
-      lastOrder: "2024-01-10",
-      tags: ['New']
-    },
-    {
-      id: 3,
-      name: "Maria Johnson",
-      phone: "+7 (777) 345-67-89",
-      totalOrders: 7,
-      totalSpent: 180000,
-      lastOrder: "2024-01-05",
-      tags: ['Regular', 'Birthday: March 15']
-    }
-  ]);
+  // Загрузка клиентов
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        setLoading(true);
+        const response = await clientsService.getClients({
+          search: searchQuery,
+          page: currentPage,
+          limit: 10
+        });
+        setClients(response.clients);
+        setTotalPages(response.totalPages);
+      } catch (error) {
+        console.error('Error loading clients:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadClients();
+  }, [searchQuery, currentPage]);
 
   const allTags = Array.from(
     new Set(clients.flatMap(client => client.tags))
@@ -58,40 +54,73 @@ function ClientsPage() {
     );
   };
 
-  const handleAddTag = (clientId) => {
+  const handleAddTag = async (clientId) => {
     if (newTag.trim()) {
-      setClients(prevClients => 
-        prevClients.map(client => 
-          client.id === clientId
-            ? { ...client, tags: [...client.tags, newTag.trim()] }
-            : client
-        )
-      );
-      setNewTag('');
-      setShowTagInput(false);
+      try {
+        const updatedClient = await clientsService.addClientTag(clientId, newTag.trim());
+        setClients(prevClients => 
+          prevClients.map(client => 
+            client.id === clientId ? updatedClient : client
+          )
+        );
+        setNewTag('');
+        setShowTagInput(false);
+      } catch (error) {
+        console.error('Error adding tag:', error);
+      }
     }
   };
 
-  const handleRemoveTag = (clientId, tagToRemove) => {
-    setClients(prevClients => 
-      prevClients.map(client => 
-        client.id === clientId
-          ? { ...client, tags: client.tags.filter(tag => tag !== tagToRemove) }
-          : client
-      )
-    );
+  const handleRemoveTag = async (clientId, tagToRemove) => {
+    try {
+      const updatedClient = await clientsService.removeClientTag(clientId, tagToRemove);
+      setClients(prevClients => 
+        prevClients.map(client => 
+          client.id === clientId ? updatedClient : client
+        )
+      );
+    } catch (error) {
+      console.error('Error removing tag:', error);
+    }
   };
 
   const filteredClients = clients.filter(client => {
-    const matchesSearch = !searchQuery || 
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.phone.includes(searchQuery);
-
     const matchesTags = selectedTags.length === 0 ||
       selectedTags.every(tag => client.tags.includes(tag));
 
-    return matchesSearch && matchesTags;
+    return matchesTags;
   });
+
+  const ClientCard = ({ client }) => {
+    return (
+      <div 
+        key={client.id}
+        className="bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => navigate(`/clients/${client.id}`)}
+      >
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <Text className="font-medium">{client.name}</Text>
+            <Text size="sm" className="text-gray-500">{client.phone}</Text>
+          </div>
+          <Text size="sm" className="font-medium text-green-600">
+            {client.totalSpent.toLocaleString()} ₸
+          </Text>
+        </div>
+        
+        <div className="flex flex-wrap gap-2 mt-2">
+          {client.tags.map((tag, index) => (
+            <span
+              key={index}
+              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
+            >
+              <Text size="sm">{tag}</Text>
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="p-6">
@@ -140,130 +169,63 @@ function ClientsPage() {
               <Button
                 key={tag}
                 onClick={() => handleTagSelect(tag)}
-                variant={selectedTags.includes(tag) ? "secondary" : "outline"}
+                variant={selectedTags.includes(tag) ? "default" : "outline"}
                 size="sm"
               >
-                <Text>{tag}</Text>
-                {selectedTags.includes(tag) && (
-                  <X className="w-4 h-4 ml-1" />
-                )}
+                {tag}
               </Button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Desktop View */}
-      <div className="hidden md:block bg-white rounded-lg shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left">
-                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Client</Text>
-              </th>
-              <th scope="col" className="px-6 py-3 text-left">
-                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Tags</Text>
-              </th>
-              <th scope="col" className="px-6 py-3 text-right">
-                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Orders</Text>
-              </th>
-              <th scope="col" className="px-6 py-3 text-right">
-                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Total Spent</Text>
-              </th>
-              <th scope="col" className="px-6 py-3 text-right">
-                <Text size="sm" className="font-medium text-gray-500 uppercase tracking-wider">Last Order</Text>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredClients.map(client => (
-              <tr 
-                key={client.id}
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => navigate(`/clients/${client.id}`)}
-              >
-                <td className="px-6 py-4">
-                  <div>
-                    <Text className="font-medium text-gray-900">{client.name}</Text>
-                    <Text size="sm" className="text-gray-500">{client.phone}</Text>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-2">
-                    {client.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
-                      >
-                        <Text size="sm">{tag}</Text>
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <Text>{client.totalOrders}</Text>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <Text className="font-medium text-green-600">{client.totalSpent.toLocaleString()} ₸</Text>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <Text size="sm" className="text-gray-500">
-                    {new Date(client.lastOrder).toLocaleDateString()}
-                  </Text>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Client List */}
+      <div className="grid gap-4">
+        {loading ? (
+          <div className="text-center py-8">Loading...</div>
+        ) : filteredClients.length > 0 ? (
+          filteredClients.map(client => (
+            <ClientCard key={client.id} client={client} />
+          ))
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            No clients found
+          </div>
+        )}
       </div>
 
-      {/* Mobile View */}
-      <div className="md:hidden space-y-4">
-        {filteredClients.map(client => (
-          <div 
-            key={client.id}
-            className="bg-white p-4 rounded-lg shadow-sm"
-            onClick={() => navigate(`/clients/${client.id}`)}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6 gap-2">
+          <Button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            variant="outline"
           >
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <Heading as="h3" className="font-medium">{client.name}</Heading>
-                <Text size="sm" className="text-gray-500">{client.phone}</Text>
-              </div>
-              <Text size="sm" className="font-medium text-green-600">
-                {client.totalSpent.toLocaleString()} ₸
-              </Text>
-            </div>
-            
-            <div className="flex flex-wrap gap-2 mt-2">
-              {client.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
-                >
-                  <Text size="sm">{tag}</Text>
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Add/Edit Client Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <Heading as="h2" className="text-xl font-bold mb-4">Add New Client</Heading>
-            <ClientForm
-              client={selectedClient}
-              onSave={(data) => {
-                console.log('Save client:', data);
-                setShowForm(false);
-              }}
-              onCancel={() => setShowForm(false)}
-            />
-          </div>
+            Previous
+          </Button>
+          <span className="px-4 py-2">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            variant="outline"
+          >
+            Next
+          </Button>
         </div>
+      )}
+
+      {/* Add Client Form Modal */}
+      {showForm && (
+        <ClientForm
+          onClose={() => setShowForm(false)}
+          onSubmit={async (data) => {
+            // Handle client creation
+            setShowForm(false);
+          }}
+        />
       )}
     </div>
   );
