@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 import { ordersService } from '@/services/ordersService';
-import { Clock, Phone, MapPin, MessageCircle, Truck, Store } from 'lucide-react';
+import { Clock, Phone, MapPin, MessageCircle, Truck, Store, Plus } from 'lucide-react';
 import { Heading, Text, Label } from '@/components/ui/Typography/Typography';
 
 // UI Components
@@ -25,7 +25,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import DateFilter from '@/components/Filters/DateFilter';
-import TypeFilter from '@/components/Filters/TypeFilter';
+import StatusFilter from '@/components/Filters/StatusFilter';
 
 // Services
 import { storageService } from '@/services/storage/storageService';
@@ -412,8 +412,8 @@ const orderVanishStyles = `
 
 export default function OrdersPage() {
   const navigate = useNavigate();
-  const [dateFilter, setDateFilter] = useState('today');
-  const [typeFilter, setTypeFilter] = useState(null);
+  const [dateFilter, setDateFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -427,39 +427,40 @@ export default function OrdersPage() {
         setError(null);
         
         // Получаем список заказов
-        const fetchedOrders = await ordersService.fetchOrders();
+        const response = await ordersService.fetchOrders();
         
-        if (fetchedOrders && Array.isArray(fetchedOrders)) {
-          setOrders(fetchedOrders);
+        if (response && response.data && Array.isArray(response.data)) {
+          setOrders(response.data);
           setError(null);
+        } else if (response.error) {
+          throw new Error(response.error);
         } else {
           throw new Error('Получены некорректные данные от сервера');
         }
       } catch (err) {
         console.error('Detailed Error:', err);
         setError(err);
+        logger.error('[OrdersPage] Ошибка при загрузке заказов', {
+          error: err.message || err,
+          timestamp: new Date().toISOString()
+        });
         
         // Если ошибка связана с превышением лимита запросов, пробуем повторить через некоторое время
         if (err.message?.includes('rate limit') && retryCount < 3) {
-          const retryDelay = Math.pow(2, retryCount) * 1000; // Экспоненциальная задержка
+          const retryDelay = Math.pow(2, retryCount) * 1000;
           toast.error(`Превышен лимит запросов. Повторная попытка через ${retryDelay/1000} сек...`);
           
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
           }, retryDelay);
-          
-          return;
         }
-        
-        toast.error(`Не удалось загрузить заказы: ${err.message || 'Неизвестная ошибка'}`);
-        logger.error('OrdersPage', 'Ошибка при загрузке заказов', null, err);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadOrders();
-  }, [retryCount]); // Перезапускаем эффект при изменении счетчика повторных попыток
+  }, [retryCount]);
 
   const handleOrderClick = useCallback((orderNumber) => {
     try {
@@ -495,50 +496,56 @@ export default function OrdersPage() {
     }
   }, [navigate]);
 
-  const handleUploadPhoto = useCallback(async (orderId, photoFile) => {
+  const handlePhotoUpload = async (orderId, file) => {
     try {
-      // Генерируем уникальное имя файла
-      const fileExt = photoFile.name.split('.').pop();
-      const fileName = `${orderId}_${Date.now()}.${fileExt}`;
-      const filePath = `orders/${fileName}`;
+      setIsLoading(true);
+      const response = await ordersService.uploadPhoto(orderId, file);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
 
-      // Загрузка файла в Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('order_photos')
-        .upload(filePath, photoFile);
-
-      if (uploadError) throw uploadError;
-
-      // Получаем публичный URL
-      const { data: { publicUrl }, error: urlError } = supabase.storage
-        .from('order_photos')
-        .getPublicUrl(filePath);
-
-      if (urlError) throw urlError;
-
-      // Обновляем запись заказа с URL фото
-      const updatedOrder = await ordersService.uploadOrderPhoto(orderId, publicUrl);
-
-      // Обновляем локальное состояние
+      toast.success('Фото успешно загружено');
+      
+      // Обновляем заказ с новым фото
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId 
             ? { 
                 ...order, 
-                photos: [...(order.photos || []), publicUrl]
+                photos: [...(order.photos || []), response.data.url]
               } 
             : order
         )
       );
-
-      toast.success('Фото успешно загружено');
-      logger.log('OrdersPage', `Загружено фото для заказа ${orderId}`);
     } catch (error) {
       console.error('Error uploading photo:', error);
-      toast.error('Не удалось загрузить фото');
-      logger.error('OrdersPage', 'Ошибка при загрузке фото', null, error);
+      toast.error(`Ошибка при загрузке фото: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
+
+  const handleViewPhotos = async (order) => {
+    try {
+      setIsLoading(true);
+      const response = await ordersService.getOrderPhotos(order.id);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Здесь можно открыть модальное окно с фотографиями
+      console.log('Order photos:', response.data);
+      
+      // TODO: Показать фотографии в модальном окне или галерее
+    } catch (error) {
+      console.error('Error viewing photos:', error);
+      toast.error(`Ошибка при просмотре фото: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleRespondToClientReaction = useCallback((orderNumber, reaction) => {
     try {
@@ -549,49 +556,29 @@ export default function OrdersPage() {
     }
   }, []);
 
-  const handleStatusChange = useCallback(async (orderId, newStatus) => {
+  const handleStatusChange = async (orderId, newStatus) => {
     try {
       setIsLoading(true);
-      await ordersService.updateOrderStatus(orderId, newStatus);
+      const response = await ordersService.updateOrderStatus(orderId, newStatus);
       
-      // Обновляем локальное состояние
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId ? { ...order, status: newStatus } : order
         )
       );
-      
-      toast.success('Статус заказа обновлен');
+
+      toast.success(`Статус заказа успешно обновлен на "${newStatus}"`);
     } catch (error) {
-      logger.error('Error updating order status:', error);
-      toast.error('Ошибка при обновлении статуса заказа');
+      console.error('Error updating order status:', error);
+      toast.error(`Ошибка при обновлении статуса: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const handleViewPhotos = useCallback(async (orderNumber) => {
-    try {
-      logger.log('OrdersPage', `Просмотр фото для заказа ${orderNumber}`);
-      const cleanNumber = orderNumber.replace(/[^0-9]/g, '');
-      const path = `orders/${cleanNumber}/photos`;
-      
-      const photos = await storageService.listFiles(path);
-      
-      if (photos && photos.length > 0) {
-        // Here you could show photos in a modal or navigate to a photos view
-        logger.log('OrdersPage', `Фото для заказа ${orderNumber} успешно загружены`);
-        console.log('Order photos:', photos);
-      } else {
-        toast.error('Нет фотографий для этого заказа');
-        logger.error('OrdersPage', `Ошибка при загрузке фото для заказа ${orderNumber}`);
-      }
-    } catch (error) {
-      console.error('Error loading photos:', error);
-      toast.error('Ошибка при загрузке фотографий');
-      logger.error('OrdersPage', `Ошибка при загрузке фото для заказа ${orderNumber}`, null, error);
-    }
-  }, []);
+  };
 
   const filteredOrders = useMemo(() => {
     if (!orders || !Array.isArray(orders)) {
@@ -653,75 +640,80 @@ export default function OrdersPage() {
       );
     }
 
+    // Status filtering
+    if (statusFilter) {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
     console.log('Filtering results:', {
       totalBefore: orders.length,
       totalAfter: filtered.length,
       dateFilter,
-      searchQuery
+      searchQuery,
+      statusFilter
     });
 
     return filtered;
-  }, [orders, dateFilter, searchQuery]); // Убрали typeFilter из зависимостей
+  }, [orders, dateFilter, searchQuery, statusFilter]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <Heading className="text-3xl font-bold">Заказы</Heading>
-        <Button onClick={() => navigate('/orders/new')} variant="default">
-          Новый заказ
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <Heading>Заказы</Heading>
+        <Button 
+          onClick={() => navigate('/orders/create')}
+          className="bg-blue-500 hover:bg-blue-600 text-white h-10 px-4 py-2 inline-flex items-center gap-2"
+        >
+          <Plus className="h-5 w-5" />
+          Добавить букет
         </Button>
       </div>
 
-      <div className="space-y-6">
-        <DateFilter 
-          value={dateFilter} 
-          onChange={(value) => {
-            console.log('Date filter changed:', value);
-            setDateFilter(value);
-          }} 
+      {/* Фильтры */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DateFilter value={dateFilter} onChange={setDateFilter} />
+        <StatusFilter 
+          value={statusFilter} 
+          onChange={setStatusFilter}
+          statuses={Object.keys(statusColors)}
         />
-        {/* Временно скрываем фильтр по типу */}
-        {/* <TypeFilter value={typeFilter} onChange={setTypeFilter} /> */}
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center min-h-[200px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-        </div>
-      ) : error ? (
-        <div className="text-center py-8">
-          <div className="text-red-500 mb-4">
-            {error.message || 'Произошла ошибка при загрузке заказов'}
+      {/* Список заказов */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {isLoading ? (
+          <div className="flex justify-center items-center min-h-[200px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
           </div>
-          <Button 
-            onClick={() => setRetryCount(prev => prev + 1)}
-            variant="outline"
-          >
-            Попробовать снова
-          </Button>
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          Заказы не найдены
-        </div>
-      ) : (
-        <div className="grid gap-4 mt-6">
-          {filteredOrders.map((order) => (
+        ) : error ? (
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-4">
+              {error.message || 'Произошла ошибка при загрузке заказов'}
+            </div>
+            <Button 
+              onClick={() => setRetryCount(prev => prev + 1)}
+              variant="outline"
+            >
+              Попробовать снова
+            </Button>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            Заказы не найдены
+          </div>
+        ) : (
+          filteredOrders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
               onStatusChange={handleStatusChange}
-              onUploadPhoto={handleUploadPhoto}
+              onUploadPhoto={handlePhotoUpload}
               onRespondToClientReaction={handleRespondToClientReaction}
               onClick={() => handleOrderClick(order.number)}
               onViewPhotos={() => handleViewPhotos(order)}
             />
-          ))}
-        </div>
-      )}
-
-      <div className="mt-4 text-sm text-gray-500">
-        Всего заказов: {orders.length}, Отфильтровано: {filteredOrders.length}
+          ))
+        )}
       </div>
     </div>
   );
