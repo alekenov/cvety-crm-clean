@@ -1,4 +1,4 @@
-# База данных CRM системы для цветочного магазина
+# База данных CRM системы цветочного магазина
 
 ## Общее описание
 
@@ -164,3 +164,183 @@ pg_restore -h db.PROJECT_REF.supabase.co -p 5432 -U postgres -d postgres -v back
 2. При планировании новых функций учитывайте текущую структуру данных
 3. Изменения в enum полях требуют обновления кода на фронтенде
 4. Регулярно проверяйте отчеты о производительности базы данных
+
+## Содержание
+1. [Общая информация](#общая-информация)
+2. [Структура базы данных](#структура-базы-данных)
+3. [Сервисы](#сервисы)
+4. [Утилиты](#утилиты)
+5. [Примеры использования](#примеры-использования)
+
+## Общая информация
+
+База данных построена на Supabase с использованием PostgreSQL. Вся работа с базой данных централизована через сервисы и утилиты в директории `src/config/database`.
+
+### Основные компоненты:
+- Сервисный слой для работы с данными
+- Система кэширования
+- Обработка ошибок
+- Валидация данных
+- Миграции
+- Логирование
+
+## Структура базы данных
+
+### Таблицы
+
+#### Orders (Заказы)
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | UUID | Уникальный идентификатор |
+| number | Integer | Номер заказа |
+| created_at | Timestamp | Дата создания |
+| delivery_time | Timestamp | Время доставки |
+| status | Enum | Статус заказа |
+| client_id | UUID | ID клиента |
+| total_price | Decimal | Общая стоимость |
+| items | JSONB | Товары в заказе |
+
+#### Clients (Клиенты)
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | UUID | Уникальный идентификатор |
+| phone | String | Телефон |
+| name | String | Имя клиента |
+| email | String | Email |
+| addresses | JSONB | Адреса доставки |
+| created_at | Timestamp | Дата регистрации |
+
+#### Shops (Магазины)
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | UUID | Уникальный идентификатор |
+| name | String | Название |
+| address | String | Адрес |
+| phone | String | Телефон |
+| working_hours | JSONB | Часы работы |
+
+#### Employees (Сотрудники)
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | UUID | Уникальный идентификатор |
+| name | String | Имя |
+| role | Enum | Роль |
+| shop_id | UUID | ID магазина |
+| status | Enum | Статус |
+
+## Сервисы
+
+### BaseService
+Базовый класс для всех сервисов с основными CRUD операциями:
+```javascript
+import { ordersService } from '@/config/database/services';
+
+// Получение всех записей
+const items = await ordersService.getAll();
+
+// Получение по ID
+const item = await ordersService.getById(id);
+
+// Создание
+const newItem = await ordersService.create(data);
+
+// Обновление
+const updatedItem = await ordersService.update(id, data);
+
+// Удаление
+await ordersService.delete(id);
+```
+
+### Специализированные сервисы
+
+#### OrdersService
+```javascript
+// Получение заказов по статусу
+const orders = await ordersService.getByStatus('processing');
+
+// Обновление статуса
+await ordersService.updateStatus(orderId, 'completed');
+```
+
+#### ClientsService
+```javascript
+// Поиск клиента по телефону
+const client = await clientsService.getByPhone('+1234567890');
+
+// Обновление статистики
+await clientsService.updateStats(clientId, stats);
+```
+
+## Утилиты
+
+### Кэширование
+```javascript
+import { withCache } from '@/config/database/utils';
+
+// Кэширование результата на 5 минут
+const cachedFn = withCache(fn, 'cache-key', 5 * 60 * 1000);
+```
+
+### Валидация
+```javascript
+import { validateData } from '@/config/database/utils';
+
+// Валидация данных перед сохранением
+validateData('orders', orderData);
+```
+
+### Обработка ошибок
+```javascript
+import { withErrorHandling } from '@/config/database/utils';
+
+// Автоматическая обработка ошибок
+const safeFn = withErrorHandling(dangerousFn);
+```
+
+## Примеры использования
+
+### Создание заказа
+```javascript
+import { ordersService, clientsService } from '@/config/database/services';
+import { ORDER_STATUS } from '@/config/database/constants';
+
+// Создание заказа с транзакцией
+await ordersService.transaction(async () => {
+  // Создаем заказ
+  const order = await ordersService.create({
+    client_id: clientId,
+    status: ORDER_STATUS.NEW,
+    items: orderItems,
+    total_price: calculateTotal(orderItems)
+  });
+
+  // Обновляем статистику клиента
+  await clientsService.updateStats(clientId, {
+    lastOrderDate: new Date(),
+    totalOrders: totalOrders + 1
+  });
+
+  return order;
+});
+```
+
+### Поиск с пагинацией
+```javascript
+// Получение заказов с пагинацией
+const { data: orders, pagination } = await ordersService.paginate({
+  page: 1,
+  limit: 20,
+  columns: 'id, number, status, total_price'
+});
+```
+
+### Работа с кэшем
+```javascript
+// Кэширование часто используемых данных
+const getActiveShops = withCache(
+  shopsService.getActive,
+  'active-shops',
+  30 * 60 * 1000 // 30 минут
+);
+
+const shops = await getActiveShops();

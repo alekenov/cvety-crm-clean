@@ -1,49 +1,55 @@
-import { ordersDb } from '../config/database/db';
+import { ordersService as dbOrdersService } from '../config/database/db';
 import { supabaseConfig } from '../config/database/supabase.config';
 
 export const ordersService = {
   async fetchOrders() {
     try {
-      console.log('Fetching orders...');
-      const orders = await ordersDb.getAll();
-      console.log('Fetched orders:', orders);
-      return orders || [];
+      return await dbOrdersService.getAll();
     } catch (error) {
       console.error('Error fetching orders:', error);
-      return [];
+      throw error;
     }
   },
 
-  async createOrder(orderData) {
+  async getAll() {
     try {
-      console.log('Creating order:', orderData);
-      const order = await ordersDb.create(orderData);
-      console.log('Created order:', order);
-      return order;
+      return await dbOrdersService.getAll();
+    } catch (error) {
+      console.error('Error getting orders:', error);
+      throw error;
+    }
+  },
+
+  async getById(id) {
+    try {
+      return await dbOrdersService.getById(id);
+    } catch (error) {
+      console.error('Error getting order by id:', error);
+      throw error;
+    }
+  },
+
+  async create(order) {
+    try {
+      return await dbOrdersService.create(order);
     } catch (error) {
       console.error('Error creating order:', error);
       throw error;
     }
   },
 
-  async updateOrder(id, orderData) {
+  async update(id, data) {
     try {
-      console.log('Updating order:', { id, orderData });
-      const order = await ordersDb.update(id, orderData);
-      console.log('Updated order:', order);
-      return order;
+      return await dbOrdersService.update(id, data);
     } catch (error) {
       console.error('Error updating order:', error);
       throw error;
     }
   },
 
-  async updateOrderStatus(id, status) {
+  async updateStatus(id, status) {
     try {
-      console.log('Updating order status:', { id, status });
-      const order = await ordersDb.updateStatus(id, status);
-      console.log('Updated order status:', order);
-      return order;
+      return await dbOrdersService.updateStatus(id, status);
     } catch (error) {
       console.error('Error updating order status:', error);
       throw error;
