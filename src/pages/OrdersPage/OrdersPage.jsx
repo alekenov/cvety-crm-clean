@@ -670,12 +670,14 @@ export default function OrdersPage() {
       </div>
 
       {/* Фильтры */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <DateFilter value={dateFilter} onChange={setDateFilter} />
-        <StatusFilter 
-          value={statusFilter} 
-          onChange={setStatusFilter}
-          statuses={Object.keys(statusColors)}
+      <div className="flex flex-wrap gap-4 items-center">
+        <DateFilter
+          value={dateFilter}
+          onChange={setDateFilter}
+        />
+        <StatusFilter
+          selectedStatus={statusFilter}
+          onStatusChange={setStatusFilter}
         />
       </div>
 

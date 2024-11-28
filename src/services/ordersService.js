@@ -2,122 +2,6 @@ import { ordersService as dbOrdersService } from '../config/database/db';
 import { supabaseConfig } from '../config/database/supabase.config';
 import logger from '../utils/logger';
 
-// Тестовые данные для заказов
-const mockOrders = [
-  {
-    id: '1',
-    number: 'ORD-001',
-    status: 'Не оплачен',
-    delivery_type: 'delivery',
-    delivery_address: 'ул. Пушкина, д. 10, кв. 15',
-    delivery_date: '2024-03-10T14:00:00',
-    customer: {
-      name: 'Анна Иванова',
-      phone: '+7 (999) 123-45-67'
-    },
-    total: 5500,
-    items: [
-      { name: 'Букет роз', quantity: 1, price: 5500 }
-    ]
-  },
-  {
-    id: '2',
-    number: 'ORD-002',
-    status: 'Оплачен',
-    delivery_type: 'pickup',
-    pickup_shop: 'ТЦ Мега',
-    delivery_date: '2024-03-10T16:00:00',
-    customer: {
-      name: 'Петр Сидоров',
-      phone: '+7 (999) 234-56-78'
-    },
-    total: 3200,
-    items: [
-      { name: 'Букет тюльпанов', quantity: 1, price: 3200 }
-    ]
-  },
-  {
-    id: '3',
-    number: 'ORD-003',
-    status: 'В работе',
-    delivery_type: 'delivery',
-    delivery_address: 'ул. Ленина, д. 25, кв. 42',
-    delivery_date: '2024-03-10T12:00:00',
-    customer: {
-      name: 'Мария Петрова',
-      phone: '+7 (999) 345-67-89'
-    },
-    total: 7800,
-    items: [
-      { name: 'Букет пионов', quantity: 1, price: 7800 }
-    ]
-  },
-  {
-    id: '4',
-    number: 'ORD-004',
-    status: 'Собран',
-    delivery_type: 'pickup',
-    pickup_shop: 'ТЦ Атриум',
-    delivery_date: '2024-03-10T15:30:00',
-    customer: {
-      name: 'Дмитрий Козлов',
-      phone: '+7 (999) 456-78-90'
-    },
-    total: 4500,
-    items: [
-      { name: 'Букет хризантем', quantity: 1, price: 4500 }
-    ]
-  },
-  {
-    id: '5',
-    number: 'ORD-005',
-    status: 'В пути',
-    delivery_type: 'delivery',
-    delivery_address: 'пр. Мира, д. 15, кв. 78',
-    delivery_date: '2024-03-10T13:00:00',
-    customer: {
-      name: 'Елена Смирнова',
-      phone: '+7 (999) 567-89-01'
-    },
-    total: 6200,
-    items: [
-      { name: 'Букет лилий', quantity: 1, price: 6200 }
-    ]
-  },
-  {
-    id: '6',
-    number: 'ORD-006',
-    status: 'Доставлен',
-    delivery_type: 'delivery',
-    delivery_address: 'ул. Гагарина, д. 8, кв. 33',
-    delivery_date: '2024-03-09T18:00:00',
-    customer: {
-      name: 'Ольга Николаева',
-      phone: '+7 (999) 678-90-12'
-    },
-    total: 8900,
-    items: [
-      { name: 'Букет орхидей', quantity: 1, price: 8900 }
-    ]
-  },
-  {
-    id: '7',
-    number: 'ORD-007',
-    status: 'Готов к самовывозу',
-    delivery_type: 'pickup',
-    pickup_shop: 'ТЦ Европейский',
-    delivery_date: '2024-03-10T17:00:00',
-    customer: {
-      name: 'Игорь Васильев',
-      phone: '+7 (999) 789-01-23'
-    },
-    total: 4100,
-    items: [
-      { name: 'Букет гербер', quantity: 1, price: 4100 }
-    ]
-  }
-];
-
 class OrdersService {
   constructor() {
     this.mockPhotos = new Map(); // Для хранения фотографий в режиме разработки
@@ -125,154 +9,174 @@ class OrdersService {
 
   async fetchOrders() {
     try {
-      if (process.env.NODE_ENV === 'development') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return { data: mockOrders, error: null };
-      }
-      return await dbOrdersService.getAll();
+      const orders = await dbOrdersService.fetchOrders();
+      return { data: orders, error: null };
     } catch (error) {
-      logger.error('[OrdersService] Error fetching orders:', error);
-      return { data: null, error: error.message || 'Failed to fetch orders' };
+      logger.error('Error fetching orders:', error);
+      return { data: null, error: error.message };
+    }
+  }
+
+  async fetchArchivedOrders() {
+    try {
+      const orders = await dbOrdersService.fetchOrders();
+      const archivedOrders = orders.filter(order => order.status === 'Доставлен');
+      return { data: archivedOrders, error: null };
+    } catch (error) {
+      logger.error('Error fetching archived orders:', error);
+      return { data: null, error: error.message };
     }
   }
 
   async getAll() {
-    try {
-      return await dbOrdersService.getAll();
-    } catch (error) {
-      logger.error('[OrdersService] Error getting orders:', error);
-      throw error;
-    }
+    return this.fetchOrders();
   }
 
   async getById(id) {
     try {
-      return await dbOrdersService.getById(id);
+      const { data: orders } = await this.fetchOrders();
+      const order = orders ? orders.find(order => order.id === id) : null;
+      return { data: order, error: null };
     } catch (error) {
-      logger.error('[OrdersService] Error getting order by id:', error);
-      throw error;
+      logger.error(`Error getting order by id ${id}:`, error);
+      return { data: null, error: error.message };
+    }
+  }
+
+  async fetchOrderById(id) {
+    try {
+      const { data: orders } = await this.fetchOrders();
+      const order = orders.find(order => order.id === id);
+      return { data: order || null, error: null };
+    } catch (error) {
+      logger.error(`Error fetching order by ID ${id}:`, error);
+      return { data: null, error: error.message };
+    }
+  }
+
+  async fetchOrderByNumber(number) {
+    try {
+      const { data: orders } = await this.fetchOrders();
+      const order = orders.find(order => order.number === number);
+      return { data: order || null, error: null };
+    } catch (error) {
+      logger.error(`Error fetching order by number ${number}:`, error);
+      return { data: null, error: error.message };
     }
   }
 
   async create(order) {
     try {
-      return await dbOrdersService.create(order);
+      const result = await dbOrdersService.create(order);
+      return { data: result, error: null };
     } catch (error) {
-      logger.error('[OrdersService] Error creating order:', error);
-      throw error;
+      logger.error('Error creating order:', error);
+      return { data: null, error: error.message };
     }
   }
 
   async update(id, data) {
     try {
-      return await dbOrdersService.update(id, data);
+      const result = await dbOrdersService.update(id, data);
+      return { data: result, error: null };
     } catch (error) {
-      logger.error('[OrdersService] Error updating order:', error);
-      throw error;
+      logger.error(`Error updating order ${id}:`, error);
+      return { data: null, error: error.message };
     }
   }
 
   async updateOrderStatus(orderId, newStatus) {
     try {
-      if (process.env.NODE_ENV === 'development') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const updatedOrders = mockOrders.map(order => 
-          order.id === orderId ? { ...order, status: newStatus } : order
-        );
-        return { data: { status: newStatus }, error: null };
-      }
-      return await dbOrdersService.updateStatus(orderId, newStatus);
+      const result = await dbOrdersService.updateStatus(orderId, newStatus);
+      return { data: result, error: null };
     } catch (error) {
-      logger.error('[OrdersService] Error updating order status:', error);
-      return { data: null, error: error.message || 'Failed to update order status' };
+      logger.error(`Error updating order status ${orderId}:`, error);
+      return { data: null, error: error.message };
     }
   }
 
   async uploadPhoto(orderId, file) {
     try {
       if (process.env.NODE_ENV === 'development') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Создаем URL для локального просмотра фото
+        // В режиме разработки сохраняем фото локально
+        const photos = this.mockPhotos.get(orderId) || [];
         const photoUrl = URL.createObjectURL(file);
-        
-        // Сохраняем фото в Map
-        if (!this.mockPhotos.has(orderId)) {
-          this.mockPhotos.set(orderId, []);
-        }
-        this.mockPhotos.get(orderId).push(photoUrl);
+        photos.push(photoUrl);
+        this.mockPhotos.set(orderId, photos);
+        return { data: { url: photoUrl }, error: null };
+      } else {
+        // В продакшене загружаем в Supabase Storage
+        const { data, error } = await supabaseConfig.storage
+          .from('orders')
+          .upload(`${orderId}/${file.name}`, file);
 
-        return { 
-          data: { 
-            url: photoUrl,
-            orderId: orderId,
-            filename: file.name
-          }, 
-          error: null 
-        };
+        if (error) throw error;
+        return { data: { url: data.path }, error: null };
       }
-
-      // В продакшене используем реальное хранилище
-      return await dbOrdersService.uploadPhoto(orderId, file);
     } catch (error) {
-      logger.error('[OrdersService] Error uploading photo:', error);
-      return { data: null, error: error.message || 'Failed to upload photo' };
+      logger.error(`Error uploading photo for order ${orderId}:`, error);
+      return { data: null, error: error.message };
     }
   }
 
   async getOrderPhotos(orderId) {
     try {
       if (process.env.NODE_ENV === 'development') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return { 
-          data: this.mockPhotos.get(orderId) || [], 
-          error: null 
-        };
+        // В режиме разработки возвращаем локально сохраненные фото
+        const photos = this.mockPhotos.get(orderId) || [];
+        return { data: photos, error: null };
+      } else {
+        // В продакшене получаем из Supabase Storage
+        const { data, error } = await supabaseConfig.storage
+          .from('orders')
+          .list(orderId);
+
+        if (error) throw error;
+        const photoUrls = data.map(file => ({
+          url: supabaseConfig.storage
+            .from('orders')
+            .getPublicUrl(`${orderId}/${file.name}`).data.publicUrl
+        }));
+        return { data: photoUrls, error: null };
       }
-      return await dbOrdersService.getPhotos(orderId);
     } catch (error) {
-      logger.error('[OrdersService] Error getting order photos:', error);
-      return { data: null, error: error.message || 'Failed to get order photos' };
+      logger.error(`Error getting photos for order ${orderId}:`, error);
+      return { data: null, error: error.message };
     }
   }
 
-  // Получить названия колонок для таблицы заказов
   getOrderColumns() {
-    return supabaseConfig.schema.orders.columns;
+    return [
+      { field: 'number', headerName: '№ заказа', width: 100 },
+      { field: 'status', headerName: 'Статус', width: 120 },
+      { field: 'delivery_type', headerName: 'Тип доставки', width: 120 },
+      { field: 'delivery_address', headerName: 'Адрес доставки', width: 200 },
+      { field: 'delivery_date', headerName: 'Дата доставки', width: 150 },
+      { 
+        field: 'customer',
+        headerName: 'Клиент',
+        width: 200,
+        valueGetter: (params) => {
+          const customer = params.row.customer;
+          return customer ? `${customer.name} (${customer.phone})` : '';
+        }
+      },
+      { field: 'total', headerName: 'Сумма', width: 100 },
+    ];
   }
 
-  // Фильтрация заказов по дате
   filterOrdersByDate(orders, dateFilter) {
-    if (!orders || !dateFilter || dateFilter === 'all') return orders;
+    if (!dateFilter) return orders;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const weekEnd = new Date(today);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-
-    const monthEnd = new Date(today);
-    monthEnd.setMonth(monthEnd.getMonth() + 1);
+    const startOfDay = new Date(dateFilter);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(dateFilter);
+    endOfDay.setHours(23, 59, 59, 999);
 
     return orders.filter(order => {
-      const deliveryDate = new Date(order.delivery_time);
-      deliveryDate.setHours(0, 0, 0, 0);
-
-      switch (dateFilter) {
-        case 'today':
-          return deliveryDate.getTime() === today.getTime();
-        case 'tomorrow':
-          return deliveryDate.getTime() === tomorrow.getTime();
-        case 'week':
-          return deliveryDate >= today && deliveryDate < weekEnd;
-        case 'month':
-          return deliveryDate >= today && deliveryDate < monthEnd;
-        default:
-          return true;
-      }
+      const orderDate = new Date(order.delivery_date);
+      return orderDate >= startOfDay && orderDate <= endOfDay;
     });
   }
 }

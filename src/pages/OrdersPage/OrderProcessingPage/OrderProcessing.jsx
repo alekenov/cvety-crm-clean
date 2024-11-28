@@ -239,79 +239,25 @@ const OrderProcessing = () => {
         const sanitizedId = id.trim();
         
         // Если ID выглядит как номер заказа (не UUID), ищем по номеру
-        const fetchedOrder = await (sanitizedId.match(/^\d+$/) 
-          ? fetchOrderByNumber(sanitizedId) 
+        const response = await (sanitizedId.match(/^\d+$/) 
+          ? ordersService.fetchOrderByNumber(sanitizedId) 
           : ordersService.fetchOrderById(sanitizedId));
-        
-        console.log('Fetched order details:', fetchedOrder);
-        
-        if (!fetchedOrder) {
-          console.warn(`No order found for ID: ${id}`);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        if (!response.data) {
           throw new Error('Заказ не найден');
         }
-        
-        setOrder(fetchedOrder);
-        setOrderStatus(fetchedOrder.status || ORDER_STATUS.NEW);
-        
-        // Инициализируем состояния на основе полученного заказа
-        setItems(fetchedOrder.items || []);
-        setTotalCost(fetchedOrder.total_price || 0);
-        setDeliveryInfo({
-          address: fetchedOrder.delivery_address || fetchedOrder.address || '',
-          entrance: '',
-          floor: '',
-          apartment: '',
-          comment: fetchedOrder.client_comment || ''
-        });
 
-        // Дополнительные состояния
-        setDeliveryAddress(fetchedOrder.delivery_address || fetchedOrder.address || '');
-        setCourier(fetchedOrder.florist_name || null);
-        setEstimatedTime(fetchedOrder.delivery_time || null);
-
-      } catch (err) {
-        console.error('Detailed error in order fetching:', err);
-        setError(err.message);
-        toast.error(err.message);
-        navigate('/orders');
-      } finally {
+        console.log('Fetched order details:', response.data);
+        setOrder(response.data);
         setLoading(false);
-      }
-    };
-
-    // Функция для поиска заказа по номеру
-    const fetchOrderByNumber = async (orderNumber) => {
-      try {
-        console.log(`🔍 Attempting to fetch order by number: ${orderNumber}`);
-        console.log('🚀 Supabase configuration:', {
-          url: supabase.supabaseUrl,
-          headers: JSON.stringify(supabase.headers),
-        });
-        
-        // Используем RPC-функцию для расширенного поиска
-        const { data: extendedData, error: extendedError } = await supabase.rpc('search_orders_by_number', { 
-          search_term: orderNumber 
-        });
-
-        console.log('🔬 RPC Search Results:', {
-          data: extendedData,
-          error: extendedError
-        });
-
-        if (extendedData && extendedData.length > 0) {
-          console.log('✅ Order found with extended search:', extendedData[0]);
-          return extendedData[0];
-        }
-
-        if (extendedError) {
-          console.warn('❌ Extended search error:', extendedError);
-        }
-
-        // Если заказ не найден
-        throw new Error(`Не удалось найти заказ с номером ${orderNumber}`);
       } catch (error) {
-        console.error('🚨 Final error in fetchOrderByNumber:', error);
-        throw new Error(`Не удалось найти заказ с номером ${orderNumber}`);
+        console.error('Error fetching order:', error);
+        setError(error.message);
+        setLoading(false);
       }
     };
 
