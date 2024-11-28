@@ -1,220 +1,113 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-const supabaseServiceKey = process.env.REACT_APP_SUPABASE_SERVICE_KEY;
+const supabaseUrl = 'https://tbjozecglteemnrbtjsb.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiam96ZWNnbHRlZW1ucmJ0anNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA3NDcyOTAsImV4cCI6MjA0NjMyMzI5MH0.LLeuhNyCuNYZj2Jl14b_9-yCywKvXArmGWZk1u4qFdY';
 
-if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase configuration');
 }
 
-// Supabase client configuration
-const supabaseConfig = {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
+// Initialize Supabase client
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: {
-    schema: 'public',
+    schema: 'public'
   },
-  global: {
-    headers: { 'x-my-custom-header': 'cvety-crm' }
-  },
-  storage: {
-    // Maximum file size in bytes (10MB)
-    maxFileSize: 10 * 1024 * 1024
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
   }
-};
-
-// Initialize regular Supabase client
-const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseConfig);
-
-// Initialize admin client with service role key
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, supabaseConfig);
+});
 
 // Error handling utility
-const handleSupabaseError = (error) => {
+export const handleSupabaseError = (error) => {
   console.error('Supabase Error:', error);
-  throw new Error(error.message || 'An error occurred with the database operation');
+  throw new Error(error.message || 'An error occurred while connecting to the database');
 };
 
 // Orders API
-const ordersApi = {
+export const ordersApi = {
   async getAll() {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          items,
-          store:store_id (*)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) handleSupabaseError(error);
+    return data;
   },
 
   async create(order) {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([{
-          number: order.number,
-          status: order.status || 'Оплачен',
-          client_phone: order.client_phone,
-          address: order.address,
-          delivery_time: order.delivery_time,
-          total_price: order.total_price,
-          items: order.items,
-          client_comment: order.client_comment,
-          shop: order.shop,
-          florist: order.florist,
-          delivery_address: order.delivery_address,
-          delivery_date: order.delivery_date,
-          store_id: order.store_id,
-          florist_name: order.florist_name
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([order])
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error);
+    return data;
   },
 
   async updateStatus(id, status) {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
+    const { error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', id);
+    
+    if (error) handleSupabaseError(error);
   },
 
   async update(id, updates) {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
-  },
-
-  async delete(id) {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error);
+    return data;
   }
 };
 
 // Products API
-const productsApi = {
+export const productsApi = {
   async getAll() {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          compositions:product_compositions (
-            *,
-            inventory_item:inventory_item_id (*)
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) handleSupabaseError(error);
+    return data;
   },
 
   async create(product) {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .insert([{
-          name: product.name,
-          category: product.category,
-          price: product.price,
-          base_price: product.base_price,
-          markup_amount: product.markup_amount,
-          packaging_cost: product.packaging_cost,
-          description: product.description,
-          status: product.status || 'active',
-          image_url: product.image_url,
-          sku: product.sku
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
+    const { data, error } = await supabase
+      .from('products')
+      .insert([product])
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error);
+    return data;
   },
 
   async update(id, updates) {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
-  },
-
-  async delete(id) {
-    try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
+    const { data, error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error);
+    return data;
   }
 };
 
 // Shops API
-const shopsApi = {
+export const shopsApi = {
   async getAll() {
     try {
       const { data, error } = await supabase
@@ -286,7 +179,7 @@ const shopsApi = {
 };
 
 // Employees API
-const employeesApi = {
+export const employeesApi = {
   async getAll(shopId) {
     try {
       const query = supabase
@@ -358,7 +251,7 @@ const employeesApi = {
 };
 
 // Inventory API
-const inventoryApi = {
+export const inventoryApi = {
   async getAll() {
     try {
       const { data, error } = await supabase
@@ -393,13 +286,4 @@ const inventoryApi = {
   }
 };
 
-// Export all APIs and the Supabase clients
-export {
-  supabase,
-  supabaseAdmin,
-  ordersApi,
-  productsApi,
-  shopsApi,
-  employeesApi,
-  inventoryApi
-};
+export default supabase;

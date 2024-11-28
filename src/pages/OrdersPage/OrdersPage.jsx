@@ -1,9 +1,9 @@
 import { supabase } from '@/lib/supabase';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
-import { ordersService } from '../../services/supabaseClient';
+import { ordersService } from '@/services/ordersService';
 import { Clock, Phone, MapPin, MessageCircle, Truck, Store } from 'lucide-react';
 import { Heading, Text, Label } from '@/components/ui/Typography/Typography';
 
@@ -24,6 +24,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import DateFilter from '@/components/Filters/DateFilter';
+import TypeFilter from '@/components/Filters/TypeFilter';
 
 // Services
 import { storageService } from '@/services/storage/storageService';
@@ -410,42 +412,54 @@ const orderVanishStyles = `
 
 export default function OrdersPage() {
   const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [deliveryTypeFilter, setDeliveryTypeFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
-  const [customDate, setCustomDate] = useState(null);
+  const [dateFilter, setDateFilter] = useState('today');
+  const [typeFilter, setTypeFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const loadOrders = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         
-        // Получаем список доставленных заказов
-        const deliveredOrders = await ordersService.archiveDeliveredOrders();
-        const deliveredOrderNumbers = deliveredOrders.map(order => order.number);
-        
+        // Получаем список заказов
         const fetchedOrders = await ordersService.fetchOrders();
-        const activeOrders = fetchedOrders.filter(order => 
-          !deliveredOrderNumbers.includes(order.number)
-        );
         
-        setOrders(activeOrders);
-        setIsLoading(false);
+        if (fetchedOrders && Array.isArray(fetchedOrders)) {
+          setOrders(fetchedOrders);
+          setError(null);
+        } else {
+          throw new Error('Получены некорректные данные от сервера');
+        }
       } catch (err) {
         console.error('Detailed Error:', err);
         setError(err);
-        setIsLoading(false);
+        
+        // Если ошибка связана с превышением лимита запросов, пробуем повторить через некоторое время
+        if (err.message?.includes('rate limit') && retryCount < 3) {
+          const retryDelay = Math.pow(2, retryCount) * 1000; // Экспоненциальная задержка
+          toast.error(`Превышен лимит запросов. Повторная попытка через ${retryDelay/1000} сек...`);
+          
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, retryDelay);
+          
+          return;
+        }
+        
         toast.error(`Не удалось загрузить заказы: ${err.message || 'Неизвестная ошибка'}`);
         logger.error('OrdersPage', 'Ошибка при загрузке заказов', null, err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadOrders();
-  }, []);
+  }, [retryCount]); // Перезапускаем эффект при изменении счетчика повторных попыток
 
   const handleOrderClick = useCallback((orderNumber) => {
     try {
@@ -537,39 +551,22 @@ export default function OrdersPage() {
 
   const handleStatusChange = useCallback(async (orderId, newStatus) => {
     try {
-      // Обновляем статус заказа
+      setIsLoading(true);
       await ordersService.updateOrderStatus(orderId, newStatus);
       
-      // Если статус "Доставлен", применяем эффект исчезновения
-      if (newStatus === 'Доставлен') {
-        // Находим элемент заказа
-        const orderElement = document.querySelector(`[data-order-id="${orderId}"]`);
-        
-        if (orderElement) {
-          // Добавляем класс для анимации "распыления"
-          orderElement.classList.add('order-vanish');
-          
-          // Удаляем заказ через 5 секунд
-          setTimeout(() => {
-            setOrders(prevOrders => 
-              prevOrders.filter(order => order.id !== orderId)
-            );
-          }, 5000);
-        }
-      } else {
-        // Для других статусов просто обновляем список
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order.id === orderId ? { ...order, status: newStatus } : order
-          )
-        );
-      }
+      // Обновляем локальное состояние
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
       
-      // Показываем уведомление об успешном обновлении
-      toast.success(`Статус заказа изменен на "${newStatus}"`);
+      toast.success('Статус заказа обновлен');
     } catch (error) {
-      console.error('Ошибка при смене статуса:', error);
-      toast.error('Не удалось обновить статус заказа');
+      logger.error('Error updating order status:', error);
+      toast.error('Ошибка при обновлении статуса заказа');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -596,201 +593,136 @@ export default function OrdersPage() {
     }
   }, []);
 
-  const handleStatusFilterChange = useCallback((status) => {
-    try {
-      logger.log('OrdersPage', `Изменение фильтра статуса на ${status}`);
-      setStatusFilter(status);
-      console.log('Filtering by status:', status);
-    } catch (error) {
-      logger.error('OrdersPage', `Ошибка при изменении фильтра статуса`, null, error);
+  const filteredOrders = useMemo(() => {
+    if (!orders || !Array.isArray(orders)) {
+      console.warn('Orders is not an array:', orders);
+      return [];
     }
-  }, []);
 
-  const handleDeliveryTypeFilterChange = useCallback((type) => {
-    try {
-      logger.log('OrdersPage', `Изменение фильтра типа доставки на ${type}`);
-      setDeliveryTypeFilter(type);
-      console.log('Filtering by delivery type:', type);
-    } catch (error) {
-      logger.error('OrdersPage', `Ошибка при изменении фильтра типа доставки`, null, error);
-    }
-  }, []);
+    console.log('Total orders before filtering:', orders.length);
+    
+    let filtered = [...orders];
 
-  const handleDateFilterChange = useCallback((date) => {
-    try {
-      logger.log('OrdersPage', `Изменение фильтра даты на ${date}`);
-      setDateFilter(date);
-      if (date !== 'custom') {
-        setCustomDate(null);
-      }
-      console.log('Filtering by date:', date);
-    } catch (error) {
-      logger.error('OrdersPage', `Ошибка при изменении фильтра даты`, null, error);
-    }
-  }, []);
-
-  const filteredOrders = orders.filter(order => {
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesDeliveryType = deliveryTypeFilter === 'all' || order.deliveryMethod === deliveryTypeFilter;
-    const matchesSearch = !searchQuery || 
-      order.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.clientComment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.phone.toLowerCase().includes(searchQuery.toLowerCase());
-
-    let matchesDate = true;
-    if (dateFilter !== 'all') {
-      const orderDate = new Date(order.date);
+    // Date filtering
+    if (dateFilter && dateFilter !== 'all') {
       const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      today.setHours(0, 0, 0, 0);
+      
+      filtered = filtered.filter(order => {
+        // Используем любую доступную дату
+        const orderDate = new Date(order.delivery_time || order.created_at);
+        const orderDay = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate());
+        const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        console.log('Order date check:', {
+          orderId: order.id,
+          orderDate: orderDay,
+          today: todayDay,
+          filter: dateFilter,
+          match: orderDay.getTime() === todayDay.getTime()
+        });
 
-      if (dateFilter === 'today') {
-        matchesDate = orderDate.toDateString() === today.toDateString();
-      } else if (dateFilter === 'tomorrow') {
-        matchesDate = orderDate.toDateString() === tomorrow.toDateString();
-      } else if (dateFilter === 'custom' && customDate) {
-        matchesDate = orderDate.toDateString() === new Date(customDate).toDateString();
-      }
+        switch (dateFilter) {
+          case 'today':
+            return orderDay.getTime() === todayDay.getTime();
+          case 'tomorrow':
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return orderDay.getTime() === tomorrow.getTime();
+          case 'week':
+            const weekLater = new Date(today);
+            weekLater.setDate(weekLater.getDate() + 7);
+            return orderDay >= today && orderDay <= weekLater;
+          case 'month':
+            const monthLater = new Date(today);
+            monthLater.setMonth(monthLater.getMonth() + 1);
+            return orderDay >= today && orderDay <= monthLater;
+          default:
+            return true;
+        }
+      });
     }
 
-    return matchesStatus && matchesDeliveryType && matchesSearch && matchesDate;
-  });
+    // Search query filtering
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(order => 
+        order.number?.toString().toLowerCase().includes(query) ||
+        order.client_name?.toLowerCase().includes(query) ||
+        order.client_phone?.toLowerCase().includes(query)
+      );
+    }
+
+    console.log('Filtering results:', {
+      totalBefore: orders.length,
+      totalAfter: filtered.length,
+      dateFilter,
+      searchQuery
+    });
+
+    return filtered;
+  }, [orders, dateFilter, searchQuery]); // Убрали typeFilter из зависимостей
 
   return (
-    <div className="bg-gray-100 min-h-screen p-4">
-      <style>{orderVanishStyles}</style>
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <Heading as="h1" className="text-3xl font-bold text-gray-900">Заказы</Heading>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <Heading className="text-3xl font-bold">Заказы</Heading>
+        <Button onClick={() => navigate('/orders/new')} variant="default">
+          Новый заказ
+        </Button>
+      </div>
+
+      <div className="space-y-6">
+        <DateFilter 
+          value={dateFilter} 
+          onChange={(value) => {
+            console.log('Date filter changed:', value);
+            setDateFilter(value);
+          }} 
+        />
+        {/* Временно скрываем фильтр по типу */}
+        {/* <TypeFilter value={typeFilter} onChange={setTypeFilter} /> */}
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-8">
+          <div className="text-red-500 mb-4">
+            {error.message || 'Произошла ошибка при загрузке заказов'}
+          </div>
           <Button 
-            onClick={handleNewOrder} 
-            variant="primary"
-            size="md"
+            onClick={() => setRetryCount(prev => prev + 1)}
+            variant="outline"
           >
-            <Text>Новый заказ</Text>
+            Попробовать снова
           </Button>
         </div>
-
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              <div className="flex-1 min-w-[200px]">
-                <Label className="block mb-2">Статус заказа</Label>
-                <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Выберите статус" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      <Text>Все статусы</Text>
-                    </SelectItem>
-                    {Object.keys(statusColors).map(status => (
-                      <SelectItem key={status} value={status}>
-                        <div className="flex items-center">
-                          <span className={`w-2 h-2 rounded-full mr-2 ${statusColors[status]}`} />
-                          <Text>{status}</Text>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium mb-2">Тип доставки</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant={deliveryTypeFilter === 'all' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => handleDeliveryTypeFilterChange('all')}
-                  >
-                    <Text>Все типы доставки</Text>
-                  </Button>
-                  <Button
-                    variant={deliveryTypeFilter === 'delivery' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => handleDeliveryTypeFilterChange('delivery')}
-                  >
-                    <Truck size={16} className="mr-1" />
-                    <Text>Доставка</Text>
-                  </Button>
-                  <Button
-                    variant={deliveryTypeFilter === 'pickup' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => handleDeliveryTypeFilterChange('pickup')}
-                  >
-                    <Store size={16} className="mr-1" />
-                    <Text>Самовывоз</Text>
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium mb-2">Дата заказа</Label>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant={dateFilter === 'all' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => handleDateFilterChange('all')}
-                  >
-                    <Text>Все даты</Text>
-                  </Button>
-                  <Button
-                    variant={dateFilter === 'today' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => handleDateFilterChange('today')}
-                  >
-                    <Text>Сегодня</Text>
-                  </Button>
-                  <Button
-                    variant={dateFilter === 'tomorrow' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => handleDateFilterChange('tomorrow')}
-                  >
-                    <Text>Завтра</Text>
-                  </Button>
-                  <div>
-                    <Button
-                      variant={dateFilter === 'custom' ? 'primary' : 'outline'}
-                      size="sm"
-                    >
-                      <Text>{customDate ? 'Выбранная дата' : 'Выбрать дату'}</Text>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium mb-2">Поиск</Label>
-                <div>
-                  <div />
-                  <input 
-                    type="text" 
-                    value={searchQuery} 
-                    onChange={(e) => setSearchQuery(e.target.value)} 
-                    placeholder="Поиск по номеру, клиенту или адресу" 
-                    className="w-full p-2 pl-10 text-sm text-gray-700 rounded-lg border border-gray-300 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredOrders
-            .map((order) => (
-              <OrderCard
-                key={order.number}
-                order={order}
-                onStatusChange={handleStatusChange}
-                onUploadPhoto={handleUploadPhoto}
-                onRespondToClientReaction={handleRespondToClientReaction}
-                onViewPhotos={handleViewPhotos}
-                onClick={() => handleOrderClick(order.number)}
-              />
-            ))}
+      ) : orders.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          Заказы не найдены
         </div>
+      ) : (
+        <div className="grid gap-4 mt-6">
+          {filteredOrders.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onStatusChange={handleStatusChange}
+              onUploadPhoto={handleUploadPhoto}
+              onRespondToClientReaction={handleRespondToClientReaction}
+              onClick={() => handleOrderClick(order.number)}
+              onViewPhotos={() => handleViewPhotos(order)}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 text-sm text-gray-500">
+        Всего заказов: {orders.length}, Отфильтровано: {filteredOrders.length}
       </div>
     </div>
-  )
+  );
 }
