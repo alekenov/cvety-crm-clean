@@ -5,7 +5,7 @@ import { FilterGroup } from '@/components/ui/FilterGroup';
 import { H1, H2, H3, Body, Caption } from '@/components/ui/Typography';
 import { 
   Calendar, Truck, Store, Package, CreditCard, Clock, Star, Filter, Box, 
-  Plus, Minus, Search, X, MessageCircle, Camera, MapPin, Phone, User,
+  Plus, Minus, Search, X, MessageCircle, Camera, MapPin, Phone, User, Tag,
   AlertTriangle, Check, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';

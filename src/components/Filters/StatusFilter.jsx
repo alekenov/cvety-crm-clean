@@ -1,19 +1,19 @@
+import React from 'react';
 import { Tag } from 'lucide-react';
 
 const ORDER_STATUSES = [
+  'Все заказы',
   'Не оплачен',
   'Оплачен',
   'В работе',
   'Собран',
   'В пути',
   'Готов к самовывозу',
-  'Доставлен',
   'Архив'
 ];
 
-const StatusFilter = ({ selectedStatus, onStatusChange }) => {
+export default function StatusFilter({ selectedStatus, onStatusChange }) {
   const handleChange = (newStatus) => {
-    // Если кликнули на текущий фильтр, сбрасываем на "Все статусы"
     onStatusChange(selectedStatus === newStatus ? null : newStatus);
   };
 
@@ -25,13 +25,15 @@ const StatusFilter = ({ selectedStatus, onStatusChange }) => {
       </div>
       <div className="flex flex-wrap gap-2">
         {ORDER_STATUSES.map((status) => (
-          <button
+          <button 
             key={status}
             onClick={() => handleChange(status)}
-            className={`px-4 py-2 rounded-md text-sm transition-colors ${
-              selectedStatus === status
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            className={`px-4 py-2 rounded-full ${
+              selectedStatus === status 
+                ? status === 'Архив'
+                  ? 'bg-gray-500 text-white'
+                  : 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             {status}
@@ -40,6 +42,4 @@ const StatusFilter = ({ selectedStatus, onStatusChange }) => {
       </div>
     </div>
   );
-};
-
-export default StatusFilter;
+}

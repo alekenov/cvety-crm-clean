@@ -581,33 +581,37 @@ export default function OrdersPage() {
   };
 
   const filteredOrders = useMemo(() => {
-    if (!orders || !Array.isArray(orders)) {
-      console.warn('Orders is not an array:', orders);
-      return [];
-    }
+    if (!orders) return [];
 
-    console.log('Total orders before filtering:', orders.length);
-    
     let filtered = [...orders];
 
-    // Date filtering
+    // Фильтрация по статусу
+    if (statusFilter) {
+      if (statusFilter === 'Архив') {
+        // В архиве показываем доставленные заказы и заказы с возвратом
+        filtered = filtered.filter(order => 
+          order.status === 'Доставлен' || order.status === 'Возврат'
+        );
+      } else if (statusFilter === 'Все заказы') {
+        // В общем списке не показываем доставленные и возвращенные заказы
+        filtered = filtered.filter(order => 
+          order.status !== 'Доставлен' && order.status !== 'Возврат'
+        );
+      } else {
+        // Для остальных статусов фильтруем как обычно
+        filtered = filtered.filter(order => order.status === statusFilter);
+      }
+    }
+
+    // Фильтрация по дате
     if (dateFilter && dateFilter !== 'all') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
       filtered = filtered.filter(order => {
-        // Используем любую доступную дату
         const orderDate = new Date(order.delivery_time || order.created_at);
         const orderDay = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate());
         const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        
-        console.log('Order date check:', {
-          orderId: order.id,
-          orderDate: orderDay,
-          today: todayDay,
-          filter: dateFilter,
-          match: orderDay.getTime() === todayDay.getTime()
-        });
 
         switch (dateFilter) {
           case 'today':
@@ -630,7 +634,7 @@ export default function OrdersPage() {
       });
     }
 
-    // Search query filtering
+    // Фильтрация по поисковому запросу
     if (searchQuery) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(order => 
@@ -639,19 +643,6 @@ export default function OrdersPage() {
         order.client_phone?.toLowerCase().includes(query)
       );
     }
-
-    // Status filtering
-    if (statusFilter) {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    console.log('Filtering results:', {
-      totalBefore: orders.length,
-      totalAfter: filtered.length,
-      dateFilter,
-      searchQuery,
-      statusFilter
-    });
 
     return filtered;
   }, [orders, dateFilter, searchQuery, statusFilter]);
