@@ -1,37 +1,72 @@
 import React from 'react';
-import { MessageCircle, Camera, AlertTriangle, MapPin, Phone, User, Store, Clock, ThumbsUp, ThumbsDown, RefreshCw, ArrowRight } from 'lucide-react';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import { 
+  Calendar, MapPin, Phone, User, MessageCircle, 
+  Camera, CreditCard, Package, Clock, AlertTriangle, Store, ArrowRight
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Heading, Text, Label, Caption } from '@/components/ui/Typography/Typography';
 
 const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReaction, onClick }) => {
-  const getDateText = (dateString) => {
-    const today = new Date();
-    const orderDate = new Date(dateString);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+  const formatDeliveryDate = (date) => {
+    // Если дата не указана, используем текущую дату
+    const deliveryDate = date ? new Date(date) : new Date();
+    
+    try {
+      // Проверка на валидность даты
+      if (isNaN(deliveryDate.getTime())) {
+        console.warn('Invalid date:', date);
+        return format(new Date(), 'd MMMM yyyy, HH:mm', { locale: ru });
+      }
 
-    if (orderDate.toDateString() === today.toDateString()) {
-      return 'Сегодня';
-    } else if (orderDate.toDateString() === tomorrow.toDateString()) {
-      return 'Завтра';
-    } else {
-      return orderDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Сброс времени для корректного сравнения дат
+      today.setHours(0, 0, 0, 0);
+      tomorrow.setHours(0, 0, 0, 0);
+      const compareDate = new Date(deliveryDate);
+      compareDate.setHours(0, 0, 0, 0);
+
+      if (compareDate.getTime() === today.getTime()) {
+        return `Сегодня, ${format(deliveryDate, 'HH:mm')}`;
+      } else if (compareDate.getTime() === tomorrow.getTime()) {
+        return `Завтра, ${format(deliveryDate, 'HH:mm')}`;
+      } else {
+        return format(deliveryDate, 'd MMMM yyyy, HH:mm', { locale: ru });
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return format(new Date(), 'd MMMM yyyy, HH:mm', { locale: ru });
     }
   };
 
-  const statusColors = {
-    'Не оплачен': 'bg-red-500',
-    'Оплачен': 'bg-blue-500',
-    'В работе': 'bg-yellow-500',
-    'Собран': 'bg-purple-500',
-    'Ожидает курьера': 'bg-orange-500',
-    'В пути': 'bg-indigo-500',
-    'Доставлен': 'bg-green-500',
-    'Проблема с доставкой': 'bg-red-700',
-    'Готов к самовывозу': 'bg-teal-500'
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'Не оплачен':
+        return 'error';
+      case 'Оплачен':
+        return 'success';
+      case 'В работе':
+        return 'warning';
+      case 'Собран':
+        return 'info';
+      case 'В пути':
+        return 'purple';
+      case 'Готов к самовывозу':
+        return 'secondary';
+      case 'Доставлен':
+        return 'outline';
+      case 'Архив':
+        return 'gray';
+      default:
+        return 'default';
+    }
   };
 
   const nextStatus = {
@@ -45,21 +80,41 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
   };
 
   return (
-    <Card className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200" onClick={onClick}>
+    <Card 
+      className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200"
+      onClick={onClick}
+    >
       <CardContent className="p-4">
-        <div className="flex flex-wrap justify-between items-center mb-3">
+        <div className="flex justify-between items-center mb-3">
           <Heading as="h3" className="font-bold">{order.number}</Heading>
-          <Badge className={`${statusColors[order.status]} text-white`}>
+          <Badge variant={getStatusBadgeVariant(order.status)}>
             <Caption className="text-white">{order.status}</Caption>
           </Badge>
           <Heading as="h4" className="font-semibold text-green-600 w-full sm:w-auto mt-2 sm:mt-0">{order.totalPrice}</Heading>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <div className="text-sm text-gray-500 mb-1">Дата доставки</div>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <span>{formatDeliveryDate(order.delivery_date)}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500 mb-1">Тип доставки</div>
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-gray-400" />
+              <span>{order.deliveryType || 'Не указан'}</span>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Clock size={16} />
             <Text className="text-gray-600">
-              {getDateText(order.date)}, {order.time}
+              {formatDeliveryDate(order.delivery_date)}{order.time ? `, ${order.time}` : ''}
             </Text>
           </div>
 

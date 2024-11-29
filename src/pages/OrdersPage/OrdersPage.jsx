@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/tooltip";
 import DateFilter from '@/components/Filters/DateFilter';
 import StatusFilter from '@/components/Filters/StatusFilter';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 
 // Services
 import { storageService } from '@/services/storage/storageService';
@@ -69,12 +70,14 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
+      const time = orderDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
       if (orderDate.toDateString() === today.toDateString()) {
-        return 'Сегодня';
+        return `Сегодня, ${time}`;
       } else if (orderDate.toDateString() === tomorrow.toDateString()) {
-        return 'Завтра';
+        return `Завтра, ${time}`;
       } else {
-        return orderDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+        return `${orderDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}, ${time}`;
       }
     } catch (error) {
       console.error('Error parsing date:', error);
@@ -101,7 +104,7 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
           <div className="flex items-center justify-between">
             <Text variant="body" className="text-gray-600 flex items-center">
               <Clock size={16} className="mr-1" />
-              {getDateText(order.date)}, {order.time}
+              {getDateText(order.delivery_date)}
             </Text>
           </div>
 
@@ -412,26 +415,47 @@ const orderVanishStyles = `
 
 export default function OrdersPage() {
   const navigate = useNavigate();
-  const [dateFilter, setDateFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [dateFilter, setDateFilter] = useState('today');
+  const [statusFilter, setStatusFilter] = useState('Все заказы');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Форматирование даты для отображения
+  const formatDeliveryDate = (date) => {
+    const deliveryDate = new Date(date);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Сброс времени для корректного сравнения дат
+    today.setHours(0, 0, 0, 0);
+    tomorrow.setHours(0, 0, 0, 0);
+    deliveryDate.setHours(0, 0, 0, 0);
+
+    if (deliveryDate.getTime() === today.getTime()) {
+      return 'Сегодня';
+    } else if (deliveryDate.getTime() === tomorrow.getTime()) {
+      return 'Завтра';
+    } else {
+      return new Intl.DateTimeFormat('ru', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }).format(deliveryDate);
+    }
+  };
 
   useEffect(() => {
     const loadOrders = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
-        
+        setLoading(true);
         // Получаем список заказов
         const response = await ordersService.fetchOrders();
         
         if (response && response.data && Array.isArray(response.data)) {
           setOrders(response.data);
-          setError(null);
         } else if (response.error) {
           throw new Error(response.error);
         } else {
@@ -439,28 +463,17 @@ export default function OrdersPage() {
         }
       } catch (err) {
         console.error('Detailed Error:', err);
-        setError(err);
         logger.error('[OrdersPage] Ошибка при загрузке заказов', {
           error: err.message || err,
           timestamp: new Date().toISOString()
         });
-        
-        // Если ошибка связана с превышением лимита запросов, пробуем повторить через некоторое время
-        if (err.message?.includes('rate limit') && retryCount < 3) {
-          const retryDelay = Math.pow(2, retryCount) * 1000;
-          toast.error(`Превышен лимит запросов. Повторная попытка через ${retryDelay/1000} сек...`);
-          
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, retryDelay);
-        }
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     loadOrders();
-  }, [retryCount]);
+  }, []);
 
   const handleOrderClick = useCallback((orderNumber) => {
     try {
@@ -498,7 +511,7 @@ export default function OrdersPage() {
 
   const handlePhotoUpload = async (orderId, file) => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       const response = await ordersService.uploadPhoto(orderId, file);
       
       if (response.error) {
@@ -522,13 +535,13 @@ export default function OrdersPage() {
       console.error('Error uploading photo:', error);
       toast.error(`Ошибка при загрузке фото: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleViewPhotos = async (order) => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       const response = await ordersService.getOrderPhotos(order.id);
       
       if (response.error) {
@@ -543,7 +556,7 @@ export default function OrdersPage() {
       console.error('Error viewing photos:', error);
       toast.error(`Ошибка при просмотре фото: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -558,7 +571,7 @@ export default function OrdersPage() {
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       const response = await ordersService.updateOrderStatus(orderId, newStatus);
       
       if (response.error) {
@@ -576,8 +589,14 @@ export default function OrdersPage() {
       console.error('Error updating order status:', error);
       toast.error(`Ошибка при обновлении статуса: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
+  };
+
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    // Обновляем фильтр на выбранную дату
+    setDateFilter('custom');
   };
 
   const filteredOrders = useMemo(() => {
@@ -609,7 +628,7 @@ export default function OrdersPage() {
       today.setHours(0, 0, 0, 0);
       
       filtered = filtered.filter(order => {
-        const orderDate = new Date(order.delivery_time || order.created_at);
+        const orderDate = new Date(order.delivery_date || order.created_at);
         const orderDay = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate());
         const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -628,6 +647,9 @@ export default function OrdersPage() {
             const monthLater = new Date(today);
             monthLater.setMonth(monthLater.getMonth() + 1);
             return orderDay >= today && orderDay <= monthLater;
+          case 'custom':
+            const selectedDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+            return orderDay.getTime() === selectedDay.getTime();
           default:
             return true;
         }
@@ -645,7 +667,7 @@ export default function OrdersPage() {
     }
 
     return filtered;
-  }, [orders, dateFilter, searchQuery, statusFilter]);
+  }, [orders, dateFilter, searchQuery, statusFilter, selectedDate]);
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -665,6 +687,8 @@ export default function OrdersPage() {
         <DateFilter
           value={dateFilter}
           onChange={setDateFilter}
+          selectedDate={selectedDate}
+          onDateSelect={handleDateSelect}
         />
         <StatusFilter
           selectedStatus={statusFilter}
@@ -674,21 +698,9 @@ export default function OrdersPage() {
 
       {/* Список заказов */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoading ? (
+        {loading ? (
           <div className="flex justify-center items-center min-h-[200px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-          </div>
-        ) : error ? (
-          <div className="text-center py-8">
-            <div className="text-red-500 mb-4">
-              {error.message || 'Произошла ошибка при загрузке заказов'}
-            </div>
-            <Button 
-              onClick={() => setRetryCount(prev => prev + 1)}
-              variant="outline"
-            >
-              Попробовать снова
-            </Button>
           </div>
         ) : orders.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
