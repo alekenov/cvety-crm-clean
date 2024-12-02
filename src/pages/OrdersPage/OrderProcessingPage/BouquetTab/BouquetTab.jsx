@@ -1,340 +1,148 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { logger } from '../../../../services/logging/loggingService';
-import { Camera, Plus, Minus, X, AlertCircle, MessageCircle, Check, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Minus, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/Input';
+import { Input } from '@/components/ui/Input/Input';
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
+  DialogTitle 
 } from '@/components/ui/dialog';
+import PhotoGallery from '../components/PhotoGallery';
+import { ordersService } from '@/services/ordersService';
+import { toast } from 'react-hot-toast';
 
-export default function BouquetTab() {
-  const [photos, setPhotos] = useState({});
+export default function BouquetTab({ order }) {
+  const [photos, setPhotos] = useState([]);
   const [showFlowerPicker, setShowFlowerPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [composition, setComposition] = useState([
-    { id: 1, name: 'Роза розовая', count: 25, price: 450 },
-    { id: 2, name: 'Гипсофила', count: 2, price: 800 }
-  ]);
 
-  const order = {
-    id: '32451',
-    items: [
-      { 
-        id: 1,
-        type: 'bouquet',
-        name: 'Букет "Нежное облако"',
-        price: 15000
-      },
-      {
-        id: 2,
-        type: 'card',
-        name: 'Открытка поздравительная',
-        price: 500
-      }
-    ]
-  };
-
-  useEffect(() => {
-    logger.log('BouquetTab', 'Инициализация вкладки букета', {
-      orderId: order.id,
-      initialComposition: composition
-    });
-  }, [order.id]);
-
-  const handlePhotoUpload = useCallback((itemId, event) => {
-    try {
-      logger.log('BouquetTab', 'Загрузка фото букета', {
-        orderId: order.id,
-        itemId
-      });
-
-      const file = event.target.files?.[0];
-      if (file) {
-        setPhotos(prev => ({
-          ...prev,
-          [itemId]: URL.createObjectURL(file)
-        }));
-      }
-    } catch (error) {
-      logger.error('BouquetTab', 'Ошибка при загрузке фото', {
-        orderId: order.id,
-        itemId
-      }, error);
-    }
-  }, [order.id]);
-
-  const updateCount = useCallback((flowerId, change) => {
-    try {
-      logger.log('BouquetTab', 'Обновление количества цветов', {
-        orderId: order.id,
-        flowerId,
-        change
-      });
-
-      setComposition(prev => prev.map(flower => {
-        if (flower.id === flowerId) {
-          const newCount = Math.max(0, flower.count + change);
-          return { ...flower, count: newCount };
-        }
-        return flower;
-      }).filter(flower => flower.count > 0));
-    } catch (error) {
-      logger.error('BouquetTab', 'Ошибка при обновлении количества цветов', {
-        orderId: order.id,
-        flowerId,
-        change
-      }, error);
-    }
-  }, [order.id]);
-
-  const addFlower = useCallback((flower) => {
-    try {
-      logger.log('BouquetTab', 'Добавление цветка в букет', {
-        orderId: order.id,
-        flowerName: flower.name
-      });
-
-      const existing = composition.find(f => f.id === flower.id);
-      if (existing) {
-        updateCount(flower.id, 1);
-      } else {
-        setComposition([...composition, { ...flower, count: 1 }]);
-      }
-      setShowFlowerPicker(false);
-    } catch (error) {
-      logger.error('BouquetTab', 'Ошибка при добавлении цветка', {
-        orderId: order.id,
-        flowerName: flower.name
-      }, error);
-    }
-  }, [order.id, composition]);
-
-  const calculateTotals = useCallback((item) => {
-    try {
-      logger.log('BouquetTab', 'Расчет стоимости букета', {
-        orderId: order.id,
-        itemId: item.id
-      });
-
-      const materialCost = composition.reduce((sum, flower) => 
-        sum + (flower.count * flower.price), 0);
-      const margin = ((item.price - materialCost) / item.price * 100).toFixed(0);
-      return { materialCost, margin };
-    } catch (error) {
-      logger.error('BouquetTab', 'Ошибка при расчете стоимости букета', {
-        orderId: order.id,
-        itemId: item.id
-      }, error);
-    }
-  }, [order.id, composition]);
-
-  // Список доступных цветов для добавления
+  // Моковые данные цветов (в реальном приложении будут загружаться с сервера)
   const flowers = [
-    { id: 101, name: 'Роза красная', price: 450 },
-    { id: 102, name: 'Роза белая', price: 450 },
-    { id: 103, name: 'Хризантема', price: 350 },
-    { id: 104, name: 'Гипсофила', price: 800 },
-    { id: 105, name: 'Эустома', price: 550 }
+    { id: 1, name: 'Розы красные', price: 1000, stock: 150 },
+    { id: 2, name: 'Тюльпаны белые', price: 500, stock: 200 },
+    { id: 3, name: 'Хризантемы розовые', price: 700, stock: 100 },
   ];
 
+  const filteredFlowers = flowers.filter(flower =>
+    flower.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handlePhotoUpload = async (files) => {
+    try {
+      const uploadedPhotos = await ordersService.uploadPhotos(order.id, files);
+      setPhotos([...photos, ...uploadedPhotos]);
+      return uploadedPhotos;
+    } catch (error) {
+      toast.error('Ошибка при загрузке фотографий');
+      throw error;
+    }
+  };
+
+  const handlePhotoDelete = async (photoId) => {
+    try {
+      await ordersService.deletePhoto(order.id, photoId);
+      setPhotos(photos.filter(p => p.id !== photoId));
+    } catch (error) {
+      toast.error('Ошибка при удалении фотографии');
+      throw error;
+    }
+  };
+
+  const handlePhotoSend = async (photoId) => {
+    try {
+      await ordersService.sendPhotoToClient(order.id, photoId);
+    } catch (error) {
+      toast.error('Ошибка при отправке фотографии');
+      throw error;
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Основной контент */}
-      <div className="flex-1 p-4 space-y-4">
-        {order.items.map(item => {
-          const { materialCost, margin } = calculateTotals(item);
-          
-          return (
-            <div key={item.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
-              {/* Заголовок товара */}
-              <div className="p-4 border-b">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">{item.name}</h3>
-                    <p className="text-green-600 font-bold mt-1">
-                      {item.price.toLocaleString()} ₸
-                    </p>
-                  </div>
-                </div>
+    <div className="space-y-6 p-6">
+      {/* Фотографии букета */}
+      <Card className="p-6">
+        <PhotoGallery
+          orderId={order.id}
+          onUpload={handlePhotoUpload}
+          onDelete={handlePhotoDelete}
+          onSend={handlePhotoSend}
+        />
+      </Card>
+
+      {/* Состав букета */}
+      <Card className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-medium">Состав букета</h3>
+          <Button onClick={() => setShowFlowerPicker(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Добавить цветы
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {order.items?.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between p-4 border rounded-lg"
+            >
+              <div>
+                <p className="font-medium">{item.name}</p>
+                <p className="text-sm text-muted-foreground">{item.price} ₸ × {item.quantity}</p>
               </div>
-
-              {/* Фото до отправки */}
-              <div className="p-4 border-b">
-                <h4 className="text-sm font-medium mb-3">Фото до отправки:</h4>
-                {photos[item.id] ? (
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <img 
-                        src={photos[item.id]} 
-                        alt="Букет" 
-                        className="w-full aspect-[3/4] object-cover rounded-lg"
-                      />
-                      <div className="absolute top-2 right-2 flex gap-2">
-                        <button 
-                          onClick={() => setPhotos(prev => ({ ...prev, [item.id]: null }))}
-                          className="bg-white/90 p-2 rounded-full shadow-sm"
-                        >
-                          <X size={16} />
-                        </button>
-                        <label className="bg-white/90 p-2 rounded-full shadow-sm cursor-pointer">
-                          <Camera size={16} />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => handlePhotoUpload(item.id, e)}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                    <div className="bg-green-50 p-3 rounded-lg flex items-center">
-                      <Check size={16} className="text-green-600 mr-2" />
-                      <span className="text-sm text-green-700">
-                        Фото отправлено клиенту
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <label className="block cursor-pointer">
-                    <div className="bg-white border-2 border-dashed border-gray-200 rounded-lg aspect-[3/4] flex flex-col items-center justify-center">
-                      <Camera className="text-gray-400 mb-2" size={32} />
-                      <p className="text-sm text-gray-600">Нажмите чтобы добавить фото</p>
-                    </div>
-                    <input 
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handlePhotoUpload(item.id, e)}
-                    />
-                  </label>
-                )}
-              </div>
-
-              {/* Состав букета */}
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-medium">Состав букета</h4>
-                  <button 
-                    onClick={() => setShowFlowerPicker(true)}
-                    className="text-blue-600 text-sm font-medium flex items-center"
-                  >
-                    <Plus size={16} className="mr-1" />
-                    Добавить цветок
-                  </button>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  {composition.map(flower => (
-                    <div key={flower.id} className="bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium">{flower.name}</span>
-                          <span className="text-sm text-gray-500 ml-2">
-                            {flower.price} ₸/шт
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center bg-white rounded-lg p-1">
-                            <button 
-                              onClick={() => updateCount(flower.id, -1)}
-                              className="p-2"
-                            >
-                              <Minus size={16} className="text-gray-600" />
-                            </button>
-                            <span className="w-8 text-center font-medium">
-                              {flower.count}
-                            </span>
-                            <button 
-                              onClick={() => updateCount(flower.id, 1)}
-                              className="p-2"
-                            >
-                              <Plus size={16} className="text-gray-600" />
-                            </button>
-                          </div>
-                          <span className="font-medium min-w-[80px] text-right">
-                            {(flower.count * flower.price).toLocaleString()} ₸
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Итоги */}
-                <div className="space-y-2">
-                  <div className="bg-blue-50 p-3 rounded-lg flex justify-between items-center">
-                    <span className="text-sm font-medium">Стоимость материалов:</span>
-                    <span className="font-bold">
-                      {materialCost.toLocaleString()} ₸
-                    </span>
-                  </div>
-                  <div className="bg-green-50 p-3 rounded-lg flex justify-between items-center">
-                    <span className="text-sm font-medium">Маржинальность:</span>
-                    <span className="font-bold text-green-600">
-                      {margin}%
-                    </span>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm">
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <span className="w-12 text-center">{item.quantity}</span>
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Модальное окно выбора цветов */}
-      {showFlowerPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="bg-white p-4 rounded-t-xl w-full max-h-[80vh] overflow-auto">
-            <div className="sticky top-0 bg-white pb-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold">Добавить цветок</h3>
-                <button onClick={() => setShowFlowerPicker(false)}>
-                  <X size={24} />
-                </button>
-              </div>
+      <Dialog open={showFlowerPicker} onOpenChange={setShowFlowerPicker}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Добавить цветы</DialogTitle>
+          </DialogHeader>
 
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Поиск цветов..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg"
-                />
-                <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-              </div>
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Поиск цветов"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
 
-            <div className="space-y-2">
-              {flowers
-                .filter(f => 
-                  f.name.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-                .map(flower => (
-                  <button
-                    key={flower.id}
-                    onClick={() => addFlower(flower)}
-                    className="w-full text-left p-3 hover:bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="font-medium">{flower.name}</div>
-                      <div className="text-sm text-gray-600">
-                        {flower.price} ₸/шт
-                      </div>
-                    </div>
-                  </button>
-                ))
-              }
+            <div className="space-y-2 max-h-[400px] overflow-auto">
+              {filteredFlowers.map((flower) => (
+                <div
+                  key={flower.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 cursor-pointer"
+                >
+                  <div>
+                    <p className="font-medium">{flower.name}</p>
+                    <p className="text-sm text-muted-foreground">{flower.price} ₸</p>
+                  </div>
+                  <Badge variant="secondary">
+                    В наличии: {flower.stock}
+                  </Badge>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

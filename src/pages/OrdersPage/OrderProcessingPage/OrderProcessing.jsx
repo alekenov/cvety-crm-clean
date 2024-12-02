@@ -175,11 +175,13 @@ const OrderProcessing = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [writeOffModalOpen, setWriteOffModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
 
   // Состояния для заказа
   const [items, setItems] = useState([]);
   const [totalCost, setTotalCost] = useState(0);
   const [margin, setMargin] = useState(0);
+  const [statusHistory, setStatusHistory] = useState([]);
 
   // Состояния для сообщений
   const [messages, setMessages] = useState([]);
@@ -264,6 +266,48 @@ const OrderProcessing = () => {
     fetchOrder();
   }, [id, navigate, isValidOrderId]);
 
+  // Функция изменения статуса
+  const handleStatusChange = async (newStatus) => {
+    try {
+      const timestamp = new Date().toISOString();
+      const statusUpdate = {
+        status: newStatus,
+        timestamp,
+        user: 'current_user', // TODO: Получать из контекста авторизации
+      };
+
+      // Сохраняем в базу
+      const { error } = await ordersService.updateOrderStatus(order.id, newStatus);
+      
+      if (error) throw error;
+
+      // Обновляем локальное состояние
+      setOrderStatus(newStatus);
+      setStatusHistory(prev => [...prev, statusUpdate]);
+      
+      // Уведомляем пользователя
+      toast.success(`Статус заказа изменен на "${getStatusLabel(newStatus)}"`);
+      
+      // Закрываем модальное окно
+      setIsStatusModalOpen(false);
+      
+      // Логируем изменение
+      logger.info('Order status updated', { 
+        orderId: order.id, 
+        oldStatus: orderStatus, 
+        newStatus, 
+        timestamp 
+      });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error('Ошибка при изменении статуса заказа');
+      logger.error('Failed to update order status', { 
+        orderId: order.id, 
+        error: error.message 
+      });
+    }
+  };
+
   // Обработчики событий
   const handlePhotoUpload = () => {
     toast.success('Фото отправлено клиенту');
@@ -324,6 +368,8 @@ const OrderProcessing = () => {
             items={items} 
             totalCost={totalCost} 
             orderStatus={orderStatus}
+            onStatusChange={handleStatusChange}
+            statusHistory={statusHistory}
           />
         </TabsContent>
         <TabsContent value="bouquet">

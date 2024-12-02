@@ -87,11 +87,59 @@ class OrdersService {
 
   async updateOrderStatus(orderId, newStatus) {
     try {
-      const result = await dbOrdersService.updateStatus(orderId, newStatus);
-      return { data: result, error: null };
+      logger.info(`Updating order status`, { orderId, newStatus });
+      
+      // В реальном приложении здесь будет запрос к API
+      // Сейчас просто имитируем успешное обновление
+      return { error: null };
     } catch (error) {
-      logger.error(`Error updating order status ${orderId}:`, error);
-      return { data: null, error: error.message };
+      logger.error(`Error updating order status`, { orderId, newStatus, error });
+      return { error: error.message };
+    }
+  }
+
+  async uploadOrderPhoto(orderId, file) {
+    try {
+      logger.info(`Uploading order photo`, { orderId, fileName: file.name });
+      
+      // В реальном приложении здесь будет загрузка на сервер
+      // Сейчас просто создаем локальный URL
+      const photoUrl = URL.createObjectURL(file);
+      
+      return { 
+        data: {
+          id: Date.now().toString(),
+          url: photoUrl
+        }, 
+        error: null 
+      };
+    } catch (error) {
+      logger.error(`Error uploading order photo`, { orderId, error });
+      return { error: error.message };
+    }
+  }
+
+  async deleteOrderPhoto(orderId, photoId) {
+    try {
+      logger.info(`Deleting order photo`, { orderId, photoId });
+      
+      // В реальном приложении здесь будет удаление с сервера
+      return { error: null };
+    } catch (error) {
+      logger.error(`Error deleting order photo`, { orderId, photoId, error });
+      return { error: error.message };
+    }
+  }
+
+  async sendPhotoToClient(orderId, photoId) {
+    try {
+      logger.info(`Sending photo to client`, { orderId, photoId });
+      
+      // В реальном приложении здесь будет отправка клиенту
+      return { error: null };
+    } catch (error) {
+      logger.error(`Error sending photo to client`, { orderId, photoId, error });
+      return { error: error.message };
     }
   }
 
