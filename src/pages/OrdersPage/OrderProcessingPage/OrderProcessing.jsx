@@ -157,18 +157,65 @@ const mockOrders = [
   }
 ];
 
-const OrderProcessing = () => {
+export default function OrderProcessing() {
   const navigate = useNavigate();
   const { id } = useParams();
-
-  // Основные состояния
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Состояния для вкладок и навигации
   const [activeTab, setActiveTab] = useState('order');
   const [orderStatus, setOrderStatus] = useState(null);
+
+  // Проверяем, является ли id валидным UUID
+  const isValidOrderId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
+  useEffect(() => {
+    console.log('OrderProcessing Component Mounted');
+    console.log('Order ID:', id);
+    console.log('Supabase headers:', supabase.headers);
+    console.log('Supabase config:', supabase.config);
+
+    const fetchOrder = async () => {
+      if (!isValidOrderId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log(`Attempting to fetch order with ID: ${id}`);
+        
+        // Проверяем и преобразуем ID перед запросом
+        const sanitizedId = id.trim();
+        
+        // Получаем заказ по ID (предполагаем, что все ID теперь в формате UUID)
+        const { data, error } = await ordersService.getById(sanitizedId);
+
+        if (error) {
+          throw new Error(error);
+        }
+
+        if (!data) {
+          throw new Error('Заказ не найден');
+        }
+
+        console.log('Fetched order details:', data);
+        console.log('Order items:', data.items);
+        
+        setOrder(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching order:', error);
+        setError(error.message);
+        setLoading(false);
+      }
+    };
+
+    fetchOrder();
+  }, [id, isValidOrderId]);
+
+  useEffect(() => {
+    console.log('Order ID:', id);
+  }, [id]);
 
   // Состояния для модальных окон
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -216,55 +263,85 @@ const OrderProcessing = () => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState(null);
 
-  // Проверка наличия ID заказа
-  const isValidOrderId = id && id !== 'new';
+  const handleOrderUpdate = (updatedOrder) => {
+    console.log('Updating order with:', updatedOrder);
+    setOrder(updatedOrder);
+  };
 
-  useEffect(() => {
-    console.log('OrderProcessing Component Mounted');
-    console.log('Order ID:', id);
-  }, [id]);
+  // Обработчики изменения данных заказа
+  const handleCommentChange = async (comment) => {
+    try {
+      await ordersService.updateOrder(order.id, { comment });
+      setOrder(prev => ({ ...prev, comment }));
+      toast.success('Комментарий обновлен');
+    } catch (error) {
+      toast.error('Ошибка при обновлении комментария');
+      console.error('Error updating comment:', error);
+    }
+  };
 
-  useEffect(() => {
-    console.log('Supabase headers:', supabase.headers);
-    console.log('Supabase config:', supabase.config);
+  const handleCardTextChange = async (cardText) => {
+    try {
+      await ordersService.updateOrder(order.id, { card_text: cardText });
+      setOrder(prev => ({ ...prev, card_text: cardText }));
+      toast.success('Текст открытки обновлен');
+    } catch (error) {
+      toast.error('Ошибка при обновлении текста открытки');
+      console.error('Error updating card text:', error);
+    }
+  };
 
-    const fetchOrder = async () => {
-      if (!isValidOrderId) {
-        setLoading(false);
-        return;
-      }
+  const handleDeliveryMethodChange = async (method) => {
+    try {
+      await ordersService.updateOrder(order.id, { delivery_method: method });
+      setOrder(prev => ({ ...prev, delivery_method: method }));
+      toast.success('Способ доставки обновлен');
+    } catch (error) {
+      toast.error('Ошибка при обновлении способа доставки');
+      console.error('Error updating delivery method:', error);
+    }
+  };
 
-      try {
-        console.log(`Attempting to fetch order with ID: ${id}`);
-        
-        // Проверяем и преобразуем ID перед запросом
-        const sanitizedId = id.trim();
-        
-        // Если ID выглядит как номер заказа (не UUID), ищем по номеру
-        const response = await (sanitizedId.match(/^\d+$/) 
-          ? ordersService.fetchOrderByNumber(sanitizedId) 
-          : ordersService.fetchOrderById(sanitizedId));
+  const handleDeliveryAddressChange = async (address) => {
+    try {
+      await ordersService.updateOrder(order.id, { delivery_address: address });
+      setOrder(prev => ({ ...prev, delivery_address: address }));
+      toast.success('Адрес доставки обновлен');
+    } catch (error) {
+      toast.error('Ошибка при обновлении адреса доставки');
+      console.error('Error updating delivery address:', error);
+    }
+  };
 
-        if (response.error) {
-          throw new Error(response.error);
-        }
+  const handleRecipientNameChange = async (name) => {
+    try {
+      const updatedDetails = {
+        ...order?.details,
+        recipient: { ...order?.details?.recipient, name }
+      };
+      await ordersService.updateOrder(order.id, { details: updatedDetails });
+      setOrder(prev => ({ ...prev, details: updatedDetails }));
+      toast.success('Имя получателя обновлено');
+    } catch (error) {
+      toast.error('Ошибка при обновлении имени получателя');
+      console.error('Error updating recipient name:', error);
+    }
+  };
 
-        if (!response.data) {
-          throw new Error('Заказ не найден');
-        }
-
-        console.log('Fetched order details:', response.data);
-        setOrder(response.data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching order:', error);
-        setError(error.message);
-        setLoading(false);
-      }
-    };
-
-    fetchOrder();
-  }, [id, navigate, isValidOrderId]);
+  const handleRecipientPhoneChange = async (phone) => {
+    try {
+      const updatedDetails = {
+        ...order?.details,
+        recipient: { ...order?.details?.recipient, phone }
+      };
+      await ordersService.updateOrder(order.id, { details: updatedDetails });
+      setOrder(prev => ({ ...prev, details: updatedDetails }));
+      toast.success('Телефон получателя обновлен');
+    } catch (error) {
+      toast.error('Ошибка при обновлении телефона получателя');
+      console.error('Error updating recipient phone:', error);
+    }
+  };
 
   // Функция изменения статуса
   const handleStatusChange = async (newStatus) => {
@@ -336,63 +413,60 @@ const OrderProcessing = () => {
 
   // Основной рендеринг
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={() => navigate('/orders')}>
-            <ArrowLeft className="w-5 h-5" />
+    <div className="container mx-auto py-6">
+      {/* Шапка с номером заказа и кнопкой назад */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/orders')}
+            className="flex items-center"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Назад
           </Button>
-          <div>
-            <h2 className="text-xl font-bold">Заказ {order.number}</h2>
-            <Badge variant={orderStatus === ORDER_STATUS.PAID ? "success" : "warning"}>
-              {getStatusLabel(orderStatus)}
+          <div className="flex items-center space-x-4">
+            <h2 className="text-2xl font-bold">
+              Заказ №{order?.number || id}
+            </h2>
+            <Badge variant="outline" className="text-base">
+              {getStatusLabel(order?.status)}
             </Badge>
           </div>
         </div>
-        
-        <div className="flex items-center space-x-2">
-          <Tabs defaultValue="order" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="order">Заказ</TabsTrigger>
-              <TabsTrigger value="bouquet">Букет</TabsTrigger>
-              <TabsTrigger value="delivery">Доставка</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      {/* Основной контент */}
+      <div className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="order">Заказ</TabsTrigger>
+          <TabsTrigger value="bouquet">Букет</TabsTrigger>
+          <TabsTrigger value="delivery">Доставка</TabsTrigger>
+        </TabsList>
+
         <TabsContent value="order">
           <OrderTab 
-            order={order} 
-            items={items} 
-            totalCost={totalCost} 
-            orderStatus={orderStatus}
-            onStatusChange={handleStatusChange}
-            statusHistory={statusHistory}
-          />
-        </TabsContent>
-        <TabsContent value="bouquet">
-          <BouquetTab 
             order={order}
-            bouquetComposition={bouquetComposition}
-            setBouquetComposition={setBouquetComposition}
-            photos={photos}
-            setPhotos={setPhotos}
+            onStatusChange={handleStatusChange}
+            onCommentChange={handleCommentChange}
+            onCardTextChange={handleCardTextChange}
           />
         </TabsContent>
+
+        <TabsContent value="bouquet">
+          <BouquetTab order={order} onOrderUpdate={handleOrderUpdate} />
+        </TabsContent>
+
         <TabsContent value="delivery">
           <DeliveryTab 
             order={order}
-            deliveryInfo={deliveryInfo}
-            setDeliveryInfo={setDeliveryInfo}
-            courier={courier}
-            estimatedTime={estimatedTime}
+            onDeliveryMethodChange={handleDeliveryMethodChange}
+            onDeliveryAddressChange={handleDeliveryAddressChange}
+            onRecipientNameChange={handleRecipientNameChange}
+            onRecipientPhoneChange={handleRecipientPhoneChange}
           />
         </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 };
-
-export default OrderProcessing;

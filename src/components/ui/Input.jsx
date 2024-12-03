@@ -12,14 +12,16 @@ export const Input = React.forwardRef(({
   error,
   clearable = false,
   onClear,
+  value,
+  onChange,
   ...props
 }, ref) => {
-  const [inputValue, setInputValue] = React.useState(props.value || '')
+  const handleChange = (e) => {
+    onChange?.(e);
+  };
 
-  const handleClear = () => {
-    setInputValue('')
-    onClear && onClear()
-  }
+  // Удаляем пропсы, которые не должны попадать в DOM
+  const { variant: _, size: __, ...domProps } = props;
 
   const variants = {
     default: "border border-neutral-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100",
@@ -45,41 +47,36 @@ export const Input = React.forwardRef(({
       {leftIcon && renderIcon(leftIcon, 'left')}
       
       <input
-        ref={ref}
         type={type}
-        value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value)
-          props.onChange && props.onChange(e)
-        }}
+        ref={ref}
+        value={value}
+        onChange={handleChange}
         className={cn(
-          'w-full',
-          'transition-all duration-200',
-          'focus:outline-none',
-          variants[error ? 'error' : variant],
+          "w-full bg-white disabled:cursor-not-allowed disabled:opacity-50",
+          variants[error ? "error" : variant],
           sizes[size],
           leftIcon && 'pl-10',
-          (rightIcon || (clearable && inputValue)) && 'pr-10',
+          rightIcon && 'pr-10',
           className
         )}
-        {...props}
+        {...domProps}
       />
-      
+
       {rightIcon && renderIcon(rightIcon, 'right')}
       
-      {clearable && inputValue && (
-        <button 
+      {clearable && value && (
+        <button
           type="button"
-          onClick={handleClear}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700"
+          onClick={onClear}
+          className="absolute inset-y-0 right-0 px-3 flex items-center"
         >
-          <X size={16} />
+          <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
         </button>
       )}
 
       {error && (
-        <div className="flex items-center mt-1 text-sm text-red-500 space-x-1">
-          <AlertCircle size={14} />
+        <div className="flex items-center mt-1 text-red-500 text-sm">
+          <AlertCircle className="h-4 w-4 mr-1" />
           <span>{error}</span>
         </div>
       )}
@@ -87,7 +84,7 @@ export const Input = React.forwardRef(({
   )
 })
 
-Input.displayName = 'Input'
+Input.displayName = "Input"
 
 // Создаем под-компоненты для удобства
 export const SearchInput = React.forwardRef((props, ref) => (

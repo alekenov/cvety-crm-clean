@@ -1,231 +1,216 @@
-import { ordersService as dbOrdersService } from '../config/database/db';
-import { supabaseConfig } from '../config/database/supabase.config';
-import logger from '../utils/logger';
+import { supabase } from './supabaseClient';
 
 class OrdersService {
-  constructor() {
-    this.mockPhotos = new Map(); // Для хранения фотографий в режиме разработки
-  }
-
-  async fetchOrders() {
-    try {
-      const orders = await dbOrdersService.fetchOrders();
-      return { data: orders, error: null };
-    } catch (error) {
-      logger.error('Error fetching orders:', error);
-      return { data: null, error: error.message };
-    }
-  }
-
-  async fetchArchivedOrders() {
-    try {
-      const orders = await dbOrdersService.fetchOrders();
-      const archivedOrders = orders.filter(order => order.status === 'Доставлен');
-      return { data: archivedOrders, error: null };
-    } catch (error) {
-      logger.error('Error fetching archived orders:', error);
-      return { data: null, error: error.message };
-    }
-  }
-
   async getAll() {
-    return this.fetchOrders();
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          items:order_items(
+            id,
+            quantity,
+            product:products(*)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      return { data: null, error: error.message };
+    }
   }
 
   async getById(id) {
     try {
-      const { data: orders } = await this.fetchOrders();
-      const order = orders ? orders.find(order => order.id === id) : null;
-      return { data: order, error: null };
+      console.log('Fetching order by ID:', id);
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          items:order_items(
+            id,
+            quantity,
+            price,
+            product:products(*)
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      console.log('Order data:', data);
+      console.log('Order items:', data?.items);
+
+      if (error) throw error;
+      return { data, error: null };
     } catch (error) {
-      logger.error(`Error getting order by id ${id}:`, error);
+      console.error(`Error getting order by id ${id}:`, error);
       return { data: null, error: error.message };
     }
   }
 
-  async fetchOrderById(id) {
+  async updateOrder(id, updates) {
     try {
-      const { data: orders } = await this.fetchOrders();
-      const order = orders.find(order => order.id === id);
-      return { data: order || null, error: null };
+      const { data, error } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
     } catch (error) {
-      logger.error(`Error fetching order by ID ${id}:`, error);
+      console.error(`Error updating order ${id}:`, error);
       return { data: null, error: error.message };
     }
   }
 
-  async fetchOrderByNumber(number) {
+  async addProductToOrder(orderId, productId, quantity) {
     try {
-      const { data: orders } = await this.fetchOrders();
-      const order = orders.find(order => order.number === number);
-      return { data: order || null, error: null };
-    } catch (error) {
-      logger.error(`Error fetching order by number ${number}:`, error);
-      return { data: null, error: error.message };
-    }
-  }
-
-  async create(order) {
-    try {
-      const result = await dbOrdersService.create(order);
-      return { data: result, error: null };
-    } catch (error) {
-      logger.error('Error creating order:', error);
-      return { data: null, error: error.message };
-    }
-  }
-
-  async update(id, data) {
-    try {
-      const result = await dbOrdersService.update(id, data);
-      return { data: result, error: null };
-    } catch (error) {
-      logger.error(`Error updating order ${id}:`, error);
-      return { data: null, error: error.message };
-    }
-  }
-
-  async updateOrderStatus(orderId, newStatus) {
-    try {
-      logger.info(`Updating order status`, { orderId, newStatus });
+      console.log('Adding product to order:', { orderId, productId, quantity });
       
-      // В реальном приложении здесь будет запрос к API
-      // Сейчас просто имитируем успешное обновление
+      // Сначала получаем информацию о продукте
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('price')
+        .eq('id', productId)
+        .single();
+
+      console.log('Product data:', product);
+
+      if (productError) throw productError;
+      if (!product) throw new Error('Product not found');
+
+      // Теперь добавляем товар в заказ с ценой
+      const { data, error } = await supabase
+        .from('order_items')
+        .insert({
+          order_id: orderId,
+          product_id: productId,
+          quantity: quantity,
+          price: product.price
+        })
+        .select(`
+          id,
+          quantity,
+          price,
+          product:products(*)
+        `)
+        .single();
+
+      console.log('Added order item:', data);
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error(`Error adding product to order ${orderId}:`, error);
+      return { data: null, error: error.message };
+    }
+  }
+
+  async updateOrderItem(itemId, updates) {
+    try {
+      const { data, error } = await supabase
+        .from('order_items')
+        .update(updates)
+        .eq('id', itemId)
+        .select(`
+          id,
+          quantity,
+          product:products(*)
+        `)
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error(`Error updating order item ${itemId}:`, error);
+      return { data: null, error: error.message };
+    }
+  }
+
+  async removeOrderItem(itemId) {
+    try {
+      const { error } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('id', itemId);
+
+      if (error) throw error;
       return { error: null };
     } catch (error) {
-      logger.error(`Error updating order status`, { orderId, newStatus, error });
+      console.error(`Error removing order item ${itemId}:`, error);
       return { error: error.message };
     }
   }
 
-  async uploadOrderPhoto(orderId, file) {
-    try {
-      logger.info(`Uploading order photo`, { orderId, fileName: file.name });
-      
-      // В реальном приложении здесь будет загрузка на сервер
-      // Сейчас просто создаем локальный URL
-      const photoUrl = URL.createObjectURL(file);
-      
-      return { 
-        data: {
-          id: Date.now().toString(),
-          url: photoUrl
-        }, 
-        error: null 
-      };
-    } catch (error) {
-      logger.error(`Error uploading order photo`, { orderId, error });
-      return { error: error.message };
-    }
-  }
-
-  async deleteOrderPhoto(orderId, photoId) {
-    try {
-      logger.info(`Deleting order photo`, { orderId, photoId });
-      
-      // В реальном приложении здесь будет удаление с сервера
-      return { error: null };
-    } catch (error) {
-      logger.error(`Error deleting order photo`, { orderId, photoId, error });
-      return { error: error.message };
-    }
-  }
-
-  async sendPhotoToClient(orderId, photoId) {
-    try {
-      logger.info(`Sending photo to client`, { orderId, photoId });
-      
-      // В реальном приложении здесь будет отправка клиенту
-      return { error: null };
-    } catch (error) {
-      logger.error(`Error sending photo to client`, { orderId, photoId, error });
-      return { error: error.message };
-    }
-  }
-
-  async uploadPhoto(orderId, file) {
-    try {
-      if (process.env.NODE_ENV === 'development') {
-        // В режиме разработки сохраняем фото локально
-        const photos = this.mockPhotos.get(orderId) || [];
-        const photoUrl = URL.createObjectURL(file);
-        photos.push(photoUrl);
-        this.mockPhotos.set(orderId, photos);
-        return { data: { url: photoUrl }, error: null };
-      } else {
-        // В продакшене загружаем в Supabase Storage
-        const { data, error } = await supabaseConfig.storage
-          .from('orders')
-          .upload(`${orderId}/${file.name}`, file);
-
-        if (error) throw error;
-        return { data: { url: data.path }, error: null };
-      }
-    } catch (error) {
-      logger.error(`Error uploading photo for order ${orderId}:`, error);
-      return { data: null, error: error.message };
-    }
-  }
-
-  async getOrderPhotos(orderId) {
-    try {
-      if (process.env.NODE_ENV === 'development') {
-        // В режиме разработки возвращаем локально сохраненные фото
-        const photos = this.mockPhotos.get(orderId) || [];
-        return { data: photos, error: null };
-      } else {
-        // В продакшене получаем из Supabase Storage
-        const { data, error } = await supabaseConfig.storage
-          .from('orders')
-          .list(orderId);
-
-        if (error) throw error;
-        const photoUrls = data.map(file => ({
-          url: supabaseConfig.storage
-            .from('orders')
-            .getPublicUrl(`${orderId}/${file.name}`).data.publicUrl
-        }));
-        return { data: photoUrls, error: null };
-      }
-    } catch (error) {
-      logger.error(`Error getting photos for order ${orderId}:`, error);
-      return { data: null, error: error.message };
-    }
-  }
-
-  getOrderColumns() {
-    return [
-      { field: 'number', headerName: '№ заказа', width: 100 },
-      { field: 'status', headerName: 'Статус', width: 120 },
-      { field: 'delivery_type', headerName: 'Тип доставки', width: 120 },
-      { field: 'delivery_address', headerName: 'Адрес доставки', width: 200 },
-      { field: 'delivery_date', headerName: 'Дата доставки', width: 150 },
-      { 
-        field: 'customer',
-        headerName: 'Клиент',
-        width: 200,
-        valueGetter: (params) => {
-          const customer = params.row.customer;
-          return customer ? `${customer.name} (${customer.phone})` : '';
-        }
-      },
-      { field: 'total', headerName: 'Сумма', width: 100 },
-    ];
-  }
-
-  filterOrdersByDate(orders, dateFilter) {
-    if (!dateFilter) return orders;
-
-    const startOfDay = new Date(dateFilter);
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date(dateFilter);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    return orders.filter(order => {
-      const orderDate = new Date(order.delivery_date);
-      return orderDate >= startOfDay && orderDate <= endOfDay;
+  async updateOrderStatus(orderId, status) {
+    return this.updateOrder(orderId, { 
+      status,
+      status_updated_at: new Date().toISOString()
     });
+  }
+
+  async createOrder(orderData) {
+    try {
+      console.log('Creating order with data:', orderData);
+
+      // Создаем заказ
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          ...orderData,
+          status: 'new',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+      console.log('Created order:', order);
+
+      // Если есть товары в заказе, добавляем их
+      if (orderData.items && orderData.items.length > 0) {
+        const orderItems = orderData.items.map(item => ({
+          order_id: order.id,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.price
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) throw itemsError;
+      }
+
+      // Получаем полные данные заказа со всеми связями
+      const { data: fullOrder, error: getError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          items:order_items(
+            id,
+            quantity,
+            price,
+            product:products(*)
+          )
+        `)
+        .eq('id', order.id)
+        .single();
+
+      if (getError) throw getError;
+      console.log('Full order data:', fullOrder);
+
+      return { data: fullOrder, error: null };
+    } catch (error) {
+      console.error('Error creating order:', error);
+      return { data: null, error: error.message };
+    }
   }
 }
 
