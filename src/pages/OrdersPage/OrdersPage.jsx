@@ -88,16 +88,19 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
   return (
     <Card 
       className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200" 
-      onClick={onClick}
-      data-order-id={order.id}  // Добавляем data-атрибут
+      onClick={() => onClick(order)}
     >
       <CardContent className="p-4">
         <div className="flex flex-wrap justify-between items-center mb-3">
-          <Text variant="h2" className="font-bold text-lg">{order.number}</Text>
+          <Text variant="h2" className="font-bold text-lg">№{order.number}</Text>
           <Badge className={`${statusColors[order.status]} text-white`}>
             {order.status}
           </Badge>
-          <Text variant="body" className="font-semibold text-green-600 w-full sm:w-auto mt-2 sm:mt-0">{order.totalPrice}</Text>
+          <Text variant="body" className="font-semibold text-green-600 w-full sm:w-auto mt-2 sm:mt-0">
+            {typeof order.total_price === 'number' 
+              ? `${order.total_price.toLocaleString()} ₸` 
+              : order.total_price || 'Цена не указана'}
+          </Text>
         </div>
 
         <div className="space-y-3">
@@ -451,15 +454,16 @@ export default function OrdersPage() {
     const loadOrders = async () => {
       try {
         setLoading(true);
-        // Получаем список заказов
-        const response = await ordersService.fetchOrders();
+        const { data, error } = await ordersService.getAll();
         
-        if (response && response.data && Array.isArray(response.data)) {
-          setOrders(response.data);
-        } else if (response.error) {
-          throw new Error(response.error);
+        if (error) {
+          throw new Error(error);
+        }
+        
+        if (data) {
+          setOrders(data);
         } else {
-          throw new Error('Получены некорректные данные от сервера');
+          setOrders([]);
         }
       } catch (err) {
         console.error('Detailed Error:', err);
@@ -467,6 +471,7 @@ export default function OrdersPage() {
           error: err.message || err,
           timestamp: new Date().toISOString()
         });
+        toast.error('Не удалось загрузить заказы');
       } finally {
         setLoading(false);
       }
@@ -475,27 +480,17 @@ export default function OrdersPage() {
     loadOrders();
   }, []);
 
-  const handleOrderClick = useCallback((orderNumber) => {
+  const handleOrderClick = useCallback((order) => {
     try {
-      if (!orderNumber) {
-        throw new Error('Номер заказа не указан');
-      }
-      logger.log('OrdersPage', `Переход на страницу заказа ${orderNumber}`);
-      
-      // Извлекаем только цифры из номера заказа
-      const cleanNumber = String(orderNumber).replace(/[^0-9]/g, '');
-      
-      logger.log('OrdersPage', `Navigating to order details for order number: ${orderNumber}, clean ID: ${cleanNumber}`);
-      
-      if (!cleanNumber) {
-        throw new Error('Некорректный номер заказа');
+      if (!order || !order.id) {
+        throw new Error('ID заказа не указан');
       }
       
-      // Используем прямую навигацию без проверки
-      navigate(`/orders/${cleanNumber}`);
+      logger.log('OrdersPage', `Переход на страницу заказа ${order.id}`);
+      navigate(`/orders/${order.id}`);
     } catch (error) {
       console.error('Detailed error:', error);
-      logger.error('OrdersPage', `Ошибка при переходе на страницу заказа ${orderNumber}`, null, error);
+      logger.error('OrdersPage', `Ошибка при переходе на страницу заказа`, null, error);
       toast.error(`Не удалось перейти на страницу заказа: ${error.message}`);
     }
   }, [navigate]);
@@ -697,7 +692,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Список заказов */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="space-y-4">
         {loading ? (
           <div className="flex justify-center items-center min-h-[200px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
@@ -711,10 +706,10 @@ export default function OrdersPage() {
             <OrderCard
               key={order.id}
               order={order}
-              onStatusChange={handleStatusChange}
-              onUploadPhoto={handlePhotoUpload}
-              onRespondToClientReaction={handleRespondToClientReaction}
-              onClick={() => handleOrderClick(order.number)}
+              onClick={() => handleOrderClick(order)}
+              onStatusChange={(newStatus) => handleStatusChange(order.id, newStatus)}
+              onUploadPhoto={(file) => handlePhotoUpload(order.id, file)}
+              onRespondToClientReaction={(response) => handleRespondToClientReaction(order.id, response)}
               onViewPhotos={() => handleViewPhotos(order)}
             />
           ))

@@ -1,78 +1,83 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/Textarea/Textarea";
+import { Input } from "@/components/ui/Input/Input";
 import { getStatusLabel } from '@/constants/orderStatuses';
 import StatusChangeModal from '../components/StatusChangeModal';
 
 const OrderTab = ({ 
-  order, 
-  orderStatus,
+  order,
   onStatusChange,
-  statusHistory
+  onCommentChange,
+  onCardTextChange
 }) => {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 p-6">
       {/* Статус заказа */}
-      <div className="flex items-center justify-between p-4 bg-card rounded-lg border">
-        <div className="space-y-1">
-          <div className="text-sm font-medium">Статус заказа</div>
-          <Badge variant="outline">
-            {getStatusLabel(orderStatus)}
-          </Badge>
-        </div>
-        <Button 
-          variant="outline"
-          onClick={() => setIsStatusModalOpen(true)}
-        >
-          Изменить статус
-        </Button>
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-lg font-medium">Статус заказа</h3>
+              <Badge variant="outline">
+                {getStatusLabel(order?.status)}
+              </Badge>
+            </div>
+            <Button 
+              variant="outline"
+              onClick={() => setIsStatusModalOpen(true)}
+            >
+              Изменить статус
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <StatusChangeModal
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
-        currentStatus={orderStatus}
+        currentStatus={order?.status}
         onStatusChange={onStatusChange}
-        statusHistory={statusHistory}
       />
 
-      {/* Информация о заказе */}
-      <div className="grid gap-4 p-4 bg-card rounded-lg border">
-        <div>
-          <h3 className="text-lg font-medium">Детали заказа</h3>
-          <p className="text-sm text-muted-foreground">
-            {order?.comment || 'Комментарий отсутствует'}
-          </p>
-        </div>
-        
-        {order?.items?.length > 0 && (
-          <div>
-            <h4 className="font-medium mb-2">Состав заказа</h4>
-            <div className="space-y-2">
-              {order.items.map((item, index) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span>{item.name} x {item.quantity}</span>
-                  <span>{item.price}</span>
-                </div>
-              ))}
+      {/* Комментарий к заказу */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Комментарий к заказу</h3>
+              <Textarea
+                value={order?.comment || ''}
+                onChange={(e) => onCommentChange(e.target.value)}
+                placeholder="Добавьте комментарий к заказу..."
+                className="min-h-[100px]"
+              />
             </div>
           </div>
-        )}
+        </CardContent>
+      </Card>
 
-        {order?.details?.recipient && (
-          <div>
-            <h4 className="font-medium mb-2">Получатель</h4>
-            <div className="space-y-1 text-sm">
-              <p>{order.details.recipient.name}</p>
-              <p>{order.details.recipient.phone}</p>
+      {/* Текст открытки */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Текст открытки</h3>
+              <Input
+                value={order?.card_text || ''}
+                onChange={(e) => onCardTextChange(e.target.value)}
+                placeholder="Введите текст для открытки..."
+              />
             </div>
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
 
 export default OrderTab;
