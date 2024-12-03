@@ -33,6 +33,36 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
   useEffect(() => {
     console.log('useEffect triggered with editingProduct:', editingProduct);
     
+    const loadProductComposition = async (productId) => {
+      const { data: compositionData, error } = await supabase
+        .from('product_compositions')
+        .select(`
+          *,
+          inventory:inventory_item_id (
+            id,
+            name,
+            price,
+            unit
+          )
+        `)
+        .eq('product_id', productId);
+
+      if (error) {
+        console.error('Error loading composition:', error);
+        return;
+      }
+
+      const formattedComposition = compositionData.map(item => ({
+        inventory_item_id: item.inventory_item_id,
+        name: item.inventory.name,
+        price: item.inventory.price,
+        unit: item.inventory.unit,
+        quantity: item.quantity
+      }));
+
+      setComposition(formattedComposition);
+    };
+    
     if (editingProduct) {
       console.log('Setting form data from editingProduct:', {
         name: editingProduct.name,
@@ -48,17 +78,8 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
         activeTab: 'composition'
       });
 
-      // Устанавливаем состав
-      if (editingProduct.composition_details?.length > 0) {
-        console.log('Setting composition from editingProduct:', editingProduct.composition_details);
-        setComposition(editingProduct.composition_details.map(item => ({
-          inventory_item_id: item.inventory_item_id,
-          name: item.name,
-          price: item.price,
-          unit: item.unit,
-          quantity: item.quantity
-        })));
-      }
+      // Загружаем состав букета
+      loadProductComposition(editingProduct.id);
     }
   }, [editingProduct]);
 
@@ -136,11 +157,11 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
         return;
       }
 
+      const totalPrice = composition.reduce((sum, item) => 
+        sum + (item.price * item.quantity), 0);
+
       if (editingProduct) {
         // Обновляем существующий продукт
-        const totalPrice = composition.reduce((sum, item) => 
-          sum + (item.price * item.quantity), 0);
-
         const { data, error } = await supabase
           .from('products')
           .update({
@@ -149,8 +170,8 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
             status: formData.status,
             price: totalPrice,
             base_price: totalPrice,
-            markup_amount: totalPrice * 0.3,
-            packaging_cost: 2000
+            markup_amount: 0,
+            packaging_cost: 0
           })
           .eq('id', editingProduct.id)
           .select()
@@ -172,7 +193,8 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
           const compositionData = composition.map(item => ({
             product_id: productId,
             inventory_item_id: item.inventory_item_id,
-            quantity: item.quantity
+            quantity: item.quantity,
+            cost: item.price
           }));
 
           const { error: compositionError } = await supabase
@@ -215,9 +237,6 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
         onProductUpdate();
       } else {
         // Создаем новый продукт
-        const totalPrice = composition.reduce((sum, item) => 
-          sum + (item.price * item.quantity), 0);
-
         const { data, error } = await supabase
           .from('products')
           .insert({
@@ -227,8 +246,8 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
             sku: generateSKU(formData.name),
             price: totalPrice,
             base_price: totalPrice,
-            markup_amount: totalPrice * 0.3,
-            packaging_cost: 2000
+            markup_amount: 0,
+            packaging_cost: 0
           })
           .select()
           .single();
@@ -241,7 +260,8 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
           const compositionData = composition.map(item => ({
             product_id: productId,
             inventory_item_id: item.inventory_item_id,
-            quantity: item.quantity
+            quantity: item.quantity,
+            cost: item.price
           }));
 
           const { error: compositionError } = await supabase
@@ -436,51 +456,19 @@ const ProductForm = ({ onClose, editingProduct = null, viewMode = false, onProdu
                   </button>
                 </div>
 
-                {composition.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
-                    Добавьте цветы в состав букета
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {composition.map(item => (
-                      <div
-                        key={item.inventory_item_id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex-grow">
-                          <div className="font-medium">{item.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {item.price} ₸ / {item.unit} • Сумма: {(item.price * item.quantity).toLocaleString()} ₸
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <button
-                            onClick={() => handleQuantityChange(item.inventory_item_id, -1)}
-                            className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-50"
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus size={16} />
-                          </button>
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          <button
-                            onClick={() => handleQuantityChange(item.inventory_item_id, 1)}
-                            className="p-1 text-gray-400 hover:text-blue-500"
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                <BouquetCompositionEditor
+                  initialComposition={composition}
+                  onCompositionChange={setComposition}
+                  maxItems={20}
+                />
 
-                    {/* Итоговая цена */}
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between font-bold">
-                        <span>Итоговая цена:</span>
-                        <span>{finalPrice.toLocaleString()} ₸</span>
-                      </div>
-                    </div>
+                {/* Итоговая цена */}
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between font-bold">
+                    <span>Итоговая цена:</span>
+                    <span>{finalPrice.toLocaleString()} ₸</span>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
