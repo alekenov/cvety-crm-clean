@@ -8,104 +8,204 @@ CRM система использует Supabase в качестве базы д
 
 ### Основные таблицы
 
-#### 1. Orders (Заказы)
-- **Назначение**: Хранение информации о заказах клиентов
-- **Основные поля**:
-  - `id`: UUID (PK)
-  - `status`: enum ('new', 'processing', 'completed', 'cancelled')
-  - `client_name`: text
-  - `client_phone`: text
-  - `delivery_address`: text
-  - `delivery_time`: timestamp
-  - `total_amount`: numeric
-  - `payment_status`: enum ('pending', 'paid', 'refunded')
-  - `payment_method`: enum ('cash', 'card', 'transfer')
-  - `employee_id`: UUID (FK to employees)
-  - `shop_id`: UUID (FK to shops)
-  - `notes`: text
-  - `created_at`: timestamp
-  - `updated_at`: timestamp
+#### 1. Organizations (Организации)
+Таблица для управления сетями магазинов
+- `id` (uuid, PK) - уникальный идентификатор
+- `name` (text) - название организации
+- `description` (text) - описание
+- `contact_person` (text) - контактное лицо
+- `phone` (text) - телефон
+- `email` (text) - email
+- `settings` (jsonb) - настройки организации
+- `status` (text) - статус (active/inactive)
 
-#### 2. Products (Продукты)
-- **Назначение**: Каталог продуктов (букеты, композиции)
-- **Основные поля**:
-  - `id`: UUID (PK)
-  - `name`: text
-  - `category`: text
-  - `price`: numeric
-  - `base_price`: numeric
-  - `markup_amount`: numeric
-  - `packaging_cost`: numeric
-  - `description`: text
-  - `status`: enum ('active', 'inactive')
-  - `image_url`: text
-  - `sku`: text
-  - `created_at`: timestamp
-  - `updated_at`: timestamp
+#### 2. Shops (Магазины)
+Таблица для управления точками продаж
+- `id` (uuid, PK) - уникальный идентификатор
+- `organization_id` (uuid, FK) - связь с организацией
+- `name` (text) - название магазина
+- `address` (text) - адрес
+- `phone` (text) - телефон
+- `whatsapp` (text) - WhatsApp
+- `instagram` (text) - Instagram
+- `working_hours` (jsonb) - часы работы
+- `settings` (jsonb) - настройки магазина (доставка, самовывоз)
+- `status` (text) - статус активности
 
-#### 3. Shops (Магазины)
-- **Назначение**: Информация о магазинах сети
-- **Основные поля**:
-  - `id`: UUID (PK)
-  - `name`: text
-  - `address`: text
-  - `phone`: text
-  - `email`: text
-  - `working_hours`: jsonb
-  - `settings`: jsonb
-  - `status`: enum ('active', 'inactive')
-  - `created_at`: timestamp
-  - `updated_at`: timestamp
+#### 3. Products (Товары)
+Товары и услуги
+- `id` (uuid, PK) - уникальный идентификатор
+- `name` (text) - название
+- `category` (text) - категория
+- `price` (numeric) - цена продажи
+- `base_price` (numeric) - базовая цена
+- `packaging_cost` (numeric) - стоимость упаковки
+- `description` (text) - описание
+- `status` (text) - статус
+- `image_url` (text) - фото товара
+- `product_type` (text) - тип (ready_bouquet/custom_bouquet/service/single_flower)
+- `assembly_time` (integer) - время сборки в минутах
+- `is_service` (boolean) - признак услуги
 
-#### 4. Employees (Сотрудники)
-- **Назначение**: Информация о сотрудниках
-- **Основные поля**:
-  - `id`: UUID (PK)
-  - `first_name`: text
-  - `last_name`: text
-  - `phone`: text
-  - `email`: text
-  - `role`: enum ('admin', 'manager', 'florist', 'courier')
-  - `shop_id`: UUID (FK to shops)
-  - `settings`: jsonb
-  - `status`: enum ('active', 'inactive')
-  - `created_at`: timestamp
-  - `updated_at`: timestamp
+#### 4. Inventory (Склад)
+Складской учет
+- `id` (bigint, PK) - уникальный идентификатор
+- `shop_id` (uuid, FK) - связь с магазином
+- `name` (text) - название
+- `type` (inventory_type) - тип товара
+- `unit` (inventory_unit) - единица измерения
+- `price` (numeric) - цена
+- `stock` (numeric) - количество в наличии
+- `min_stock` (numeric) - минимальный остаток
+- `category` (text) - категория
+- `supplier` (text) - поставщик
+- `expiry_date` (date) - срок годности
+- `status` (text) - статус
+
+#### 5. Product Compositions (Состав продуктов)
+Связь между продуктами и компонентами
+- `id` (bigint, PK) - уникальный идентификатор
+- `product_id` (uuid, FK) - связь с продуктом
+- `inventory_item_id` (bigint, FK) - связь с компонентом
+- `quantity` (integer) - количество
+- `cost` (numeric) - стоимость
+- `position_in_bouquet` (integer) - позиция в букете
+- `component_notes` (text) - заметки к компоненту
+- `alternative_items` (jsonb) - альтернативные замены
+
+#### 6. Orders (Заказы)
+Заказы клиентов
+- `id` (uuid, PK) - уникальный идентификатор
+- `number` (text) - номер заказа
+- `shop_id` (uuid, FK) - связь с магазином
+- `client_id` (bigint, FK) - связь с клиентом
+- `status` (text) - статус заказа
+- `address` (text) - адрес доставки
+- `delivery_time` (text) - время доставки
+- `delivery_date` (date) - дата доставки
+- `delivery_type` (text) - тип доставки (delivery/pickup)
+- `delivery_interval` (text) - интервал доставки
+- `delivery_cost` (integer) - стоимость доставки
+- `subtotal_price` (integer) - сумма товаров
+- `discount_amount` (integer) - сумма скидки
+- `total_price` (integer) - итоговая сумма
+- `payment_method` (text) - способ оплаты
+- `payment_status` (text) - статус оплаты
+- `payment_date` (timestamptz) - дата оплаты
+- `client_comment` (text) - комментарий клиента
+- `client_reaction` (text) - реакция клиента
+- `client_reaction_comment` (text) - комментарий к реакции
+- `delivery_problem` (text) - проблемы с доставкой
+- `reassembly_requested` (boolean) - требуется пересборка
+
+#### 7. Order Items (Позиции заказа)
+Позиции в заказе
+- `id` (bigint, PK) - уникальный идентификатор
+- `order_id` (uuid, FK) - связь с заказом
+- `product_id` (uuid, FK) - связь с продуктом
+- `florist_id` (uuid, FK) - флорист
+- `quantity` (integer) - количество
+- `price` (numeric) - цена
+- `original_price` (numeric) - цена до скидки
+- `discount_amount` (numeric) - сумма скидки
+- `status` (text) - статус готовности
+- `notes` (text) - заметки
+
+#### 8. Employees (Сотрудники)
+Сотрудники магазинов
+- `id` (uuid, PK) - уникальный идентификатор
+- `shop_id` (uuid, FK) - связь с магазином
+- `name` (text) - имя
+- `role` (text) - роль (admin/manager/florist)
+- `phone` (text) - телефон
+- `email` (text) - email
+- `is_active` (boolean) - активен ли сотрудник
+
+#### 9. Clients (Клиенты)
+Клиенты
+- `id` (bigint, PK) - уникальный идентификатор
+- `organization_id` (uuid, FK) - связь с организацией
+- `name` (text) - имя
+- `phone` (text) - телефон
+- `email` (text) - email
+- `default_address` (text) - адрес по умолчанию
+- `preferences` (jsonb) - предпочтения (любимые цветы, аллергии)
+- `important_dates` (jsonb) - важные даты
+- `notes` (text) - заметки
+- `status` (text) - статус
+
+#### 10. Notifications (Уведомления)
+Система уведомлений
+- `id` (uuid, PK) - уникальный идентификатор
+- `order_id` (uuid, FK) - связь с заказом
+- `shop_id` (uuid, FK) - связь с магазином
+- `type` (text) - тип уведомления
+- `title` (text) - заголовок
+- `message` (text) - сообщение
+- `status` (text) - статус
+- `sent_at` (timestamptz) - время отправки
+- `error_message` (text) - сообщение об ошибке
+
+#### 11. Order Status History (История статусов заказа)
+История изменений статуса заказа
+- `id` (uuid, PK) - уникальный идентификатор
+- `order_id` (uuid, FK) - связь с заказом
+- `old_status` (text) - предыдущий статус
+- `new_status` (text) - новый статус
+- `comment` (text) - комментарий
+- `changed_by` (text) - кто изменил
 
 ### Связующие таблицы
 
 #### 1. Order Items (Позиции заказа)
-- **Назначение**: Связь заказов с продуктами
-- **Основные поля**:
-  - `id`: UUID (PK)
-  - `order_id`: UUID (FK to orders)
-  - `product_id`: UUID (FK to products)
-  - `quantity`: integer
-  - `price`: numeric
-  - `total`: numeric
-  - `notes`: text
+Позиции в заказе
+- `id` (bigint, PK) - уникальный идентификатор
+- `order_id` (uuid, FK) - связь с заказом
+- `product_id` (uuid, FK) - связь с продуктом
+- `florist_id` (uuid, FK) - флорист
+- `quantity` (integer) - количество
+- `price` (numeric) - цена
+- `original_price` (numeric) - цена до скидки
+- `discount_amount` (numeric) - сумма скидки
+- `status` (text) - статус готовности
+- `notes` (text) - заметки
 
 #### 2. Product Compositions (Состав продуктов)
-- **Назначение**: Связь продуктов с инвентарем
-- **Основные поля**:
-  - `id`: UUID (PK)
-  - `product_id`: UUID (FK to products)
-  - `inventory_item_id`: UUID (FK to inventory)
-  - `quantity`: integer
-  - `cost`: numeric
+Связь между продуктами и компонентами
+- `id` (bigint, PK) - уникальный идентификатор
+- `product_id` (uuid, FK) - связь с продуктом
+- `inventory_item_id` (bigint, FK) - связь с компонентом
+- `quantity` (integer) - количество
+- `cost` (numeric) - стоимость
+- `position_in_bouquet` (integer) - позиция в букете
+- `component_notes` (text) - заметки к компоненту
+- `alternative_items` (jsonb) - альтернативные замены
 
-#### 3. Inventory (Инвентарь)
-- **Назначение**: Учет материалов и цветов
-- **Основные поля**:
-  - `id`: UUID (PK)
-  - `name`: text
-  - `type`: enum ('flower', 'material', 'packaging')
-  - `unit`: enum ('piece', 'stem', 'meter', 'gram')
-  - `price`: numeric
-  - `stock`: numeric
-  - `min_stock`: numeric
-  - `shop_id`: UUID (FK to shops)
-  - `status`: enum ('active', 'inactive')
+## Основные связи
+
+1. Organization -> Shops (1:M)
+2. Shop -> Employees (1:M)
+3. Shop -> Inventory (1:M)
+4. Shop -> Orders (1:M)
+5. Product -> Product Compositions (1:M)
+6. Order -> Order Items (1:M)
+7. Client -> Orders (1:M)
+
+## Триггеры
+
+1. **calculate_total_price** - расчет итоговой суммы заказа
+2. **calculate_item_price** - расчет цены позиции с учетом скидки
+3. **create_order_notification** - создание уведомлений при изменении статуса
+4. **log_order_status_change** - логирование изменений статуса заказа
+
+## Индексы
+
+Основные индексы созданы для:
+- Поиска по статусам
+- Поиска по внешним ключам
+- Поиска по номерам телефонов
+- Поиска по датам создания
+- Поиска по типам продуктов
 
 ## Оставшиеся задачи
 
