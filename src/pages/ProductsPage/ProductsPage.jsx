@@ -497,4 +497,3 @@ function ProductsPage() {
 }
 
 export default ProductsPage;
-export default ProductsPage;

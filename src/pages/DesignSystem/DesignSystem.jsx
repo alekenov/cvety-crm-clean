@@ -20,6 +20,7 @@ import { SearchBar } from '@/components/ui/search/SearchBar';
 import { FilterGroup, FilterButton } from '@/components/ui/filters/FilterGroup';
 import DateFilter from '@/components/Filters/DateFilter';
 import StatusFilter from '@/components/Filters/StatusFilter';
+import { SimpleDataTable, CustomDataTable } from './components/DataTableDemo';
 
 const ComponentDemo = ({ title, children, description }) => {
   return (
@@ -53,6 +54,24 @@ export default function DesignSystem() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
         <H1 className="mb-8">Компоненты</H1>
+
+        {/* DataTable */}
+        <ComponentDemo 
+          title="DataTable" 
+          description="Универсальный компонент для отображения данных в табличном или карточном виде. Поддерживает поиск, кастомизацию внешнего вида и адаптивную верстку."
+        >
+          <div className="space-y-8">
+            <div>
+              <H3 className="mb-4">Простая таблица с колонками</H3>
+              <SimpleDataTable />
+            </div>
+
+            <div>
+              <H3 className="mb-4">Кастомный вид карточек</H3>
+              <CustomDataTable />
+            </div>
+          </div>
+        </ComponentDemo>
 
         {/* Поиск */}
         <ComponentDemo 
