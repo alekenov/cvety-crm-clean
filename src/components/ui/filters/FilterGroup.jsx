@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { Filter } from 'lucide-react';
 
 export const FilterGroup = ({
@@ -20,12 +20,14 @@ export const FilterGroup = ({
   );
 };
 
-export const FilterButton = ({
+const FilterButton = forwardRef(({
   active,
   onClick,
   children,
-  variant = 'default'
-}) => {
+  variant = 'default',
+  className = '',
+  ...props
+}, ref) => {
   const baseStyles = "px-4 py-2 rounded-full text-sm transition-colors";
   const variants = {
     default: {
@@ -46,10 +48,16 @@ export const FilterButton = ({
 
   return (
     <button
+      ref={ref}
       onClick={onClick}
-      className={`${baseStyles} ${active ? styles.active : styles.inactive}`}
+      className={`${baseStyles} ${active ? styles.active : styles.inactive} ${className}`}
+      {...props}
     >
       {children}
     </button>
   );
-};
+});
+
+FilterButton.displayName = 'FilterButton';
+
+export { FilterButton };

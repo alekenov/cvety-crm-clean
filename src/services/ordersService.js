@@ -22,7 +22,8 @@ class OrdersService {
                 )
               )
             )
-          )
+          ),
+          operations(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -41,7 +42,8 @@ class OrdersService {
             position: comp.position_in_bouquet,
             notes: comp.component_notes
           }))
-        }))
+        })),
+        payment_status: order.operations?.length > 0 ? 'paid' : 'unpaid'
       }));
 
       return { data: processedData, error: null };
@@ -63,16 +65,21 @@ class OrdersService {
             quantity,
             price,
             product:products(*)
-          )
+          ),
+          operations(*)
         `)
         .eq('id', id)
         .single();
 
-      console.log('Order data:', data);
-      console.log('Order items:', data?.items);
-
       if (error) throw error;
-      return { data, error: null };
+
+      // Добавляем статус оплаты
+      const processedData = {
+        ...data,
+        payment_status: data.operations?.length > 0 ? 'paid' : 'unpaid'
+      };
+
+      return { data: processedData, error: null };
     } catch (error) {
       console.error(`Error getting order by id ${id}:`, error);
       return { data: null, error: error.message };
@@ -186,7 +193,7 @@ class OrdersService {
     try {
       console.log('Creating order with data:', orderData);
 
-      // Создаем заказ
+      // Начинаем транзакцию
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -216,6 +223,19 @@ class OrdersService {
         if (itemsError) throw itemsError;
       }
 
+      // Создаем финансовую операцию для заказа
+      const { error: operationError } = await supabase
+        .from('operations')
+        .insert({
+          type: 'income',
+          category: 'orders',
+          amount: orderData.total_amount,
+          description: `Оплата заказа #${order.order_number}`,
+          order_id: order.id
+        });
+
+      if (operationError) throw operationError;
+
       // Получаем полные данные заказа со всеми связями
       const { data: fullOrder, error: getError } = await supabase
         .from('orders')
@@ -226,15 +246,23 @@ class OrdersService {
             quantity,
             price,
             product:products(*)
-          )
+          ),
+          operations(*)
         `)
         .eq('id', order.id)
         .single();
 
       if (getError) throw getError;
-      console.log('Full order data:', fullOrder);
 
-      return { data: fullOrder, error: null };
+      // Добавляем статус оплаты
+      const processedOrder = {
+        ...fullOrder,
+        payment_status: fullOrder.operations?.length > 0 ? 'paid' : 'unpaid'
+      };
+
+      console.log('Full order data:', processedOrder);
+
+      return { data: processedOrder, error: null };
     } catch (error) {
       console.error('Error creating order:', error);
       return { data: null, error: error.message };

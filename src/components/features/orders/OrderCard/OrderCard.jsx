@@ -4,7 +4,29 @@ import { ru } from 'date-fns/locale';
 import Button from '../../../ui/Button/Button';
 
 const OrderCard = ({ order }) => {
-  const { id, clientName, products, totalPrice, status, deliveryDate } = order;
+  const { id, clientName, products, totalPrice, status, deliveryDate, payment_status } = order;
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPaymentStatusColor = (status) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-emerald-100 text-emerald-800';
+      case 'unpaid':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="card">
@@ -15,14 +37,15 @@ const OrderCard = ({ order }) => {
         </div>
         <div className="text-right">
           <p className="text-lg font-medium">{totalPrice} ₽</p>
-          <span className={`inline-block px-2 py-1 rounded-full text-sm ${
-            status === 'completed' ? 'bg-green-100 text-green-800' :
-            status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-            'bg-gray-100 text-gray-800'
-          }`}>
-            {status === 'completed' ? 'Выполнен' :
-             status === 'pending' ? 'В обработке' : 'Новый'}
-          </span>
+          <div className="flex gap-2">
+            <span className={`inline-block px-2 py-1 rounded-full text-sm ${getStatusColor(status)}`}>
+              {status === 'completed' ? 'Выполнен' :
+               status === 'pending' ? 'В обработке' : 'Новый'}
+            </span>
+            <span className={`inline-block px-2 py-1 rounded-full text-sm ${getPaymentStatusColor(payment_status)}`}>
+              {payment_status === 'paid' ? 'Оплачен' : 'Не оплачен'}
+            </span>
+          </div>
         </div>
       </div>
       
@@ -54,4 +77,4 @@ const OrderCard = ({ order }) => {
   );
 };
 
-export default OrderCard; 
+export default OrderCard;

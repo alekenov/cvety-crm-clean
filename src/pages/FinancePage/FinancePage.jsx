@@ -6,8 +6,10 @@ import {
   Search,
   FileText,
   Download,
-  Trash2
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import PageLayout, { PageHeader, PageSection } from '@/components/layout/PageLayout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -194,6 +196,9 @@ const FinancePage = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Описание
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Связанный заказ
+                      </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Сумма
                       </th>
@@ -219,6 +224,19 @@ const FinancePage = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {operation.description}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {operation.order && (
+                            <Link 
+                              to={`/orders/${operation.order.id}`}
+                              className="flex items-center text-blue-600 hover:text-blue-800"
+                            >
+                              <span className="mr-1">
+                                {operation.order.client_name} ({operation.order.status})
+                              </span>
+                              <ExternalLink className="w-4 h-4" />
+                            </Link>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                           <span className={operation.type === 'income' ? 'text-green-600' : 'text-red-600'}>

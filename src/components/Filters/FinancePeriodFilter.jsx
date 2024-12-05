@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { FilterGroup, FilterButton } from '@/components/ui/filters/FilterGroup';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -13,7 +14,21 @@ const PERIOD_OPTIONS = [
   { id: 'month', label: 'Месяц' },
 ];
 
-export default function FinancePeriodFilter({ selectedPeriod, onPeriodChange, customDate, onCustomDateChange }) {
+const CustomDateButton = React.forwardRef(({ onClick, customDate, isActive }, ref) => (
+  <FilterButton
+    ref={ref}
+    onClick={onClick}
+    active={isActive}
+  >
+    {isActive && customDate 
+      ? format(customDate, 'd MMMM', { locale: ru })
+      : 'Выбрать дату'}
+  </FilterButton>
+));
+
+CustomDateButton.displayName = 'CustomDateButton';
+
+const FinancePeriodFilter = ({ selectedPeriod, onPeriodChange, customDate, onCustomDateChange }) => {
   const handleChange = (newPeriod) => {
     onPeriodChange(selectedPeriod === newPeriod ? 'all' : newPeriod);
   };
@@ -32,11 +47,10 @@ export default function FinancePeriodFilter({ selectedPeriod, onPeriodChange, cu
       
       <Popover>
         <PopoverTrigger asChild>
-          <FilterButton active={selectedPeriod === 'custom'}>
-            {selectedPeriod === 'custom' && customDate 
-              ? format(customDate, 'd MMMM', { locale: ru })
-              : 'Выбрать дату'}
-          </FilterButton>
+          <CustomDateButton
+            customDate={customDate}
+            isActive={selectedPeriod === 'custom'}
+          />
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
@@ -52,4 +66,8 @@ export default function FinancePeriodFilter({ selectedPeriod, onPeriodChange, cu
       </Popover>
     </FilterGroup>
   );
-}
+};
+
+FinancePeriodFilter.displayName = 'FinancePeriodFilter';
+
+export default FinancePeriodFilter;

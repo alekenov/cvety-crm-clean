@@ -8,7 +8,7 @@ const OPERATION_TYPES = [
   { id: 'expense', label: 'Расходы' },
 ];
 
-export default function FinanceTypeFilter({ selectedType, onTypeChange }) {
+const FinanceTypeFilter = React.forwardRef(({ selectedType, onTypeChange }, ref) => {
   const handleChange = (newType) => {
     onTypeChange(selectedType === newType ? 'all' : newType);
   };
@@ -27,4 +27,8 @@ export default function FinanceTypeFilter({ selectedType, onTypeChange }) {
       ))}
     </FilterGroup>
   );
-}
+});
+
+FinanceTypeFilter.displayName = 'FinanceTypeFilter';
+
+export default FinanceTypeFilter;
