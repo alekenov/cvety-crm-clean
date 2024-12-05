@@ -150,11 +150,20 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
             <Text variant="h3" className="font-medium mb-2">Состав заказа:</Text>
             <div className="space-y-2">
               {order.items.map((item, index) => (
-                <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
-                  <div className="flex items-center">
-                    <Text variant="body">{item.name}</Text>
+                <div key={index} className="flex flex-col bg-gray-50 p-2 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <Text variant="body" className="font-medium">{item.name}</Text>
+                    </div>
+                    <Text variant="body" className="font-medium">{item.price.toLocaleString()} ₸</Text>
                   </div>
-                  <Text variant="body" className="font-medium">{item.price}</Text>
+                  {item.composition && item.composition.length > 0 && (
+                    <div className="mt-1 pl-4">
+                      <Text variant="small" className="text-gray-600">
+                        Состав: {item.composition.map(prod => prod.name).join(', ')}
+                      </Text>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

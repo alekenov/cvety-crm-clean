@@ -3,9 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const bodyParser = require('body-parser');
+const { SUPABASE_CONFIG, SERVER_CONFIG } = require('./config.js');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = SERVER_CONFIG.port;
 
 // Middleware
 app.use(cors());
@@ -13,9 +14,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(SUPABASE_CONFIG.supabaseUrl, SUPABASE_CONFIG.supabaseKey);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -40,4 +39,5 @@ app.get('/api/products', async (req, res) => {
 // Start server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+  console.log('Supabase URL:', SUPABASE_CONFIG.supabaseUrl);
 });

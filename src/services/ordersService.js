@@ -10,13 +10,41 @@ class OrdersService {
           items:order_items(
             id,
             quantity,
-            product:products(*)
+            price,
+            product:products(
+              *,
+              composition:product_compositions(
+                position_in_bouquet,
+                component_notes,
+                inventory_item:inventory(
+                  name,
+                  category
+                )
+              )
+            )
           )
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return { data, error: null };
+
+      // Преобразуем данные для удобного отображения
+      const processedData = data.map(order => ({
+        ...order,
+        items: order.items.map(item => ({
+          ...item,
+          name: item.product.name,
+          price: item.price,
+          composition: item.product.composition.map(comp => ({
+            name: comp.inventory_item.name,
+            category: comp.inventory_item.category,
+            position: comp.position_in_bouquet,
+            notes: comp.component_notes
+          }))
+        }))
+      }));
+
+      return { data: processedData, error: null };
     } catch (error) {
       console.error('Error fetching orders:', error);
       return { data: null, error: error.message };
