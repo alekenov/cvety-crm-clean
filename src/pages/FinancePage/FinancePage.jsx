@@ -1,434 +1,245 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, 
   ArrowUp, 
-  ArrowDown, 
-  Calendar, 
-  Receipt,
-  Share,
-  Trash,
-  Camera,
-  X,
-  ChevronDown,
+  ArrowDown,
+  Search,
   FileText,
-  Upload,
-  Search
+  Download,
+  Trash2
 } from 'lucide-react';
 import PageLayout, { PageHeader, PageSection } from '@/components/layout/PageLayout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import toast from 'react-hot-toast';
-
-// Создаем объект для уведомлений
-const showToast = {
-  success: (message) => toast.success(message, { duration: 3000 }),
-  error: (message) => toast.error(message, { duration: 3000 }),
-  loading: (message) => toast.loading(message),
-};
+import FinancePeriodFilter from '@/components/Filters/FinancePeriodFilter';
+import FinanceTypeFilter from '@/components/Filters/FinanceTypeFilter';
+import FinanceCategoryFilter from '@/components/Filters/FinanceCategoryFilter';
+import NewOperationModal from './components/NewOperationModal';
+import { operationsService } from '@/services/operations/operationsService';
 
 const FinancePage = () => {
+  // Состояния для фильтров
   const [selectedPeriod, setSelectedPeriod] = useState('today');
-  const [showNewOperation, setShowNewOperation] = useState(false);
-  const [operationType, setOperationType] = useState('income');
-  const [filterType, setFilterType] = useState('all');
+  const [customDate, setCustomDate] = useState(null);
+  const [selectedType, setSelectedType] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Состояния для операций
+  const [showNewOperation, setShowNewOperation] = useState(false);
+  const [operations, setOperations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Категории для выбора
-  const categories = {
-    income: [
-      { id: 'cash', name: 'Наличные' },
-      { id: 'card', name: 'Карта' },
-      { id: 'marketplace', name: 'Cvety.kz' }
-    ],
-    expense: [
-      { id: 'flowers', name: 'Закуп цветов' },
-      { id: 'delivery', name: 'Доставка' },
-      { id: 'package', name: 'Упаковка' },
-      { id: 'other', name: 'Прочее' }
-    ]
-  };
-
-  // Демо-данные
-  const data = {
-    summary: {
-      income: 115000,
-      expenses: 70000,
-      profit: 45000
-    },
-    operations: [
-      {
-        id: 1,
-        time: "10:30",
-        type: "income",
-        amount: 15000,
-        description: "Букет 'Нежность'",
-        payment: "Карта",
-        orderId: "#1234",
-        hasFiles: true
-      },
-      {
-        id: 2,
-        time: "11:15",
-        type: "expense",
-        amount: 8000,
-        description: "Закуп роз (50 шт)",
-        category: "Закуп цветов",
-        hasFiles: true
-      },
-      {
-        id: 3,
-        time: "13:20",
-        type: "income",
-        amount: 12000,
-        description: "Букет '15 роз'",
-        payment: "Наличные",
-        orderId: "#1235",
-        hasFiles: false
+  // Загрузка операций
+  useEffect(() => {
+    const loadOperations = async () => {
+      try {
+        setLoading(true);
+        const data = await operationsService.getOperations();
+        setOperations(data);
+      } catch (error) {
+        toast.error('Ошибка при загрузке операций');
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
-    ]
-  };
+    };
 
-  const header = (
-    <PageHeader title="Финансы">
-      <div className="flex space-x-2">
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setShowNewOperation(true)}
-        >
-          <Plus size={16} className="mr-1" />
-          Новая операция
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-        >
-          <FileText size={16} className="mr-1" />
-          Отчет
-        </Button>
-      </div>
-    </PageHeader>
-  );
+    loadOperations();
+  }, []);
 
-  // Модальное окно добавления операции
-  const AddOperationModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-md">
-        <div className="p-4 border-b flex justify-between items-center">
-          <h3 className="font-semibold">Новая операция</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowNewOperation(false)}
-          >
-            <X size={20} />
-          </Button>
-        </div>
+  // Отфильтрованные операции
+  const filteredOperations = useMemo(() => {
+    return operations.filter(operation => {
+      const matchesSearch = operation.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = selectedType === 'all' || operation.type === selectedType;
+      const matchesCategory = selectedCategory === 'all' || operation.category === selectedCategory;
+      
+      return matchesSearch && matchesType && matchesCategory;
+    });
+  }, [operations, searchTerm, selectedType, selectedCategory]);
 
-        <div className="p-4 space-y-4">
-          <div className="flex space-x-2">
-            <Button
-              variant={operationType === 'income' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setOperationType('income')}
-            >
-              <ArrowUp size={16} className="mr-1" />
-              Приход
-            </Button>
-            <Button
-              variant={operationType === 'expense' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setOperationType('expense')}
-            >
-              <ArrowDown size={16} className="mr-1" />
-              Расход
-            </Button>
-          </div>
+  // Расчет статистики на основе отфильтрованных операций
+  const statistics = useMemo(() => {
+    const income = filteredOperations
+      .filter(op => op.type === 'income')
+      .reduce((sum, op) => sum + Number(op.amount), 0);
+    
+    const expenses = filteredOperations
+      .filter(op => op.type === 'expense')
+      .reduce((sum, op) => sum + Number(op.amount), 0);
+    
+    return {
+      income,
+      expenses,
+      profit: income - expenses
+    };
+  }, [filteredOperations]);
 
-          <Input
-            type="text"
-            placeholder="Сумма"
-            className="w-full"
-          />
-
-          <div className="grid grid-cols-2 gap-2">
-            {categories[operationType].map(category => (
-              <Button
-                key={category.id}
-                variant="outline"
-                size="sm"
-              >
-                {category.name}
-              </Button>
-            ))}
-          </div>
-
-          <Input
-            type="text"
-            placeholder="Комментарий"
-            className="w-full"
-          />
-
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-            >
-              <Camera size={16} className="mr-1" />
-              Фото чека
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-            >
-              <Upload size={16} className="mr-1" />
-              Загрузить чек
-            </Button>
-          </div>
-        </div>
-
-        <div className="p-4 border-t flex justify-end space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowNewOperation(false)}
-          >
-            Отмена
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => handleAddTransaction({
-              type: operationType,
-              amount: 1000,
-              description: 'Тестовая операция',
-              payment: 'Карта',
-              orderId: '#1234',
-              hasFiles: true
-            })}
-          >
-            Сохранить
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const handleAddTransaction = async (transactionData) => {
-    const loadingToast = showToast.loading('Добавление транзакции...');
+  const handleSaveOperation = async (newOperation) => {
     try {
-      // Логика добавления транзакции
-      showToast.success('Транзакция успешно добавлена');
+      const savedOperation = await operationsService.createOperation(newOperation);
+      setOperations(prev => [savedOperation, ...prev]);
+      toast.success('Операция успешно добавлена');
     } catch (error) {
-      console.error('Error adding transaction:', error);
-      showToast.error('Ошибка при добавлении транзакции');
-    } finally {
-      toast.dismiss(loadingToast);
-    }
-  };
-
-  const handleUpdateExpense = async (expenseId, updateData) => {
-    const loadingToast = showToast.loading('Обновление расхода...');
-    try {
-      // Логика обновления расхода
-      showToast.success('Расход успешно обновлен');
-    } catch (error) {
-      console.error('Error updating expense:', error);
-      showToast.error('Ошибка при обновлении расхода');
-    } finally {
-      toast.dismiss(loadingToast);
-    }
-  };
-
-  const handleGenerateReport = async (reportParams) => {
-    const loadingToast = showToast.loading('Генерация отчета...');
-    try {
-      // Логика генерации отчета
-      showToast.success('Отчет успешно сгенерирован');
-    } catch (error) {
-      console.error('Error generating report:', error);
-      showToast.error('Ошибка при генерации отчета');
-    } finally {
-      toast.dismiss(loadingToast);
+      toast.error('Ошибка при сохранении операции');
+      console.error(error);
     }
   };
 
   return (
-    <PageLayout header={header}>
-      <div className="space-y-6">
-        {/* Основная информация */}
-        <PageSection>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedPeriod('today')}
-              className={selectedPeriod === 'today' ? 'bg-primary text-white' : ''}
-            >
-              Сегодня
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedPeriod('week')}
-              className={selectedPeriod === 'week' ? 'bg-primary text-white' : ''}
-            >
-              Неделя
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedPeriod('month')}
-              className={selectedPeriod === 'month' ? 'bg-primary text-white' : ''}
-            >
-              Месяц
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-            >
-              <Calendar size={16} className="mr-1" />
-              Выбрать
-            </Button>
+    <PageLayout>
+      <PageHeader title="Финансы">
+        <div className="flex space-x-2">
+          <Button
+            onClick={() => setShowNewOperation(true)}
+            variant="primary"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Новая операция
+          </Button>
+          <Button variant="outline">
+            <FileText className="w-5 h-5 mr-2" />
+            Отчет
+          </Button>
+        </div>
+      </PageHeader>
+      
+      <PageSection>
+        <div className="space-y-6">
+          {/* Строка поиска */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Поиск по операциям..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 pl-10 border rounded-lg"
+            />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <div className="flex items-center mb-2">
-                <ArrowUp className="text-green-500 w-5 h-5" />
-                <span className="text-sm text-gray-500 ml-2">Доходы</span>
-              </div>
-              <p className="text-2xl font-bold text-green-500">
-                {data.summary.income.toLocaleString()} ₸
-              </p>
-            </div>
+          {/* Фильтры */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <FinancePeriodFilter
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={setSelectedPeriod}
+              customDate={customDate}
+              onCustomDateChange={setCustomDate}
+            />
+            <FinanceTypeFilter
+              selectedType={selectedType}
+              onTypeChange={setSelectedType}
+            />
+            <FinanceCategoryFilter
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+              operationType={selectedType}
+            />
+          </div>
 
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <div className="flex items-center mb-2">
-                <ArrowDown className="text-red-500 w-5 h-5" />
-                <span className="text-sm text-gray-500 ml-2">Расходы</span>
-              </div>
-              <p className="text-2xl font-bold text-red-500">
-                {data.summary.expenses.toLocaleString()} ₸
-              </p>
+          {/* Статистика */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg shadow">
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-500 flex items-center">
+                <ArrowUp className="w-4 h-4 text-green-500 mr-1" />
+                Доходы
+              </span>
+              <span className="text-2xl font-bold text-green-500">
+                {statistics.income.toLocaleString()} ₸
+              </span>
             </div>
-
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <div className="flex items-center mb-2">
-                <span className="text-sm text-gray-500">Прибыль</span>
-              </div>
-              <p className="text-2xl font-bold text-blue-500">
-                {data.summary.profit.toLocaleString()} ₸
-              </p>
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-500 flex items-center">
+                <ArrowDown className="w-4 h-4 text-red-500 mr-1" />
+                Расходы
+              </span>
+              <span className="text-2xl font-bold text-red-500">
+                {statistics.expenses.toLocaleString()} ₸
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-500">Прибыль</span>
+              <span className="text-2xl font-bold text-blue-500">
+                {statistics.profit.toLocaleString()} ₸
+              </span>
             </div>
           </div>
-        </PageSection>
 
-        {/* История операций */}
-        <PageSection
-          title="История операций"
-          actions={
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-              >
-                <Calendar size={16} className="mr-1" />
-                Фильтр по дате
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleGenerateReport({})}
-              >
-                <FileText size={16} className="mr-1" />
-                Скачать отчет
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-              >
-                <Trash size={16} />
-                Очистить
-              </Button>
-            </div>
-          }
-        >
+          {/* Список операций */}
           <div className="space-y-4">
-            {/* Поиск и фильтры */}
-            <div className="space-y-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Поиск операций..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            {loading ? (
+              <div className="text-center py-8 text-gray-500">
+                Загрузка операций...
               </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFilterType('all')}
-                  className={filterType === 'all' ? 'bg-primary text-white' : ''}
-                >
-                  Все
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFilterType('income')}
-                  className={filterType === 'income' ? 'bg-primary text-white' : ''}
-                >
-                  <ArrowUp size={16} className="mr-1" />
-                  Приход
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFilterType('expense')}
-                  className={filterType === 'expense' ? 'bg-primary text-white' : ''}
-                >
-                  <ArrowDown size={16} className="mr-1" />
-                  Расход
-                </Button>
+            ) : filteredOperations.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Нет операций для отображения
               </div>
-            </div>
-
-            {/* Список операций */}
-            {data.operations.map(operation => (
-              <div key={operation.id} className="border-b last:border-b-0 pb-4 last:pb-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">{operation.description}</p>
-                    <p className="text-sm text-gray-500">
-                      {operation.time}
-                      {operation.orderId && ` • ${operation.orderId}`}
-                      {operation.payment && ` • ${operation.payment}`}
-                    </p>
-                    {operation.hasFiles && (
-                      <div className="flex items-center mt-1 text-blue-500">
-                        <FileText size={16} className="mr-1" />
-                        <span className="text-sm">Файлы</span>
-                      </div>
-                    )}
-                  </div>
-                  <span className={`font-bold ${
-                    operation.type === 'income' ? 'text-green-500' : 'text-red-500'
-                  }`}>
-                    {operation.type === 'income' ? '+' : '-'}{operation.amount.toLocaleString()} ₸
-                  </span>
-                </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Дата
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Тип
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Категория
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Описание
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Сумма
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredOperations.map((operation) => (
+                      <tr key={operation.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(operation.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            operation.type === 'income' 
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {operation.type === 'income' ? 'Доход' : 'Расход'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {operation.category}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {operation.description}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                          <span className={operation.type === 'income' ? 'text-green-600' : 'text-red-600'}>
+                            {Number(operation.amount).toLocaleString()} ₸
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
+            )}
           </div>
-        </PageSection>
-      </div>
+        </div>
+      </PageSection>
 
-      {/* Модальное окно добавления */}
-      {showNewOperation && <AddOperationModal />}
+      <NewOperationModal
+        isOpen={showNewOperation}
+        onClose={() => setShowNewOperation(false)}
+        onSave={handleSaveOperation}
+      />
     </PageLayout>
   );
 };

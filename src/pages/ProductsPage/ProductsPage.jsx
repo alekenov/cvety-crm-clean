@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, ChevronDown, ArrowUpDown, Filter, MoreVertical } from 'lucide-react';
+import { Search, Plus, ArrowUpDown, MoreVertical } from 'lucide-react';
 import AddProductForm from './components/AddProductForm';
 import { supabase } from '../../lib/supabase';
 import { Button } from '@/components/ui/button';
 import styles from '@/styles/pages.module.css';
 import toast from 'react-hot-toast';
+import ProductCategoryFilter from '@/components/Filters/ProductCategoryFilter';
+import ProductAvailabilityFilter from '@/components/Filters/ProductAvailabilityFilter';
 
 function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const [filterAvailability, setFilterAvailability] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
@@ -24,9 +25,28 @@ function ProductsPage() {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*');
+      let query = supabase.from('products').select('*');
+
+      // Применяем фильтры
+      if (filterCategory !== 'all') {
+        query = query.eq('category', filterCategory);
+      }
+      
+      if (filterAvailability !== 'all') {
+        switch (filterAvailability) {
+          case 'in_stock':
+            query = query.gt('quantity', 0);
+            break;
+          case 'out_of_stock':
+            query = query.eq('quantity', 0);
+            break;
+          case 'low_stock':
+            query = query.lt('quantity', 5).gt('quantity', 0);
+            break;
+        }
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setProducts(data);
@@ -63,8 +83,7 @@ function ProductsPage() {
 
       console.log('Formatted product:', formattedProduct);
       setEditingProduct(formattedProduct);
-      setShowAddForm(true);
-      setShowActionMenu(null);
+      setIsViewMode(false);
     } catch (error) {
       console.error('Error loading product details:', error);
       toast.error('Ошибка при загрузке данных букета');
@@ -125,7 +144,6 @@ function ProductsPage() {
       console.log('Formatted product:', formattedProduct);
       setSelectedProduct(formattedProduct);
       setEditingProduct(formattedProduct);
-      setShowAddForm(true);
       setIsViewMode(true);
     } catch (error) {
       console.error('Error loading product details:', error);
@@ -167,8 +185,12 @@ function ProductsPage() {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
-    const matchesStatus = filterStatus === 'all' || product.status === filterStatus;
-    return matchesSearch && matchesCategory && matchesStatus;
+    const matchesAvailability = filterAvailability === 'all' || 
+      (filterAvailability === 'in_stock' && product.quantity > 0) || 
+      (filterAvailability === 'out_of_stock' && product.quantity === 0) || 
+      (filterAvailability === 'low_stock' && product.quantity < 5 && product.quantity > 0);
+    
+    return matchesSearch && matchesCategory && matchesAvailability;
   });
 
   // Обновляем DesktopView
@@ -280,18 +302,10 @@ function ProductsPage() {
           <h1 className="text-lg font-semibold">Мои букеты</h1>
           <div className="flex items-center space-x-2">
             <Button 
-              onClick={() => setShowFilters(!showFilters)}
               variant="ghost"
               size="icon"
             >
-              <Filter className="w-5 h-5" />
-            </Button>
-            <Button 
-              onClick={() => setShowAddForm(true)}
-              variant="primary"
-              size="icon"
-            >
-              <Plus className="w-5 h-5" />
+              <ArrowUpDown className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -308,29 +322,22 @@ function ProductsPage() {
         </div>
 
         {/* Фильтры */}
-        {showFilters && (
-          <div className="mt-4 space-y-3">
-            <select 
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-            >
-              <option value="all">Все категории</option>
-              <option value="Букеты">Букеты</option>
-              <option value="Композиции">Композиции</option>
-            </select>
-
-            <select 
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-            >
-              <option value="all">Все статусы</option>
-              <option value="active">Активные</option>
-              <option value="inactive">Неактивные</option>
-            </select>
-          </div>
-        )}
+        <div className="mt-4 space-y-3">
+          <ProductCategoryFilter
+            selectedCategory={filterCategory}
+            onCategoryChange={(category) => {
+              setFilterCategory(category);
+              loadProducts();
+            }}
+          />
+          <ProductAvailabilityFilter
+            selectedStatus={filterAvailability}
+            onStatusChange={(status) => {
+              setFilterAvailability(status);
+              loadProducts();
+            }}
+          />
+        </div>
       </div>
 
       {/* Список букетов */}
@@ -395,6 +402,28 @@ function ProductsPage() {
     </div>
   );
 
+  // Добавляем рендер фильтров где они должны отображаться
+  const renderFilters = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ProductCategoryFilter
+          selectedCategory={filterCategory}
+          onCategoryChange={(category) => {
+            setFilterCategory(category);
+            loadProducts();
+          }}
+        />
+        <ProductAvailabilityFilter
+          selectedStatus={filterAvailability}
+          onStatusChange={(status) => {
+            setFilterAvailability(status);
+            loadProducts();
+          }}
+        />
+      </div>
+    );
+  };
+
   return (
     <div className={styles.pageContainer}>
       <div className="max-w-6xl mx-auto">
@@ -411,55 +440,24 @@ function ProductsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="relative flex-1">
-              <input 
-                type="text" 
-                placeholder="Поиск товаров..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <div className="space-y-4">
+            {/* Верхняя панель с поиском */}
+            <div className="flex justify-between items-center">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Поиск продуктов..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="mr-2" size={16} />
-              Фильтры
-            </Button>
-          </div>
 
-          {showFilters && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Категория</label>
-                <select 
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="all">Все категории</option>
-                  <option value="Букеты">Букеты</option>
-                  <option value="Композиции">Композиции</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Статус</label>
-                <select 
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="all">Все статусы</option>
-                  <option value="active">Активные</option>
-                  <option value="inactive">Неактивные</option>
-                </select>
-              </div>
-            </div>
-          )}
+            {/* Фильтры */}
+            {renderFilters()}
+          </div>
         </div>
 
         <DesktopView 
@@ -479,14 +477,14 @@ function ProductsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <AddProductForm
+                product={editingProduct}
+                isViewMode={isViewMode}
                 onClose={() => {
                   setShowAddForm(false);
                   setEditingProduct(null);
                   setIsViewMode(false);
                 }}
-                editingProduct={editingProduct}
-                onProductUpdate={loadProducts}
-                isViewMode={isViewMode}
+                onSave={loadProducts}
               />
             </div>
           </div>
