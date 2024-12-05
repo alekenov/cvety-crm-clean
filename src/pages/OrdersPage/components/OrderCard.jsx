@@ -108,6 +108,28 @@ const OrderCard = ({ order, onStatusChange, onUploadPhoto, onRespondToClientReac
               <span>{order.deliveryType || 'Не указан'}</span>
             </div>
           </div>
+          <div className="col-span-2">
+            <div className="text-sm text-gray-500 mb-2">Состав заказа</div>
+            {order.products && order.products.length > 0 ? (
+              <div className="space-y-1">
+                {order.products.map((product, index) => (
+                  <div key={index} className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-gray-400" />
+                      <span>{product.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">{product.quantity} шт.</span>
+                      <span className="text-gray-600">×</span>
+                      <span className="font-medium">{product.price}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-400">Нет товаров в заказе</div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2">

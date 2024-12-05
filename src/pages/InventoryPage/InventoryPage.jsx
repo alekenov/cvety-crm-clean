@@ -10,17 +10,17 @@ import {
   ClipboardCheck, 
   Check, 
   X, 
-  Percent, 
-  Wallet, 
-  Calendar, 
   Box, 
-  History, 
-  Image as ImageIcon, 
-  DollarSign 
+  History,
+  Wallet,
+  Calendar,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { H1, H3, Body, Caption } from '@/components/ui/Typography';
+import { FilterGroup, FilterButton } from '@/components/ui/filters/FilterGroup';
+import TypeFilter from '@/components/Filters/TypeFilter';
 import RevisionMode from './components/RevisionMode';
 import HistoryMode from './components/HistoryMode';
 import toast from 'react-hot-toast';
@@ -39,6 +39,10 @@ const InventoryPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProduct, setEditedProduct] = useState(null);
+  
+  // Состояния для фильтров
+  const [selectedType, setSelectedType] = useState(null);
+  const [stockFilter, setStockFilter] = useState('all'); // 'all', 'in_stock', 'low_stock', 'out_of_stock'
 
   // Состояния для ревизии
   const [revisionItems, setRevisionItems] = useState([]);
@@ -65,7 +69,83 @@ const InventoryPage = () => {
     return cost + (cost * markup / 100);
   }, [newProduct.costPrice, newProduct.markup]);
 
-  // Обработчик загрузки фото
+  const { data: inventoryData, loading, error, updateData } = useSupabase('inventory', {
+    select: '*'
+  });
+
+  // Фильтрация данных
+  const filteredInventoryData = useMemo(() => {
+    if (!inventoryData) return [];
+    
+    let filtered = inventoryData;
+
+    // Фильтр по поиску
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Фильтр по типу
+    if (selectedType) {
+      filtered = filtered.filter(item => item.type === selectedType);
+    }
+
+    // Фильтр по статусу наличия
+    if (stockFilter !== 'all') {
+      switch (stockFilter) {
+        case 'in_stock':
+          filtered = filtered.filter(item => item.stock > 0);
+          break;
+        case 'low_stock':
+          filtered = filtered.filter(item => item.stock <= item.min_stock && item.stock > 0);
+          break;
+        case 'out_of_stock':
+          filtered = filtered.filter(item => item.stock === 0);
+          break;
+      }
+    }
+
+    return filtered;
+  }, [inventoryData, searchQuery, selectedType, stockFilter]);
+
+  // Компонент фильтров
+  const FiltersSection = () => (
+    <div className="space-y-6 mb-6">
+      <TypeFilter value={selectedType} onChange={setSelectedType} />
+      
+      <FilterGroup icon={Box} title="Фильтр по наличию">
+        <FilterButton
+          active={stockFilter === 'all'}
+          onClick={() => setStockFilter('all')}
+        >
+          Все товары
+        </FilterButton>
+        <FilterButton
+          active={stockFilter === 'in_stock'}
+          onClick={() => setStockFilter('in_stock')}
+          variant="success"
+        >
+          В наличии
+        </FilterButton>
+        <FilterButton
+          active={stockFilter === 'low_stock'}
+          onClick={() => setStockFilter('low_stock')}
+          variant="danger"
+        >
+          Заканчивается
+        </FilterButton>
+        <FilterButton
+          active={stockFilter === 'out_of_stock'}
+          onClick={() => setStockFilter('out_of_stock')}
+          variant="danger"
+        >
+          Нет в наличии
+        </FilterButton>
+      </FilterGroup>
+    </div>
+  );
+
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -76,10 +156,6 @@ const InventoryPage = () => {
       }));
     }
   };
-
-  const { data: inventoryData, loading, error, updateData } = useSupabase('inventory', {
-    select: '*'
-  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -388,71 +464,104 @@ const InventoryPage = () => {
   if (error) return <div className="p-4 text-red-500">Ошибка: {error}</div>;
 
   return (
-    <div className="bg-gray-100 min-h-screen">
-      {mode === 'inventory' && (
-        <div className="bg-white p-4 mb-4 shadow-sm">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Package className="text-blue-500" size={24} />
-              <H1 className="text-xl font-bold">Склад</H1>
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setShowAddModal(true)}
-              >
-                <Plus size={20} className="mr-1" />
-                <span className="hidden md:inline">Добавить товар</span>
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setMode('revision')}
-              >
-                <ClipboardCheck size={20} className="mr-1" />
-                <span className="hidden md:inline">Ревизия</span>
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setMode('history')}
-              >
-                <History size={20} className="mr-1" />
-                <span className="hidden md:inline">История</span>
-              </Button>
-            </div>
-          </div>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <H1>Инвентарь</H1>
+        <div className="flex gap-4">
+          <Button
+            variant={mode === 'inventory' ? 'default' : 'outline'}
+            onClick={() => setMode('inventory')}
+          >
+            <Package className="mr-2 h-4 w-4" />
+            Инвентарь
+          </Button>
+          <Button
+            variant={mode === 'revision' ? 'default' : 'outline'}
+            onClick={() => setMode('revision')}
+          >
+            <ClipboardCheck className="mr-2 h-4 w-4" />
+            Ревизия
+          </Button>
+          <Button
+            variant={mode === 'history' ? 'default' : 'outline'}
+            onClick={() => setMode('history')}
+          >
+            <History className="mr-2 h-4 w-4" />
+            История
+          </Button>
         </div>
-      )}
-
-      {/* Основной контент */}
-      <div className={mode === 'inventory' ? "p-4" : ""}>
-        {renderContent()}
       </div>
 
-      {/* Метрики внизу страницы */}
-      {mode === 'inventory' && sortedInventory.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:bottom-0 bottom-16">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <Body size="sm" className="text-gray-500">Всего позиций</Body>
-                <Body size="lg" className="font-bold">{sortedInventory.length}</Body>
-              </div>
-              <div className="text-center">
-                <Body size="sm" className="text-gray-500">Стоимость склада</Body>
-                <Body size="lg" className="font-bold text-green-500">
-                  {sortedInventory.reduce((sum, item) => sum + (item.quantity * item.price), 0).toLocaleString()} ₸
-                </Body>
-              </div>
-              <div className="text-center">
-                <Body size="sm" className="text-gray-500">Последняя ревизия</Body>
-                <Body size="lg" className="font-bold">{new Date('2024-03-21').toLocaleDateString()}</Body>
+      {mode === 'inventory' && (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-4">
+              <Button onClick={() => setShowSearch(!showSearch)}>
+                <Search className="h-4 w-4" />
+              </Button>
+              {showSearch && (
+                <Input
+                  type="text"
+                  placeholder="Поиск по названию..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-64"
+                />
+              )}
+            </div>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Добавить товар
+            </Button>
+          </div>
+
+          <FiltersSection />
+
+          {/* Таблица или список товаров */}
+          <InventoryView />
+
+          {/* Метрики внизу страницы */}
+          {sortedInventory.length > 0 && (
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:bottom-0 bottom-16">
+              <div className="max-w-7xl mx-auto">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <Body size="sm" className="text-gray-500">Всего позиций</Body>
+                    <Body size="lg" className="font-bold">{sortedInventory.length}</Body>
+                  </div>
+                  <div className="text-center">
+                    <Body size="sm" className="text-gray-500">Стоимость склада</Body>
+                    <Body size="lg" className="font-bold text-green-500">
+                      {sortedInventory.reduce((sum, item) => sum + (item.quantity * item.price), 0).toLocaleString()} ₸
+                    </Body>
+                  </div>
+                  <div className="text-center">
+                    <Body size="sm" className="text-gray-500">Последняя ревизия</Body>
+                    <Body size="lg" className="font-bold">{new Date('2024-03-21').toLocaleDateString()}</Body>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
+      )}
+
+      {mode === 'revision' && (
+        <RevisionMode
+          items={revisionItems}
+          onSave={(items) => {
+            setRevisionItems(items);
+            showToast.success('Ревизия сохранена');
+          }}
+        />
+      )}
+
+      {mode === 'history' && (
+        <HistoryMode
+          items={historyItems}
+          filter={historyFilter}
+          onFilterChange={setHistoryFilter}
+        />
       )}
 
       {/* Модальное окно */}
@@ -573,4 +682,4 @@ const InventoryPage = () => {
   );
 };
 
-export default InventoryPage; 
+export default InventoryPage;

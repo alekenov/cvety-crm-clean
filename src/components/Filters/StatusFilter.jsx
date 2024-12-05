@@ -1,15 +1,16 @@
 import React from 'react';
 import { Tag } from 'lucide-react';
+import { FilterGroup, FilterButton } from '@/components/ui/filters/FilterGroup';
 
 const ORDER_STATUSES = [
-  'Все заказы',
-  'Не оплачен',
-  'Оплачен',
-  'В работе',
-  'Собран',
-  'В пути',
-  'Готов к самовывозу',
-  'Архив'
+  { id: 'all', label: 'Все заказы', variant: 'default' },
+  { id: 'unpaid', label: 'Не оплачен', variant: 'danger' },
+  { id: 'paid', label: 'Оплачен', variant: 'success' },
+  { id: 'in_progress', label: 'В работе', variant: 'default' },
+  { id: 'assembled', label: 'Собран', variant: 'default' },
+  { id: 'in_delivery', label: 'В пути', variant: 'default' },
+  { id: 'ready_for_pickup', label: 'Готов к самовывозу', variant: 'success' },
+  { id: 'archived', label: 'Архив', variant: 'default' }
 ];
 
 export default function StatusFilter({ selectedStatus, onStatusChange }) {
@@ -18,28 +19,17 @@ export default function StatusFilter({ selectedStatus, onStatusChange }) {
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Tag size={20} />
-        <span className="font-medium">Фильтр по статусу</span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {ORDER_STATUSES.map((status) => (
-          <button 
-            key={status}
-            onClick={() => handleChange(status)}
-            className={`px-4 py-2 rounded-full ${
-              selectedStatus === status 
-                ? status === 'Архив'
-                  ? 'bg-gray-500 text-white'
-                  : 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {status}
-          </button>
-        ))}
-      </div>
-    </div>
+    <FilterGroup icon={Tag} title="Фильтр по статусу">
+      {ORDER_STATUSES.map((status) => (
+        <FilterButton
+          key={status.id}
+          active={selectedStatus === status.id}
+          onClick={() => handleChange(status.id)}
+          variant={status.variant}
+        >
+          {status.label}
+        </FilterButton>
+      ))}
+    </FilterGroup>
   );
 }

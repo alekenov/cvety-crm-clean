@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FilterGroup } from '@/components/ui/FilterGroup';
 import { H1, H2, H3, Body, Caption } from '@/components/ui/Typography';
 import { 
   Calendar, Truck, Store, Package, CreditCard, Clock, Star, Filter, Box, 
   Plus, Minus, Search, X, MessageCircle, Camera, MapPin, Phone, User, Tag,
-  AlertTriangle, Check, ChevronDown, ChevronUp
+  AlertTriangle, Check, ChevronDown, ChevronUp, Settings, Heart
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/select';
@@ -17,11 +16,17 @@ import { Tooltip } from '@/components/ui/overlays/Tooltip';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Pagination } from '@/components/ui/pagination';
+import { SearchBar } from '@/components/ui/search/SearchBar';
+import { FilterGroup, FilterButton } from '@/components/ui/filters/FilterGroup';
+import DateFilter from '@/components/Filters/DateFilter';
+import StatusFilter from '@/components/Filters/StatusFilter';
+import { SimpleDataTable, CustomDataTable } from './components/DataTableDemo';
 
-const ComponentDemo = ({ title, children }) => {
+const ComponentDemo = ({ title, children, description }) => {
   return (
     <div className="mb-8">
-      <H2 className="mb-4">{title}</H2>
+      <H2 className="mb-2">{title}</H2>
+      {description && <Body className="text-gray-600 mb-4">{description}</Body>}
       <Card>
         <CardContent className="p-6">
           {children}
@@ -32,9 +37,13 @@ const ComponentDemo = ({ title, children }) => {
 };
 
 export default function DesignSystem() {
+  // Состояния для демонстрации
+  const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('today');
-  const [typeFilter, setTypeFilter] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [categoryFilter, setCategoryFilter] = useState(null);
+  const [priceFilter, setPriceFilter] = useState(null);
   const [switchValue, setSwitchValue] = useState(false);
   const [date, setDate] = useState(new Date());
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,6 +55,133 @@ export default function DesignSystem() {
       <div className="max-w-6xl mx-auto">
         <H1 className="mb-8">Компоненты</H1>
 
+        {/* DataTable */}
+        <ComponentDemo 
+          title="DataTable" 
+          description="Универсальный компонент для отображения данных в табличном или карточном виде. Поддерживает поиск, кастомизацию внешнего вида и адаптивную верстку."
+        >
+          <div className="space-y-8">
+            <div>
+              <H3 className="mb-4">Простая таблица с колонками</H3>
+              <SimpleDataTable />
+            </div>
+
+            <div>
+              <H3 className="mb-4">Кастомный вид карточек</H3>
+              <CustomDataTable />
+            </div>
+          </div>
+        </ComponentDemo>
+
+        {/* Поиск */}
+        <ComponentDemo 
+          title="Поиск" 
+          description="Универсальный компонент поиска с иконкой и кнопкой очистки"
+        >
+          <div className="max-w-md">
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Поиск..."
+            />
+          </div>
+        </ComponentDemo>
+
+        {/* Фильтры */}
+        <ComponentDemo 
+          title="Фильтры" 
+          description="Набор компонентов для фильтрации данных"
+        >
+          <div className="space-y-4">
+            {/* Фильтр по дате */}
+            <DateFilter
+              value={dateFilter}
+              onChange={setDateFilter}
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
+
+            {/* Фильтр по статусу */}
+            <StatusFilter
+              selectedStatus={statusFilter}
+              onStatusChange={setStatusFilter}
+            />
+
+            {/* Пример кастомного фильтра по категориям */}
+            <FilterGroup icon={Tag} title="Категории">
+              <FilterButton
+                active={categoryFilter === 'flowers'}
+                onClick={() => setCategoryFilter(categoryFilter === 'flowers' ? null : 'flowers')}
+              >
+                Цветы
+              </FilterButton>
+              <FilterButton
+                active={categoryFilter === 'bouquets'}
+                onClick={() => setCategoryFilter(categoryFilter === 'bouquets' ? null : 'bouquets')}
+                variant="success"
+              >
+                Букеты
+              </FilterButton>
+              <FilterButton
+                active={categoryFilter === 'gifts'}
+                onClick={() => setCategoryFilter(categoryFilter === 'gifts' ? null : 'gifts')}
+                variant="default"
+              >
+                Подарки
+              </FilterButton>
+            </FilterGroup>
+
+            {/* Пример фильтра по цене */}
+            <FilterGroup icon={CreditCard} title="Ценовой диапазон">
+              <FilterButton
+                active={priceFilter === 'low'}
+                onClick={() => setPriceFilter(priceFilter === 'low' ? null : 'low')}
+              >
+                До 5000 ₸
+              </FilterButton>
+              <FilterButton
+                active={priceFilter === 'medium'}
+                onClick={() => setPriceFilter(priceFilter === 'medium' ? null : 'medium')}
+              >
+                5000 - 15000 ₸
+              </FilterButton>
+              <FilterButton
+                active={priceFilter === 'high'}
+                onClick={() => setPriceFilter(priceFilter === 'high' ? null : 'high')}
+              >
+                Более 15000 ₸
+              </FilterButton>
+            </FilterGroup>
+
+            {/* Пример комбинированных фильтров */}
+            <div className="flex flex-wrap gap-4 items-start">
+              <FilterGroup icon={Heart} title="Избранное">
+                <FilterButton
+                  active={true}
+                  variant="danger"
+                >
+                  В избранном
+                </FilterButton>
+              </FilterGroup>
+
+              <FilterGroup icon={Settings} title="Дополнительно">
+                <FilterButton
+                  active={true}
+                >
+                  С фото
+                </FilterButton>
+                <FilterButton
+                  active={false}
+                  variant="success"
+                >
+                  Есть отзыв
+                </FilterButton>
+              </FilterGroup>
+            </div>
+          </div>
+        </ComponentDemo>
+
+        {/* Остальные компоненты */}
         <ComponentDemo title="Карточка заказа">
           <div className="space-y-4">
             <Card className="cursor-pointer hover:shadow-md transition-shadow duration-200">
@@ -154,44 +290,22 @@ export default function DesignSystem() {
             </div>
             <div className="flex flex-wrap gap-2">
               <button 
-                className={`px-4 py-2 rounded-full flex items-center gap-2 ${typeFilter.includes('bouquet') ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                onClick={() => setTypeFilter(prev => 
-                  prev.includes('bouquet') 
-                    ? prev.filter(t => t !== 'bouquet')
-                    : [...prev, 'bouquet']
-                )}
+                className={`px-4 py-2 rounded-full flex items-center gap-2 ${categoryFilter === 'flowers' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                onClick={() => setCategoryFilter(categoryFilter === 'flowers' ? null : 'flowers')}
               >
-                <Box className="w-4 h-4" /> Букеты
+                <Box className="w-4 h-4" /> Цветы
               </button>
               <button 
-                className={`px-4 py-2 rounded-full flex items-center gap-2 ${typeFilter.includes('roses') ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                onClick={() => setTypeFilter(prev => 
-                  prev.includes('roses') 
-                    ? prev.filter(t => t !== 'roses')
-                    : [...prev, 'roses']
-                )}
+                className={`px-4 py-2 rounded-full flex items-center gap-2 ${categoryFilter === 'bouquets' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                onClick={() => setCategoryFilter(categoryFilter === 'bouquets' ? null : 'bouquets')}
               >
-                <Store className="w-4 h-4" /> Розы
+                <Store className="w-4 h-4" /> Букеты
               </button>
               <button 
-                className={`px-4 py-2 rounded-full flex items-center gap-2 ${typeFilter.includes('urgent') ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                onClick={() => setTypeFilter(prev => 
-                  prev.includes('urgent') 
-                    ? prev.filter(t => t !== 'urgent')
-                    : [...prev, 'urgent']
-                )}
+                className={`px-4 py-2 rounded-full flex items-center gap-2 ${categoryFilter === 'gifts' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                onClick={() => setCategoryFilter(categoryFilter === 'gifts' ? null : 'gifts')}
               >
-                <Clock className="w-4 h-4" /> Срочно
-              </button>
-              <button 
-                className={`px-4 py-2 rounded-full flex items-center gap-2 ${typeFilter.includes('vip') ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                onClick={() => setTypeFilter(prev => 
-                  prev.includes('vip') 
-                    ? prev.filter(t => t !== 'vip')
-                    : [...prev, 'vip']
-                )}
-              >
-                <Star className="w-4 h-4" /> VIP
+                <Clock className="w-4 h-4" /> Подарки
               </button>
             </div>
           </div>
